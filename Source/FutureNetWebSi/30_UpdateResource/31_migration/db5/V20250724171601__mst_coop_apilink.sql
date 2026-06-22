@@ -1,0 +1,12 @@
+DELETE FROM ntss.mst_coop_apilink
+where ctl_no in (-1102000,-1102001,-1102002);
+
+INSERT INTO ntss.mst_coop_apilink
+(ctl_no, facility_cd, coop_cd, coop_cd_index, crud, direction, api_timing_io, api_timing_ba, api_timing_seq, api_uri, api_method, api_body, continue_api_status, after_api_status, is_del, user_id, reg_date, up_date, api_type, sql_setting, coop_version)
+VALUES(-1102002, 'Secom', 'ind_dial', '', 'D', 'S', 'C9', 'A', 1, 'http://localhost:8080/ntss-coop-api/runDataSet', 'POST', '{"dataKey": {"ctlNo": "$JOURNAL.ctl_no", "ordNo": "$JOURNAL.ord_no", "patId": "$JOURNAL.pat_id", "facilityCd": "$JOURNAL.facility_cd", "coopVersion": "$JOURNAL.coop_version"}, "sqlCode": -1102027, "facilityCd": "$JOURNAL.facility_cd", "coop_version": "Secom"}'::jsonb, '{"exit_code": [], "continue_code": [200]}'::jsonb, '{}'::jsonb, '0', -1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, '0', NULL, 'Secom');
+INSERT INTO ntss.mst_coop_apilink
+(ctl_no, facility_cd, coop_cd, coop_cd_index, crud, direction, api_timing_io, api_timing_ba, api_timing_seq, api_uri, api_method, api_body, continue_api_status, after_api_status, is_del, user_id, reg_date, up_date, api_type, sql_setting, coop_version)
+VALUES(-1102001, 'Secom', 'ind_dial', '', 'U', 'S', 'C9', 'A', 1, 'http://localhost:8080/ntss-coop-api/runDataSet', 'POST', '{"dataKey": {"ctlNo": "$JOURNAL.ctl_no", "ordNo": "$JOURNAL.ord_no", "patId": "$JOURNAL.pat_id", "facilityCd": "$JOURNAL.facility_cd", "coopVersion": "$JOURNAL.coop_version"}, "sqlCode": -1102027, "facilityCd": "$JOURNAL.facility_cd", "coop_version": "Secom"}'::jsonb, '{"exit_code": [], "continue_code": [200]}'::jsonb, '{}'::jsonb, '0', -1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, '0', NULL, 'Secom');
+INSERT INTO ntss.mst_coop_apilink
+(ctl_no, facility_cd, coop_cd, coop_cd_index, crud, direction, api_timing_io, api_timing_ba, api_timing_seq, api_uri, api_method, api_body, continue_api_status, after_api_status, is_del, user_id, reg_date, up_date, api_type, sql_setting, coop_version)
+VALUES(-1102000, 'Secom', 'ind_dial', '', 'C', 'S', 'C9', 'A', 1, 'http://localhost:8080/ntss-coop-api/runDataSet', 'POST', '{"dataKey": {"ctlNo": "$JOURNAL.ctl_no", "ordNo": "$JOURNAL.ord_no", "patId": "$JOURNAL.pat_id", "facilityCd": "$JOURNAL.facility_cd", "coopVersion": "$JOURNAL.coop_version"}, "sqlCode": -1102027, "facilityCd": "$JOURNAL.facility_cd", "coop_version": "Secom"}'::jsonb, '{"exit_code": [], "continue_code": [200]}'::jsonb, '{}'::jsonb, '0', -1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, '0', NULL, 'Secom');

@@ -1,0 +1,3 @@
+--INSERT INTO "ntss"."sys_system_define" ( "ctl_no", "service_cd", "name", "value", "description", "is_enable", "up_date" )
+--VALUES
+--	( '28', '003', 'コンバータログ', '{"out_flg": "convert-server-side=1", "path_output": "/efs/{0}/コンバータ/{1}/{2}/{0}.log", "file_pattern": "/efs/{0}/コンバータ/{1}/{2}/%d''{''yyyyMMdd''}''/{0}_%d''{''yyyyMMdd''}_%i''.log.gz", "max_file_size": "100"}', 'コンバータログの出力パスとファイル命名規則の設定。', '1', NOW( ) )

@@ -1,0 +1,47 @@
+DELETE FROM ntss.mst_coop_layout_detail
+WHERE ctl_no=-1104000012;
+DELETE FROM ntss.mst_coop_layout_detail
+WHERE ctl_no=-1104000011;
+DELETE FROM ntss.mst_coop_layout_detail
+WHERE ctl_no=-1104000002;
+DELETE FROM ntss.mst_coop_layout_detail
+WHERE ctl_no=-1104000003;
+
+INSERT INTO ntss.mst_coop_layout_detail
+(ctl_no, facility_cd, coop_cd, direction, coop_cd_detail, coop_cd_detail_sub, coop_name, description, is_editable, coop_setting, coop_ext_setting, is_disp, is_del, user_id, reg_date, up_date, coop_version)
+VALUES(-1104000012, 'Secom', 'ind_dial', 'S', 'inj_top_del', '01', 'セコム連携_透析指示連携', 'セコム連携_透析指示_注射依頼_del', '1', '<root name="透析指示_注射依頼" useSharedSysdate="true">
+  <file name="セコム連携_透析指示_注射依頼ファイル_オーダーインデックス" detail="inj_index_del" sqlCode="-1102021"/>
+  <file name="セコム連携_透析指示_注射依頼ファイル_注射ヘッダー" detail="inj_header_del" sqlCode="-1102022"/>
+  <file name="セコム連携_透析指示_注射依頼ファイル_実施単位" detail="inj_unit_top_del" sqlCode="-1102023"/>
+  <file name="セコム連携_透析指示_注射依頼ファイル_処置項目" detail="inj_item_top_del" sqlCode="-1102024"/>
+  <file name="セコム連携_透析指示_注射依頼ファイル_ファイル作成終了" detail="inj_finish" sqlCode="-1102025"/>
+</root>', '{"dataset": [{"key0": "key0", "key1": "SCM_DIALYSISSCHESEND", "key2": "INJECT_IDX_FILE_STR", "time": "$SHARED_SYSDATE:yyyy/MM/dd HH:mm:ss", "ctlNo": "ctlNo", "ordNo": "ordNo", "patId": "patId", "sqlCode": -1102021, "fileKind": "injection", "facilityCd": "facilityCd", "file_extension": "txt"}, {"key0": "key0", "key1": "SCM_DIALYSISSCHESEND", "key2": "INJECT_HEAD_FILE_STR", "time": "$SHARED_SYSDATE:yyyy/MM/dd HH:mm:ss", "ctlNo": "ctlNo", "ordNo": "ordNo", "patId": "patId", "sqlCode": -1102022, "fileKind": "injection", "facilityCd": "facilityCd", "file_extension": "txt"}, {"key0": "key0", "key1": "SCM_DIALYSISSCHESEND", "key2": "INJECT_RP_FILE_STR", "time": "$SHARED_SYSDATE:yyyy/MM/dd HH:mm:ss", "ctlNo": "ctlNo", "ordNo": "ordNo", "patId": "patId", "sqlCode": -1102023, "fileKind": "injection", "facilityCd": "facilityCd", "file_extension": "txt"}, {"key0": "key0", "key1": "SCM_DIALYSISSCHESEND", "key2": "INJECT_ITEM_FILE_STR", "time": "$SHARED_SYSDATE:yyyy/MM/dd HH:mm:ss", "ctlNo": "ctlNo", "ordNo": "ordNo", "patId": "patId", "sqlCode": -1102024, "fileKind": "injection", "facilityCd": "facilityCd", "file_extension": "txt"}, {"key0": "key0", "key1": "SCM_DIALYSISSCHESEND", "key2": "NULL", "time": "$SHARED_SYSDATE:yyyy/MM/dd HH:mm:ss", "ctlNo": "ctlNo", "ordNo": "ordNo", "patId": "patId", "sqlCode": -1102025, "fileKind": "injection", "facilityCd": "facilityCd", "file_extension": "txt"}]}'::jsonb, '1', '0', -1, '2025-06-26 23:43:00.020', current_timestamp, 'Secom');
+INSERT INTO ntss.mst_coop_layout_detail
+(ctl_no, facility_cd, coop_cd, direction, coop_cd_detail, coop_cd_detail_sub, coop_name, description, is_editable, coop_setting, coop_ext_setting, is_disp, is_del, user_id, reg_date, up_date, coop_version)
+VALUES(-1104000011, 'Secom', 'ind_dial', 'S', 'inj_top_cre', '01', 'セコム連携_透析指示連携', 'セコム連携_透析指示_注射依頼_cre', '1', '<root name="透析指示_注射依頼" useSharedSysdate="true">
+  <file name="セコム連携_透析指示_注射依頼ファイル_オーダーインデックス" detail="inj_index_cre" sqlCode="-1102021"/>
+  <file name="セコム連携_透析指示_注射依頼ファイル_注射ヘッダー" detail="inj_header_cre" sqlCode="-1102022"/>
+  <file name="セコム連携_透析指示_注射依頼ファイル_実施単位" detail="inj_unit_top_cre" sqlCode="-1102023"/>
+  <file name="セコム連携_透析指示_注射依頼ファイル_処置項目" detail="inj_item_top_cre" sqlCode="-1102024"/>
+  <file name="セコム連携_透析指示_注射依頼ファイル_ファイル作成終了" detail="inj_finish" sqlCode="-1102025"/>
+</root>', '{"dataset": [{"key0": "key0", "key1": "SCM_DIALYSISSCHESEND", "key2": "INJECT_IDX_FILE_STR", "time": "$SHARED_SYSDATE:yyyy/MM/dd HH:mm:ss", "ctlNo": "ctlNo", "ordNo": "ordNo", "patId": "patId", "sqlCode": -1102021, "fileKind": "injection", "facilityCd": "facilityCd", "file_extension": "txt"}, {"key0": "key0", "key1": "SCM_DIALYSISSCHESEND", "key2": "INJECT_HEAD_FILE_STR", "time": "$SHARED_SYSDATE:yyyy/MM/dd HH:mm:ss", "ctlNo": "ctlNo", "ordNo": "ordNo", "patId": "patId", "sqlCode": -1102022, "fileKind": "injection", "facilityCd": "facilityCd", "file_extension": "txt"}, {"key0": "key0", "key1": "SCM_DIALYSISSCHESEND", "key2": "INJECT_RP_FILE_STR", "time": "$SHARED_SYSDATE:yyyy/MM/dd HH:mm:ss", "ctlNo": "ctlNo", "ordNo": "ordNo", "patId": "patId", "sqlCode": -1102023, "fileKind": "injection", "facilityCd": "facilityCd", "file_extension": "txt"}, {"key0": "key0", "key1": "SCM_DIALYSISSCHESEND", "key2": "INJECT_ITEM_FILE_STR", "time": "$SHARED_SYSDATE:yyyy/MM/dd HH:mm:ss", "ctlNo": "ctlNo", "ordNo": "ordNo", "patId": "patId", "sqlCode": -1102024, "fileKind": "injection", "facilityCd": "facilityCd", "file_extension": "txt"}, {"key0": "key0", "key1": "SCM_DIALYSISSCHESEND", "key2": "NULL", "time": "$SHARED_SYSDATE:yyyy/MM/dd HH:mm:ss", "ctlNo": "ctlNo", "ordNo": "ordNo", "patId": "patId", "sqlCode": -1102025, "fileKind": "injection", "facilityCd": "facilityCd", "file_extension": "txt"}]}'::jsonb, '1', '0', -1, '2025-06-26 23:43:00.020', current_timestamp, 'Secom');
+INSERT INTO ntss.mst_coop_layout_detail
+(ctl_no, facility_cd, coop_cd, direction, coop_cd_detail, coop_cd_detail_sub, coop_name, description, is_editable, coop_setting, coop_ext_setting, is_disp, is_del, user_id, reg_date, up_date, coop_version)
+VALUES(-1104000002, 'Secom', 'ind_dial', 'S', 'trt_top_cre', '01', 'セコム連携_透析指示連携', 'セコム連携_透析指示_処置依頼', '1', '<root name="処置依頼" useSharedSysdate="true">
+  <file name="オーダーインデックス" detail="trt_index_cre" sqlCode="-1102016"/>
+  <file name="処置ヘッダー" detail="trt_header_cre" sqlCode="-1102017"/>
+  <file name="処置単位" detail="trt_unit_top_cre" sqlCode="-1102018"/>
+  <file name="処置項目" detail="trt_item_top_cre" sqlCode="-1102019"/>
+  <file name="ファイル作成終了" detail="trt_finish" sqlCode="-1102020"/>
+</root>
+', '{"dataset": [{"key0": "key0", "key1": "SCM_DIALYSISSCHESEND", "key2": "TREAT_IDX_FILE_STR", "time": "$SHARED_SYSDATE:yyyy/MM/dd HH:mm:ss", "ctlNo": "ctlNo", "ordNo": "ordNo", "patId": "patId", "sqlCode": -1102016, "fileKind": "treatment", "facilityCd": "facilityCd", "file_extension": "txt"}, {"key0": "key0", "key1": "SCM_DIALYSISSCHESEND", "key2": "TREAT_HEAD_FILE_STR", "time": "$SHARED_SYSDATE:yyyy/MM/dd HH:mm:ss", "ctlNo": "ctlNo", "ordNo": "ordNo", "patId": "patId", "sqlCode": -1102017, "fileKind": "treatment", "facilityCd": "facilityCd", "file_extension": "txt"}, {"key0": "key0", "key1": "SCM_DIALYSISSCHESEND", "key2": "TREAT_RP_FILE_STR", "time": "$SHARED_SYSDATE:yyyy/MM/dd HH:mm:ss", "ctlNo": "ctlNo", "ordNo": "ordNo", "patId": "patId", "sqlCode": -1102018, "fileKind": "treatment", "facilityCd": "facilityCd", "file_extension": "txt"}, {"key0": "key0", "key1": "SCM_DIALYSISSCHESEND", "key2": "TREAT_ITEM_FILE_STR", "time": "$SHARED_SYSDATE:yyyy/MM/dd HH:mm:ss", "ctlNo": "ctlNo", "ordNo": "ordNo", "patId": "patId", "sqlCode": -1102019, "fileKind": "treatment", "facilityCd": "facilityCd", "file_extension": "txt"}, {"key0": "key0", "key1": "SCM_DIALYSISSCHESEND", "key2": "NULL", "time": "$SHARED_SYSDATE:yyyy/MM/dd HH:mm:ss", "ctlNo": "ctlNo", "ordNo": "ordNo", "patId": "patId", "sqlCode": -1102020, "fileKind": "treatment", "facilityCd": "facilityCd", "file_extension": "txt"}]}'::jsonb, '1', '0', -1, '2025-06-26 23:35:08.627', current_timestamp, 'Secom');
+INSERT INTO ntss.mst_coop_layout_detail
+(ctl_no, facility_cd, coop_cd, direction, coop_cd_detail, coop_cd_detail_sub, coop_name, description, is_editable, coop_setting, coop_ext_setting, is_disp, is_del, user_id, reg_date, up_date, coop_version)
+VALUES(-1104000003, 'Secom', 'ind_dial', 'S', 'trt_top_del', '01', 'セコム連携_透析指示連携', 'セコム連携_透析指示_処置依頼', '1', '<root name="処置依頼" useSharedSysdate="true">
+  <file name="オーダーインデックス" detail="trt_index_del" sqlCode="-1102016"/>
+  <file name="処置ヘッダー" detail="trt_header_del" sqlCode="-1102017"/>
+  <file name="処置単位" detail="trt_unit_top_del" sqlCode="-1102018"/>
+  <file name="処置項目" detail="trt_item_top_del" sqlCode="-1102019"/>
+  <file name="ファイル作成終了" detail="trt_finish" sqlCode="-1102020"/>
+</root>
+', '{"dataset": [{"key0": "key0", "key1": "SCM_DIALYSISSCHESEND", "key2": "TREAT_IDX_FILE_STR", "time": "$SHARED_SYSDATE:yyyy/MM/dd HH:mm:ss", "ctlNo": "ctlNo", "ordNo": "ordNo", "patId": "patId", "sqlCode": -1102016, "fileKind": "treatment", "facilityCd": "facilityCd", "file_extension": "txt"}, {"key0": "key0", "key1": "SCM_DIALYSISSCHESEND", "key2": "TREAT_HEAD_FILE_STR", "time": "$SHARED_SYSDATE:yyyy/MM/dd HH:mm:ss", "ctlNo": "ctlNo", "ordNo": "ordNo", "patId": "patId", "sqlCode": -1102017, "fileKind": "treatment", "facilityCd": "facilityCd", "file_extension": "txt"}, {"key0": "key0", "key1": "SCM_DIALYSISSCHESEND", "key2": "TREAT_RP_FILE_STR", "time": "$SHARED_SYSDATE:yyyy/MM/dd HH:mm:ss", "ctlNo": "ctlNo", "ordNo": "ordNo", "patId": "patId", "sqlCode": -1102018, "fileKind": "treatment", "facilityCd": "facilityCd", "file_extension": "txt"}, {"key0": "key0", "key1": "SCM_DIALYSISSCHESEND", "key2": "TREAT_ITEM_FILE_STR", "time": "$SHARED_SYSDATE:yyyy/MM/dd HH:mm:ss", "ctlNo": "ctlNo", "ordNo": "ordNo", "patId": "patId", "sqlCode": -1102019, "fileKind": "treatment", "facilityCd": "facilityCd", "file_extension": "txt"}, {"key0": "key0", "key1": "SCM_DIALYSISSCHESEND", "key2": "NULL", "time": "$SHARED_SYSDATE:yyyy/MM/dd HH:mm:ss", "ctlNo": "ctlNo", "ordNo": "ordNo", "patId": "patId", "sqlCode": -1102020, "fileKind": "treatment", "facilityCd": "facilityCd", "file_extension": "txt"}]}'::jsonb, '1', '0', -1, '2025-06-26 23:35:08.627', current_timestamp, 'Secom');

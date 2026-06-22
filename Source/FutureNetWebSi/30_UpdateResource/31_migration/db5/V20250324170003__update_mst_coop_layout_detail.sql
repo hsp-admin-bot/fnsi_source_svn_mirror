@@ -1,0 +1,60 @@
+--DELETE FROM
+--    ntss.mst_coop_layout_detail
+--where
+--    ctl_no in (
+--        -307001,
+--        -307002,
+--        -307003,
+--        -307004,
+--        -307005,
+--        -307006,
+--        -307007,
+--        -307008,
+--        -307009,
+--        -307010,
+--        -307011,
+--        -307012,
+--        -307013,
+--        -307014,
+--        -307015,
+--        -307016,
+--        -307017,
+--        -307018,
+--        -307019,
+--        -307020,
+--        -307021,
+--        -307022,
+--        -307023,
+--        -307024,
+--        -307025,
+--        -307026,
+--        -307027,
+--        -307028,
+--        -307029,
+--        -307030,
+--        -307031,
+--        -407000028 -- 個別対応分
+--    );
+--
+---- 個別対応分
+--INSERT INTO ntss.mst_coop_layout_detail
+--(ctl_no, facility_cd, coop_cd, direction, coop_cd_detail, coop_cd_detail_sub, coop_name, description, is_editable, coop_setting, coop_ext_setting, is_disp, is_del, user_id, reg_date, up_date, coop_version)
+--VALUES(-407000028, 'P_hosp', 'rst_dial', 'S', 'treatment', '15', '処置・人工腎臓以外', '処置・人工腎臓以外', '1', '<root>
+--    <Order Code="dataset:-307009.code" Name="dataset:-307009.name"
+--        Count="dataset:-307009.amount" Unit="dataset:-307009.unit"
+--        Cutoff="dataset:-307009.cutoff" SeqNo="dataset:-307009.seq_no" />
+--    <Order_Administration />
+--    <OrderUnits_Memo />
+--</root>', '{"dataset": [{"ordNo": "ordNo", "sqlCode": -307064}]}'::jsonb, '1', '0', -1, '2023-11-21 23:54:58.443', CURRENT_TIMESTAMP, 'MED');
+--
+---- 個別対応分
+--INSERT INTO ntss.mst_coop_layout_detail
+--(ctl_no, facility_cd, coop_cd, direction, coop_cd_detail, coop_cd_detail_sub, coop_name, description, is_editable, coop_setting, coop_ext_setting, is_disp, is_del, user_id, reg_date, up_date, coop_version)
+--VALUES(-407000032, 'P_hosp', 'rst_dial', 'S', 'treatment', '16', '処置・人工腎臓以外（導入期加算）', '処置・人工腎臓以外（導入期加算）', '1', '<root>
+--    <Order Code="dataset:-307009.code" Name="dataset:-307009.name"
+--        Count="dataset:-307009.amount" Unit="dataset:-307009.unit"
+--        Cutoff="dataset:-307009.cutoff" SeqNo="dataset:-307009.seq_no" />
+--    <Order_Administration />
+--    <OrderUnits_Memo />
+--</root>', '{"dataset": [{"ordNo": "ordNo", "sqlCode": -307064}]}'::jsonb, '1', '0', 5843, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'MED');
+--

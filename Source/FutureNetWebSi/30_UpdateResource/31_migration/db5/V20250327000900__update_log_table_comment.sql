@@ -1,0 +1,2 @@
+--update log_table_comment set delete_flg = 1 where tbl_name IN ('mst_spitz', 'mst_exam_set') and col_name = 'is_in_hospital';
+--INSERT INTO log_table_comment ("tbl_name", "tbl_comment", "col_name", "col_comment", "json_flg", "keystep", "pk_flg", "delete_flg", "ord_main_hst_ins_flg") VALUES ('mst_exam_item', '検査項目マスタ', 'is_in_hospital', '院内院外フラグ', '0', '1', '0', NULL, '0');
