@@ -1,2 +1,0 @@
-UPDATE "ntss"."sys_master_define" SET "edit_level" = '9' WHERE "master_physical_name" = 'mst_obs_kind';
-UPDATE "ntss"."sys_master_define" SET "edit_level" = '9' WHERE "master_physical_name" = 'usage_subscription';

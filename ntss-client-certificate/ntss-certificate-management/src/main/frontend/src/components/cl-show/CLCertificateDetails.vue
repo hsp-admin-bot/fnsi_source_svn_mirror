@@ -273,6 +273,11 @@ export default {
       }
     },
   methods : {
+    ...mapActions("loading-screen", {
+      setLoadingScreenVisible: "setLoadingScreenVisible",
+      setLoadingScreenMessage: "setLoadingScreenMessage",
+      resetLoadingScreenVisibleCount: "resetLoadingScreenVisibleCount"
+    }),
     ...mapActions("cl-detail", {
       selectAllCertificatesByFacilityCd: "selectAllCertificatesByFacilityCd"
     }),
@@ -344,6 +349,8 @@ export default {
 
     async certificateDelete( facilityCd, manyFacilityCd, clCertificateId ) {
       //CL証明書と施設を削除しました。
+      this.setLoadingScreenMessage("処理中・・・");
+      this.setLoadingScreenVisible(true);
       try {
         let obj = {
           facilityCd: facilityCd,
@@ -351,14 +358,15 @@ export default {
           clCertificateId: clCertificateId
         };
         await ApiHelper.post("/cl-details/deleteCl", obj);
+        await this.selectAllCertificatesByFacilityCd(this.facilityCd);
+        this.resetLoadingScreenVisibleCount();
       } catch {
-          this.$ons.notification.alert({
-            title: "",
-            message: DIALOG_MESSAGES[this.deletemessageCd]
-          });
+        this.setLoadingScreenVisible(false);
+        this.$ons.notification.alert({
+          title: "",
+          message: DIALOG_MESSAGES[this.deletemessageCd]
+        });
       }
-      await this.selectAllCertificatesByFacilityCd(this.facilityCd)
-
    },
    //戻るボタン
    closeClDetails() {

@@ -1,7 +1,0 @@
---ALTER TABLE "ntss"."ord_main_restore"
---    DROP COLUMN "rst_device_set_info",
---    DROP COLUMN "rst_vital_info";
---
---DELETE from log_table_comment where tbl_name = 'ord_main_restore' and col_name = 'rst_device_set_info';
---DELETE from log_table_comment where tbl_name = 'ord_main_restore' and col_name = 'rst_vital_info';
---

@@ -1,6 +1,0 @@
---ALTER TABLE "ntss"."ord_main_restore"
---    ADD COLUMN "ind_device_mode" numeric(2,0),
---    ADD COLUMN "ind_dw_user_info" jsonb;
---COMMENT ON COLUMN "ntss"."ord_main_restore"."ind_device_mode" IS '装置モード';
---COMMENT ON COLUMN "ntss"."ord_main_restore"."ind_dw_user_info" IS 'DW指示者情报';
---

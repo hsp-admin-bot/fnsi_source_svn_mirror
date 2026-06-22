@@ -1,2 +1,0 @@
---ALTER TABLE pat_group ADD COLUMN in_hospital_cd_1 varchar(20);
---COMMENT ON COLUMN "pat_group"."in_hospital_cd_1" IS '院内コード1';

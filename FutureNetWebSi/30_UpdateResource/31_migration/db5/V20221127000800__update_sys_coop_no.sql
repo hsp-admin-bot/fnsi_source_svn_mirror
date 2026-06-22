@@ -1,2 +1,0 @@
-DELETE FROM ntss.sys_coop_no where ctl_no in (-202);    
-INSERT INTO "ntss"."sys_coop_no"("ctl_no", "facility_cd", "coop_ord_cd", "cur_coop_ord_no", "no_of_digit", "padding_char", "padding_pos", "range_max", "range_min", "prefix_char", "suffix_char", "is_disp", "is_del", "user_id", "reg_date", "up_date", "coop_cd", "coop_cd_index") VALUES (-202, 'F_hosp', '[{"ord_cd": "exam_rst"}, {"ord_cd": "exam_ord"}, {"ord_cd": "rad_ord"}, {"ord_cd": "phy_ord"}]', 1, 8, '0', 'left', 9999999999, 1, '', '', '1', '0', -1, '2022-11-27 10:23:41.05',CURRENT_TIMESTAMP, '', '');

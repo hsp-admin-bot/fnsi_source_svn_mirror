@@ -1,2 +1,0 @@
-insert into sys_system_define (ctl_no, service_cd, name, value, description, is_enable, up_date)
-values (14, '003', 'オンプレミス', '{"path":"C://store","status":"off"}', 'S3を使わずにロカール環境でファイル保存する。ロカールのファイル格納のパスを指定する。OnPremises有効を設定する。', '1', current_timestamp);

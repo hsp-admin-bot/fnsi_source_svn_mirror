@@ -913,23 +913,11 @@ void *comsv_stream(void *ptr) {
 							LogOutputs(NTSS_LOG_INFO, logMsg, 0, conSock->scn.deviceType, conSock->scn.devid);
 						}
 						*/
-                        // #12571 2026.04.07 mod 排液判定中に次患者要求が来ると治療が終了しなくなる TDC高村 start
-						// sprintf(logMsg, "通信スレッドNEW[%d] : イベント（次患者情報）", conSock->thread_no);
-						// LogOutputs(NTSS_LOG_INFO, logMsg, 0, conSock->scn.deviceType, conSock->scn.devid);
-						// conSock->scn.next_pat_send = 1;	// 次患者送信（0:タイミング,1:イベント）
-						// conSock->scn.reqflg[C_NEXTPAT] = 1;
-						// // #11520 2025.02.06 mod 次回透析患者情報転送を必ず要求する TDC高村 end
-						if ( (conSock->scn.mon_sta & 1) && conSock->scn.dial_end_date ) {
-							sprintf(logMsg, "通信スレッドNEW[%d] : イベント（次患者情報）排液判定中無効", conSock->thread_no);
-							LogOutputs(NTSS_LOG_INFO, logMsg, 0, conSock->scn.deviceType, conSock->scn.devid);
-                        }
-                        else {
-						    sprintf(logMsg, "通信スレッドNEW[%d] : イベント（次患者情報）", conSock->thread_no);
-						    LogOutputs(NTSS_LOG_INFO, logMsg, 0, conSock->scn.deviceType, conSock->scn.devid);
-						    conSock->scn.next_pat_send = 1;	// 次患者送信（0:タイミング,1:イベント）
-						    conSock->scn.reqflg[C_NEXTPAT] = 1;
-                        }
-                        // #12571 2026.04.07 mod 排液判定中に次患者要求が来ると治療が終了しなくなる TDC高村 end
+						sprintf(logMsg, "通信スレッドNEW[%d] : イベント（次患者情報）", conSock->thread_no);
+						LogOutputs(NTSS_LOG_INFO, logMsg, 0, conSock->scn.deviceType, conSock->scn.devid);
+						conSock->scn.next_pat_send = 1;	// 次患者送信（0:タイミング,1:イベント）
+						conSock->scn.reqflg[C_NEXTPAT] = 1;
+						// #11520 2025.02.06 mod 次回透析患者情報転送を必ず要求する TDC高村 end
 					}
 					else if ( i == 4 ) {
 						// 未登録患者割付の通知

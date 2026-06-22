@@ -1558,17 +1558,30 @@ export default {
         .kendoDropDownList({
           dataSource: this.dropDownFacilityDataSource,
           optionLabel: "操作",
-          change: () => {
+          change: async () => {
             // add #6690 「操作するたびに対象施設が表示していない1ページ目にもどる」について、対応する。 dengshen start
             const page = $("#facility-grid").data("kendoGrid").pager.dataSource._page
             const sort = $("#facility-grid").data("kendoGrid").dataSource._sort
             this.setPage(page);
             this.setSort(sort);
             // add #6690 「操作するたびに対象施設が表示していない1ページ目にもどる」について、対応する。 dengshen end
-            this.selectCertificateByFacilityCd(
-              this.getSelectedFacility.facilityCd
-            );
             let val = data.model[data.field];
+            // mod CLCertificateAddモーダル表示混乱の修正 start
+            // 操作対象行の施設情報を使用（getSelectedFacilityは別行選択時に不整合が発生する）
+            const facilityCd = data.model["facilityCd"];
+            const facilityName = data.model["facilityName"];
+            this.setSelectedFacility({ facilityCd, facilityName });
+            this.setModalDetails({
+              facilityCd,
+              facilityName,
+              displayFacilityCd: facilityCd,
+              displayFacilityName: facilityName,
+              latestIssuedUser: this.getUserName
+            });
+            // ドロップダウン選択内容でモードを確定（API完了後にモーダルを表示）
+            const isUpdate = val === "施設PW変更";
+            await this.selectCertificateByFacilityCd({ facilityCd, isUpdate });
+            // mod CLCertificateAddモーダル表示混乱の修正 end
             //mod FNSI-【1006】最新の改修対象一覧.NO43を修正 周安寧 start
             //if (val === "発行") {
             if (val === "アカウント発行" || val === "施設PW変更") {

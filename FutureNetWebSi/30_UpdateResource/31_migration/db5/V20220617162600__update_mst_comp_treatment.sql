@@ -1,1 +1,0 @@
-UPDATE ntss.mst_comp_treatment SET treat_class = '2' WHERE treat_medicine_cd IS NULL;

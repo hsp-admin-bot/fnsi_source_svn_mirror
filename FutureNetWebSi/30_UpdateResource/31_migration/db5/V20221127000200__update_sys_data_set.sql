@@ -1,3 +1,0 @@
-delete from ntss.sys_data_set where sql_cd = '205';
-INSERT INTO "ntss"."sys_data_set"("sql_cd", "sql", "db_class", "detail", "can_repeat", "use_application", "report_class", "memo", "reg_date", "up_date", "pre_sql_info") VALUES (205, 'select * from ord_main  where 1=2
-', 2, '[{"preview": "", "can_calc": "0", "data_code": "", "data_name": "フリーテキストボックス（複数配置可）", "data_type": "", "conv_table": [], "data_class": "画面入力用", "field_name": "", "disp_format": "", "data_category": "紹介状", "facility_table": "", "facility_filter_type": "0"}]', '0', '{"applications": [1]}', '{"classes": [9]}', NULL, '2022-10-31 17:07:08.814', CURRENT_TIMESTAMP, NULL);

@@ -1,1 +1,0 @@
-INSERT INTO ntss.sys_data_list_detail (data_list_detail_cd, disp_order, category_cd, master_display_name, master_display_type, master_display_sql, function_display_name, function_display_type, function_display_sql, data_set, cell_display) VALUES(1439, 1, 159, 'ホスト報知', '2', NULL, 'ホスト報知', '2', NULL, NULL, NULL);

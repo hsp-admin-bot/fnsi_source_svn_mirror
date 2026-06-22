@@ -18,7 +18,6 @@ subprojects {
   apply plugin: "jacoco"
   def javaLanguageVersion = Integer.parseInt(findProperty('java_language_version').toString())
   def springBootBom = "org.springframework.boot:spring-boot-dependencies:${rootProject.findProperty('spring_boot_version')}"
-  def tomcatVersion = rootProject.findProperty('tomcat_version').toString()
   java {
     toolchain {
       languageVersion = JavaLanguageVersion.of(javaLanguageVersion)
@@ -32,25 +31,10 @@ subprojects {
     options.compilerArgs += ['-parameters', '-proc:full']
   }
 
-  // Spring Boot 4.0.6 manages Tomcat 11.0.21; pin the patched Tomcat line for security scanners.
-  configurations.configureEach {
-    resolutionStrategy.force(
-      "org.apache.tomcat.embed:tomcat-embed-core:${tomcatVersion}",
-      "org.apache.tomcat.embed:tomcat-embed-el:${tomcatVersion}",
-      "org.apache.tomcat.embed:tomcat-embed-websocket:${tomcatVersion}"
-    )
-  }
   pluginManager.withPlugin('io.spring.dependency-management') {
     dependencyManagement {
       imports {
         mavenBom "org.springframework.boot:spring-boot-dependencies:${rootProject.findProperty('spring_boot_version')}"
-        mavenBom "io.netty:netty-bom:${rootProject.findProperty('netty_version')}"
-      }
-      dependencies {
-        dependency "org.postgresql:postgresql:${rootProject.findProperty('postgresql_version')}"
-        dependency "org.apache.tomcat.embed:tomcat-embed-core:${tomcatVersion}"
-        dependency "org.apache.tomcat.embed:tomcat-embed-el:${tomcatVersion}"
-        dependency "org.apache.tomcat.embed:tomcat-embed-websocket:${tomcatVersion}"
       }
     }
   }

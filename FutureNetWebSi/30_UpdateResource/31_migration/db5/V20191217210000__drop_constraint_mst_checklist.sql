@@ -1,1 +1,0 @@
-ALTER TABLE mst_checklist DROP CONSTRAINT IF EXISTS mst_checklist_facility_cd_fkey;

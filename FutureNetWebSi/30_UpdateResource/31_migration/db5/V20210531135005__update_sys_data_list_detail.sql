@@ -1,1 +1,0 @@
-UPDATE "ntss"."sys_data_list_detail" SET "data_set" = '[{"param": "count", "sql_cd": -11043}, {"param": "unit", "sql_cd": -11044}]' WHERE "data_list_detail_cd" = 42;

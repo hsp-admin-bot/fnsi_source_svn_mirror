@@ -100,10 +100,6 @@
                   id="error-massage"
                   v-if="hasAuthError"
                 >
-                  <p class="p-error" id="p-error">
-                    認証情報が正しくありません。
-                    <br />もう一度お試しください。
-                  </p>
                 </div>
               </v-ons-col>
             </div>

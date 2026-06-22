@@ -1,2 +1,0 @@
--- アプリケーションログ、gzを変更
-update sys_system_define set value='{"path_output": "/efs/{0}/サーバー/{1}/{2}/{0}.log", "file_pattern": "/efs/{0}/サーバー/{1}/{2}/%d''{''yyyyMMdd''}''/{0}_%d''{''yyyyMMdd''}_%i''.log.gz", "max_file_size": "100", "out_flg": "ntss-admin-web=1,ntss-client-comm=1,ntss-web-api=1,ntss-coop-api=1,device_edge=1,ntss-m-notice=1,device_edge_updater=1,data_gathering=1,data_gathering_auto=1,alive_moni=1,alive_moni_auto=1"}' where ctl_no = 27

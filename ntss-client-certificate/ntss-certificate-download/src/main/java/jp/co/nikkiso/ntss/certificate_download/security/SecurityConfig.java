@@ -31,7 +31,6 @@ import org.springframework.security.web.authentication.session.RegisterSessionAu
 import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
 import org.springframework.security.web.authentication.session.SessionFixationProtectionStrategy;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
-import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.session.HttpSessionEventPublisher;
 
 import java.util.ArrayList;
@@ -132,8 +131,8 @@ public class SecurityConfig {
             .permitAll())
         .csrf(csrf -> csrf
             .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-            // SS6 既定の Xor 検証は Cookie 平文トークン（Boot2 時の挙動）と不一致になるため、ヘッダー検証のみ従来どおりに戻す
-            .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
+            // SPA（Vue + Axios）: 認証後の CSRF Cookie 再発行と Header/Cookie 平文トークン検証（Boot 2 同等）
+            .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
             .ignoringRequestMatchers(Uri.LOGIN, Uri.CLDOWNLOAD + "/mergeP12"));
 
     http.addFilterAt(authenticationFilter(authenticationManager), UsernamePasswordAuthenticationFilter.class);

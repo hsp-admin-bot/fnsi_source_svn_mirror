@@ -1,1 +1,0 @@
-DROP FUNCTION IF EXISTS info_unescape(inData text);

@@ -228,6 +228,16 @@ int comsv_cmd(int thread_no, struct scn_data_fm *sp)
             break;
 
         case C_NEXTPAT:      // 次回透析患者情報転送
+            // #12571 2026.06.14 add 排液判定中は次回透析患者情報転送を行わない（治療が終了しなくなる為） TDC高村 start
+            if ( (sp->mon_sta & 1) && sp->dial_end_date ) {
+                // 排液判定中（メモリ上は透析中、かつ透析終了日時設定済み）の場合は転送しない
+                sprintf(logMsg, "通信スレッドNEW[%d] : 次回透析患者情報転送排液判定中無効 [%ld]", thread_no, sp->dev_no);
+                LogOutputs(NTSS_LOG_INFO, logMsg, 0, sp->deviceType, sp->devid);
+                sp->next_pat_send = 0;	// 次患者送信（0:タイミング,1:イベント）
+                sndlen = 0;
+                break;
+            }
+            // #12571 2026.06.14 add 排液判定中は次回透析患者情報転送を行わない（治療が終了しなくなる為） TDC高村 end
 			sprintf(logMsg, "通信スレッドNEW[%d] : 次回透析患者情報転送開始 [%ld]", thread_no, sp->dev_no);
 		    LogOutputs(NTSS_LOG_INFO, logMsg, 0, sp->deviceType, sp->devid);
             sp->cmd = 0xeb;

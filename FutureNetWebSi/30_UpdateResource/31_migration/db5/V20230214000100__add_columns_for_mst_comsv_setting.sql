@@ -1,2 +1,0 @@
---ALTER TABLE mst_comsv_setting ADD COLUMN lcd_medi_time character varying(1) DEFAULT '0';
---COMMENT ON COLUMN mst_comsv_setting.lcd_medi_time IS E'仮想端末投与時間（OFF：時刻、ON：経過）';

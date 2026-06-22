@@ -1,7 +1,0 @@
---ALTER TABLE mst_monitor_graph ADD COLUMN fn_monitor_graph_cd int8 DEFAULT NULL;
---comment on column mst_monitor_graph.fn_monitor_graph_cd is 'FNW+で管理する施設内の一意なコード';
---
---ALTER TABLE mst_add_monitor ADD COLUMN fn_vital_monitor_item_cd int8 DEFAULT NULL;
---comment on column mst_add_monitor.fn_vital_monitor_item_cd is 'FNW+で管理する施設内の一意なコード';
---
---comment on column mst_pat_event_data_template.fn_template_cd is 'FNW+で管理する施設内の一意なコード';

@@ -1,6 +1,0 @@
---ALTER TABLE
---  mnt_recalc_que
---ADD COLUMN
---  calc_pat_id jsonb
---;
---COMMENT ON COLUMN "mnt_recalc_que"."calc_pat_id" IS '再計算済患者ID';

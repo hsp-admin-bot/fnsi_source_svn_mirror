@@ -1,8 +1,0 @@
----- modify 10425 by zhoutao 20240612 start ord_material_saveの処方データ修正
---alter table "ntss"."ord_material_save" add column prescription_unit varchar default null;
---COMMENT ON COLUMN "ntss"."ord_material_save"."prescription_unit" IS '処方薬剤単位';
---alter table "ntss"."ord_material_save" add column frequency_flg varchar default null;
---COMMENT ON COLUMN "ntss"."ord_material_save"."frequency_flg" IS '処方調剤単位';
---alter table "ntss"."ord_material_save" add column frequency_num varchar default null;
---COMMENT ON COLUMN "ntss"."ord_material_save"."frequency_num" IS '処方調剤量';
----- modify 10425 by zhoutao 20240612 end ord_material_saveの処方データ修正

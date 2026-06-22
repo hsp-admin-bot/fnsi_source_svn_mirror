@@ -1,2 +1,0 @@
-DELETE FROM mst_coop_layout WHERE ctl_no 
-IN (-3080001, -3080002, -3080005,-3080006);

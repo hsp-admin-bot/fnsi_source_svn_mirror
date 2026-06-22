@@ -1,2 +1,0 @@
---ALTER TABLE mst_disease ADD COLUMN fn_class_cd VARCHAR(1) DEFAULT NULL;
---comment on column mst_disease.fn_class_cd  is '0：死因以外、1：死因';

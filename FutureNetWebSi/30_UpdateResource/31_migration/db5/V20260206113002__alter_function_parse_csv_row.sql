@@ -1,1 +1,0 @@
-ALTER FUNCTION ntss.parse_csv_row(text) ROWS 39;

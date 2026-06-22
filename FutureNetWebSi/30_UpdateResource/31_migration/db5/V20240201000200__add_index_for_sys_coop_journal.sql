@@ -1,1 +1,0 @@
---CREATE INDEX "sys_coop_journal_idx_01" ON "ntss"."sys_coop_journal" USING btree ("facility_cd" ,"coop_result");

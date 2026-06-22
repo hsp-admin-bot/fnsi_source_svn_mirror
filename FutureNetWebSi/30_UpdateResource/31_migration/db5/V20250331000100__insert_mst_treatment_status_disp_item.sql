@@ -1,1 +1,0 @@
---INSERT INTO "ntss"."mst_treatment_status_disp_item" ("item_cd", "data_class", "machine_class", "item_name", "table_name", "field_name", "json_key_name", "disp_order", "is_disp", "is_del", "reg_date", "up_date", "unit") VALUES (113, '1', '0', '残り時間', 'mni_monitor', 'monitor_data', NULL, 0, '1', '0', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, NULL);

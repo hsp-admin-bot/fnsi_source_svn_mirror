@@ -1,4 +1,0 @@
---ALTER TABLE mst_mainte_category ADD COLUMN fn_mainte_category_cd   character varying(3);
---comment on column mst_mainte_category.fn_mainte_category_cd is 'FNW+で管理する施設内の一意なコード';
---ALTER TABLE mst_mainte_detail ADD COLUMN fn_mainte_detail_cd  int8;
---comment on column mst_mainte_detail.fn_mainte_detail_cd is 'FNW+で管理する施設内の一意なコード';

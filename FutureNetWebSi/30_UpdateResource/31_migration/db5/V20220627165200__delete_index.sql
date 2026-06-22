@@ -1,2 +1,0 @@
-DROP INDEX ord_checklist_ord_no_index;
-DROP INDEX ord_material_save_supplies_base_no;

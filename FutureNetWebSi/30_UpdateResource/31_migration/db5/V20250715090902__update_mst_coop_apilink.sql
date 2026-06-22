@@ -1,9 +1,0 @@
-DELETE FROM ntss.mst_coop_apilink
-WHERE ctl_no IN (-1111001, -1111002);
-
-INSERT INTO mst_coop_apilink
-(ctl_no, facility_cd, coop_cd, coop_cd_index, crud, direction, api_timing_io, api_timing_ba, api_timing_seq, api_uri, api_method, api_body, continue_api_status, after_api_status, is_del, user_id, reg_date, up_date, api_type, sql_setting, coop_version)
-VALUES(-1111001, 'Secom', 'rad_ord', '', 'C', 'S', 'C9', 'A', 1, 'http://localhost:8080/ntss-coop-api/runDataSet', 'POST', '{"dataKey": {"ctlNo": "$JOURNAL.ctl_no", "ordNo": "$JOURNAL.ord_no", "patId": "$JOURNAL.pat_id", "facilityCd": "$JOURNAL.facility_cd", "coopVersion": "$JOURNAL.coop_version"}, "sqlCode": -1106005, "facilityCd": "$JOURNAL.facility_cd", "coop_version": "Secom"}'::jsonb, '{"exit_code": [], "continue_code": [200]}'::jsonb, '{}'::jsonb, '0', -1, '2025-07-14 21:24:14.314', CURRENT_TIMESTAMP, '0', NULL, 'Secom');
-INSERT INTO mst_coop_apilink
-(ctl_no, facility_cd, coop_cd, coop_cd_index, crud, direction, api_timing_io, api_timing_ba, api_timing_seq, api_uri, api_method, api_body, continue_api_status, after_api_status, is_del, user_id, reg_date, up_date, api_type, sql_setting, coop_version)
-VALUES(-1111002, 'Secom', 'rad_ord', '', 'D', 'S', 'C9', 'A', 1, 'http://localhost:8080/ntss-coop-api/runDataSet', 'POST', '{"dataKey": {"ctlNo": "$JOURNAL.ctl_no", "ordNo": "$JOURNAL.ord_no", "patId": "$JOURNAL.pat_id", "facilityCd": "$JOURNAL.facility_cd", "coopVersion": "$JOURNAL.coop_version"}, "sqlCode": -1106005, "facilityCd": "$JOURNAL.facility_cd", "coop_version": "Secom"}'::jsonb, '{"exit_code": [], "continue_code": [200]}'::jsonb, '{}'::jsonb, '0', -1, '2025-07-14 21:24:14.314', CURRENT_TIMESTAMP, '0', NULL, 'Secom');

@@ -1,2 +1,0 @@
--- mst_treatment_status_disp_itemに警報・報知を追加：item_cd=111
-INSERT INTO mst_treatment_status_disp_item("item_cd", "data_class", "machine_class", "item_name", "table_name", "field_name", "json_key_name", "disp_order", "is_disp", "is_del", "reg_date", "up_date") VALUES (111, '1', '0', '警報・報知', null, null, null, 0, '1', '0', current_timestamp, current_timestamp)

@@ -1,4 +1,0 @@
-UPDATE pat_main 
-SET host_notification_info = '{"ap": {"judge": false, "lower": 0, "upper": 0}, "vp": {"judge": false, "lower": 0, "upper": 0}, "ufr": {"judge": false, "lower": 0, "upper": 0.1}, "bpmi": {"judge": false, "interval": 0}, "ldqb": {"judge": false, "lower": 0, "upper": 0}, "pulse": {"judge": false, "lower": 0, "upper": 0}, "bp_ave": {"judge": false, "lower": 0, "upper": 0}, "bp_max": {"judge": false, "lower": 0, "upper": 0}, "bp_min": {"judge": false, "lower": 0, "upper": 0}, "care_i": {"judge": false, "interval": 0}, "na_conc": {"judge": false, "lower": 120, "upper": 130}, "d_bv_roc": {"judge": false, "lower": 0, "upper": 0}, "ip_speed": {"judge": false, "lower": 0, "upper": 0}, "blood_flow": {"judge": false, "lower": 40, "upper": 40}, "dialys_temp": {"judge": false, "lower": 33, "upper": 33}}' 
-WHERE
-	host_notification_info ='{}'

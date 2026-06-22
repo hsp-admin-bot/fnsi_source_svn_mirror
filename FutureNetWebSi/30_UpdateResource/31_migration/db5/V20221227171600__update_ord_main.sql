@@ -1,3 +1,0 @@
---CREATE INDEX "idx_ord_main_04" ON "ntss"."ord_main" USING btree (
---  "ind_treatment_cd" "pg_catalog"."int4_ops" ASC NULLS LAST
---);

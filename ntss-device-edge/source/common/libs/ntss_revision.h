@@ -16,6 +16,6 @@
 
 // リリースリビジョン（YYYY.MM.DD.連番）
 // 連番：同日リリース毎にインクリメント
-#define RELEASE_REVISION    "2026.05.29.00"
+#define RELEASE_REVISION    "2026.06.15.00"
 
 #endif

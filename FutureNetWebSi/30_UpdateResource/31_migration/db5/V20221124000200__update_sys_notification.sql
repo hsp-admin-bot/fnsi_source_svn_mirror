@@ -1,2 +1,0 @@
-Delete FROM ntss.sys_notification where notification_no in (23);    
-INSERT INTO "ntss"."sys_notification"("notification_no", "notification_category", "setting_name", "message", "additional_info", "disp_order", "available_keys", "is_disp", "is_del", "reg_date", "up_date", "help") VALUES (23, 60, '患者情報連携通知', '[LASTNAME] [FIRSTNAME] さん の患者情報更新を実施しました。', '{"FUNC": "007", "PATID": "[PATID]", "FACILITYCD": "[FACILITYCD]"}', '23', '[LASTNAME]：患者名(姓)、[FIRSTNAME]：患者名(名)', '1', '0', '2022-06-08 12:01:23.763', CURRENT_TIMESTAMP, '連携設定の患者更新の通知。');

@@ -384,13 +384,14 @@ chmod 644 /etc/default/smstools
 systemctl enable smstools.service
 echo 'smstools サービスの自動起動を設定しました.'
 
-# #12332 2026.06.02 add stunnel対応 TDC片口 start
+# #12332 2026.06.15 add stunnel対応 TDC片口 start
 if [ "$USE_STUNNEL" = 'y' ]; then
 	echo 'stunnel4 のインストールを開始します'
-	dpkg -i --force-downgrade /mnt/sd/setup/package/$PKG_STUNNEL
+	dpkg -i --force-depends --force-downgrade /mnt/sd/setup/package/$PKG_STUNNEL
 	echo 'stunnel4 のインストールが完了しました'
 
 	cp -f /mnt/sd/setup/package/stunnel.conf /etc/stunnel/
+    mkdir -p /var/log/stunnel4
 	
 	echo "バイパス先URL:$AWS_URL:443"
 	
@@ -406,10 +407,10 @@ if [ "$USE_STUNNEL" = 'y' ]; then
     
 	chmod 644 /etc/stunnel/stunnel.conf
 
-	systemctl enable stunnel4.service
-	echo 'stunnel4 サービスの自動起動を設定しました.'
+	systemctl enable stunnel@stunnel.service
+	echo ' stunnel@stunnel サービスの自動起動を設定しました.'
 fi
-# #12332 2026.06.02 add stunnel対応 TDC片口 end
+# #12332 2026.06.15 add stunnel対応 TDC片口 end
 
 # confファイルの警報/モニタデータ用フォルダ作成
 while read line

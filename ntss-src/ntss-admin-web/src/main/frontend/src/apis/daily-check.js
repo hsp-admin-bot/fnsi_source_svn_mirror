@@ -14,13 +14,6 @@ const DAILY_CHECK = "/mente-main";
 const LAYOUT_MST = "/mente-layout";
 
 /**
- * 日常点検情報取得
- */
-export function sendRequestGetInspectionItem() {
-  return ApiHelper.get(`${DAILY_CHECK}/machines-inspection`);
-}
-
-/**
  * 指定日の日常点検情報取得
  * @param {string} date 点検日（YYYY-MM-DD）
  */
@@ -167,7 +160,7 @@ export function sendRequestGetMachineResult(params) {
  * @param {Object} params
  * @param {number} params.bedGroupCd ベッドグループコード
  * @param {string[]} params.machineTypeList 型式リスト
- * @param {string} params.keyWord フリーワード
+ * @param {string} params.keyword フリーワード
  */
 export function sendRequestGetMachinesConditionRes(params) {
   return ApiHelper.post(`${DAILY_CHECK}/get-condition-machines`, params);

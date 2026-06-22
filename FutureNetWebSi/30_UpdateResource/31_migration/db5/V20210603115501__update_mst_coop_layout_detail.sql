@@ -1,1 +1,0 @@
-delete from "mst_coop_layout_detail" where "ctl_no" = -203000009;

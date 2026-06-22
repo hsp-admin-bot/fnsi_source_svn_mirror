@@ -1,6 +1,0 @@
----- add 10378 by kangjie 20240523  start
---ALTER TABLE "ntss"."mst_facility"
---  ADD COLUMN "is_schext_exception" varchar(1) COLLATE "pg_catalog"."default" DEFAULT 0;
---
---COMMENT ON COLUMN "ntss"."mst_facility"."is_schext_exception" IS 'スケジュール延長除外フラグ';
----- add 10378 by kangjie 20240523  end

@@ -1,5 +1,0 @@
-DELETE FROM ntss.mst_coop_apilink
-WHERE ctl_no=-1112001;
-INSERT INTO ntss.mst_coop_apilink
-(ctl_no, facility_cd, coop_cd, coop_cd_index, crud, direction, api_timing_io, api_timing_ba, api_timing_seq, api_uri, api_method, api_body, continue_api_status, after_api_status, is_del, user_id, reg_date, up_date, api_type, sql_setting, coop_version)
-VALUES(-1112001, 'Secom', 'karte_ord', '', 'C', 'S', 'AS', 'A', 1, 'http://localhost:8080/ntss-coop-api/runDataSet', 'POST', '{"dataKey": {"ordNo": "$JOURNAL.ord_no", "patId": "$JOURNAL.pat_id", "coopCd": "$JOURNAL.coop_cd", "facilityCd": "$JOURNAL.facility_cd", "coopVersion": "$JOURNAL.coop_version"}, "sqlCode": -1107008}'::jsonb, '{"exit_code": [], "continue_code": [200]}'::jsonb, '{}'::jsonb, '0', -1, '2025-08-10 12:29:24.081', '2025-08-10 12:29:29.609', '0', NULL, 'Secom');

@@ -1,1 +1,0 @@
-update sys_data_list_detail set category_cd='74' where data_list_detail_cd in (7941,7942);

@@ -1,1 +1,0 @@
-alter table mst_function_report drop constraint mst_function_report_report_cd_fkey

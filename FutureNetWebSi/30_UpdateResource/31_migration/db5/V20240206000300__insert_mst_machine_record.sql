@@ -1,4 +1,0 @@
----- add #10063 by zhangruixue 2023.11.20  G100 G101 G102
---INSERT INTO "ntss"."mst_machine_record" ("machine_record_cd", "machine_record_message", "reg_date", "up_date", "is_default", "log_class", "target_model", "disp_flg") VALUES ('G100', '自己診断合格', now(), now(), '0', '6', '6', '0');
---INSERT INTO "ntss"."mst_machine_record" ("machine_record_cd", "machine_record_message", "reg_date", "up_date", "is_default", "log_class", "target_model", "disp_flg") VALUES ('G101', '自己診断不合格', now(), now(), '0', '6', '6', '0');
---INSERT INTO "ntss"."mst_machine_record" ("machine_record_cd", "machine_record_message", "reg_date", "up_date", "is_default", "log_class", "target_model", "disp_flg") VALUES ('G102', '自己診断合格（要注意）', now(), now(), '0', '6', '6', '0');

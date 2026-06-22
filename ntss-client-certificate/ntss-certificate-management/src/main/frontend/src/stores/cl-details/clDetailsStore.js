@@ -253,57 +253,48 @@ export default {
       commit("setModalCertificatesVisible", isCertificateShow);
     },
     //add FNSI-【1006】最新の改修対象一覧.NO51を修正 周安寧 end
-    async selectCertificateByFacilityCd({ commit, state }, facilityCd) {
-      let obj = {
+    // mod CLCertificateAddモーダル表示混乱の修正 start
+    // 施設PW変更/アカウント発行のモード判定をAPI応答だけに依存せず、
+    // 呼び出し元から渡されたisUpdateを優先する（awaitでAPI完了後に状態を確定）
+    async selectCertificateByFacilityCd({ commit, state }, payload) {
+      const facilityCd =
+        typeof payload === "string" ? payload : payload.facilityCd;
+      // ドロップダウン操作から明示的に渡された更新モード（未指定時はAPI結果で判定）
+      const explicitIsUpdate =
+        typeof payload === "object" ? payload.isUpdate : undefined;
+
+      const res = await ApiHelper.get("/cl-details/selectByFacilityCd", {
         facilityCd: facilityCd
-      };
-      ApiHelper.get("/cl-details/selectByFacilityCd", obj)
-        .then(res => {
-          if (res.data.passwordCl === undefined) {
-            commit("setIsUpdateState", false);
-            let data = {
-              isShow: false,
-              passwordCl: "",
-              //del FNSI-【1006】最新の改修対象一覧.NO43を修正 周安寧 start
-              // expiredDate: moment(new Date()).format("YYYY-MM-DD"),
-              // hour: moment(new Date(2019, 2, 2, 23, 59)).format("HH:mm"),
-              // maxDownload: 0,
-              // curDownload: 0,
-              //del FNSI-【1006】最新の改修対象一覧.NO43を修正 周安寧 end
-              facilityName: state.modalDetailsCondition.facilityName,
-              facilityCd: state.modalDetailsCondition.facilityCd,
-              //add FNSI-【1006】最新の改修対象一覧.NO43を修正 周安寧 start
-              isCertificateShow: false
-              //add FNSI-【1006】最新の改修対象一覧.NO43を修正 周安寧 end
-            };
-            commit("setCertificate", data);
-            return;
-          } else {
-            commit("setIsUpdateState", true);
-            //del FNSI-【1006】最新の改修対象一覧.NO43を修正 周安寧 start
-            // let stringDate = moment(res.data.expiredDate)
-            //   .format("YYYY-MM-DD HH:mm")
-            //   .split(" ");
-            //del FNSI-【1006】最新の改修対象一覧.NO43を修正 周安寧 end
-            let data = {
-              isShow: false,
-              passwordCl: res.data.passwordCl,
-              //del FNSI-【1006】最新の改修対象一覧.NO43を修正 周安寧 start
-              // expiredDate: stringDate[0],
-              // hour: stringDate[1],
-              // maxDownload: res.data.maxDownload,
-              // curDownload: res.data.curDownload,
-              //del FNSI-【1006】最新の改修対象一覧.NO43を修正 周安寧 end
-              facilityName: res.data.facilityName,
-              facilityCd: res.data.facilityCd,
-              //add FNSI-【1006】最新の改修対象一覧.NO43を修正 周安寧 start
-              isCertificateShow: false
-              //add FNSI-【1006】最新の改修対象一覧.NO43を修正 周安寧 end
-            };
-            commit("setCertificate", data);
-          }
-        });
+      });
+
+      const isUpdate =
+        explicitIsUpdate !== undefined
+          ? explicitIsUpdate
+          : res.data.passwordCl !== undefined;
+
+      if (isUpdate) {
+        let data = {
+          isShow: false,
+          passwordCl: res.data.passwordCl,
+          facilityName: res.data.facilityName,
+          facilityCd: res.data.facilityCd,
+          isCertificateShow: false
+        };
+        commit("setCertificate", data);
+      } else {
+        // アカウント発行時は既存証明書データを使わず新規発行用の状態を設定
+        let data = {
+          isShow: false,
+          passwordCl: "",
+          facilityName: state.modalDetailsCondition.facilityName,
+          facilityCd: state.modalDetailsCondition.facilityCd,
+          isCertificateShow: false
+        };
+        commit("setCertificate", data);
+      }
+      commit("setIsUpdateState", isUpdate);
     },
+    // mod CLCertificateAddモーダル表示混乱の修正 end
     //mod FNSI-【1006】最新の改修対象一覧.NO43を修正 周安寧 start
     async updateCertificate({ state, dispatch}) {
     //async updateCertificate({ state, dispatch, commit }) {
@@ -493,6 +484,10 @@ export default {
     },
 
     clearModalDetail(state) {
+      // mod CLCertificateAddモーダル表示混乱の修正 start
+      // モーダル閉鎖時に更新モードをリセットし、次回表示時の状態残留を防止
+      state.isUpdate = false;
+      // mod CLCertificateAddモーダル表示混乱の修正 end
       state.certificate = {
         passwordCl: "",
         //del FNSI-【1006】最新の改修対象一覧.NO43を修正 周安寧 start

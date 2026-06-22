@@ -1,2 +1,0 @@
---ALTER TABLE "ntss"."mst_machine" ADD COLUMN "fn_class_cd" varchar(1);
---COMMENT ON COLUMN "ntss"."mst_machine"."fn_class_cd" IS 'FNW用装置区分 ０：透析装置 １：機械室装置';

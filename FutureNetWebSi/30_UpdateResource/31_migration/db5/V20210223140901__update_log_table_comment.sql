@@ -1,1 +1,0 @@
-update log_table_comment set pk_flg=1 where tbl_name='pat_group' and col_name='pat_group_cd';

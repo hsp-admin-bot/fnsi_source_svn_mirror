@@ -1,2 +1,0 @@
---CREATE INDEX idx_facility_cd_coop_cd
---ON ord_coop_no (facility_cd,coop_cd);

@@ -1,1 +1,0 @@
-CREATE INDEX IF NOT EXISTS idx_mnt_motion_record_06 ON mnt_motion_record USING btree (facility_cd, ord_no);

@@ -1,1 +1,0 @@
-UPDATE ntss.sys_facility_setting SET setting_name='カードサインイン方式' WHERE facility_setting_no='1030';

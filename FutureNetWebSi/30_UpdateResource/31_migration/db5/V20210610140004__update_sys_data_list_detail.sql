@@ -1,1 +1,0 @@
-UPDATE "ntss"."sys_data_list_detail" SET "function_display_sql" = 'select treatment_cd as id, treatment_name as name from mst_treatment where is_del = ''0''  AND facility_cd = @facilityCd and treatment_cd in (@ids) and is_disp = ''1''' WHERE "data_list_detail_cd" = 58;

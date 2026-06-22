@@ -1,5 +1,0 @@
-----FNSI-8360 ord_main_restoreに列bvms_pathを追加
---
---ALTER TABLE "ord_main_restore" ADD COLUMN "bvms_path" jsonb; --sql設定
---
---COMMENT ON COLUMN "ord_main_restore"."bvms_path" IS E'BVMSファイルのパス';

@@ -1,7 +1,0 @@
----- 列の削除
---ALTER TABLE mnt_if_edge_healthmon DROP COLUMN IF EXISTS coop_version;
---
---delete from mnt_if_edge_healthmon;
---
----- ユニークキー制約
---ALTER TABLE mnt_if_edge_healthmon ADD CONSTRAINT unq_mnt_if_edge_healthmon_fc UNIQUE (facility_cd);

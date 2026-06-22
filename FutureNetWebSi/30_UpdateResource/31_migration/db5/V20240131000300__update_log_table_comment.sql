@@ -1,8 +1,0 @@
---INSERT INTO "ntss"."log_table_comment" ("tbl_name", "tbl_comment", "col_name", "col_comment", "json_flg", "keystep", "pk_flg", "delete_flg", "ord_main_hst_ins_flg")
---VALUES ('ord_main', '治療情報', 'ind_device_mode', '装置モード', '0', '1', '0', NULL, '1');
---
---INSERT INTO "ntss"."log_table_comment" ("tbl_name", "tbl_comment", "col_name", "col_comment", "json_flg", "keystep", "pk_flg", "delete_flg", "ord_main_hst_ins_flg")
---VALUES ('ord_main', '治療情報', 'ind_dw_user_info', 'DW指示者情报', '1', '1', '0', NULL, '1');
---
---INSERT INTO "ntss"."log_table_comment" ("tbl_name", "tbl_comment", "col_name", "col_comment", "json_flg", "keystep", "pk_flg", "delete_flg", "ord_main_hst_ins_flg")
---VALUES ('ord_material_save', '計算材料保持テーブル', 'receipt_conversion', '単位換算情报', '1', '1', '0', NULL, '0');

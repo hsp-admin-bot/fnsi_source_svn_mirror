@@ -1,5 +1,0 @@
---ALTER TABLE "ntss"."ord_main"
---  ADD COLUMN "rst_device_mode" numeric(2,0);
---
---INSERT INTO "ntss"."log_table_comment" ("tbl_name", "tbl_comment", "col_name", "col_comment", "json_flg", "keystep", "pk_flg", "delete_flg", "ord_main_hst_ins_flg")
---  VALUES ('ord_main', '治療情報', 'rst_device_mode', '実績：装置モード', '0', '1', '0', NULL, '1');

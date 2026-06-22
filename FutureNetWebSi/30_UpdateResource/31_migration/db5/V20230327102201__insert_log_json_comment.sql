@@ -1,6 +1,0 @@
---INSERT INTO "ntss"."log_json_comment" ( "tbl_name", "col_name", "json_key_name", "json_key_comment" )
---VALUES
---	( 'ord_main', 'bvms_path', 'bucket', 'S3上のバケット名' );
---INSERT INTO "ntss"."log_json_comment" ( "tbl_name", "col_name", "json_key_name", "json_key_comment" )
---VALUES
---	( 'ord_main', 'bvms_path', 'csv_filename', 'CSVファイル名' );

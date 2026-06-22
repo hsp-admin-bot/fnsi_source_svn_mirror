@@ -1,5 +1,0 @@
-DELETE FROM mst_coop_apilink WHERE ctl_no IN (-1108001);
-
-INSERT INTO mst_coop_apilink
-(ctl_no, facility_cd, coop_cd, coop_cd_index, crud, direction, api_timing_io, api_timing_ba, api_timing_seq, api_uri, api_method, api_body, continue_api_status, after_api_status, is_del, user_id, reg_date, up_date, api_type, sql_setting, coop_version)
-VALUES(-1108001, 'Secom', 'rep_dial', 'pdf', 'C', 'S', 'C9', 'A', 1, 'http://localhost:8080/ntss-coop-api/runDataSet', 'POST', '{"dataKey": {"key0": "$JOURNAL.key0", "ctlNo": "$JOURNAL.ctl_no", "ordNo": "$JOURNAL.ord_no", "patId": "$JOURNAL.pat_id", "facilityCd": "$JOURNAL.facility_cd", "coopVersion": "$JOURNAL.coop_version"}, "sqlCode": -1108001}'::jsonb, '{"exit_code": [], "continue_code": [200]}'::jsonb, '{}'::jsonb, '0', -1, '2025-08-01 22:49:03.102', CURRENT_TIMESTAMP, '0', NULL, 'Secom');

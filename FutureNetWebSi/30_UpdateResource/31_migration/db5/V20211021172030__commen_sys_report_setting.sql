@@ -1,1 +1,0 @@
-comment on table sys_report_setting  is '機能帳票設定';

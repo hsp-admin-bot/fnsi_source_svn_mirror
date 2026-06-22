@@ -1,2 +1,0 @@
-update sys_master_define set column_info = jsonb_set(column_info,'{fields,7, type}', '"number"', true)  where master_physical_name = 'mst_machine';
-update sys_master_define set column_info = jsonb_set(column_info,'{fields,7, validation}', '{"max":65535,"min":0,"required":true}', true)  where master_physical_name = 'mst_machine';

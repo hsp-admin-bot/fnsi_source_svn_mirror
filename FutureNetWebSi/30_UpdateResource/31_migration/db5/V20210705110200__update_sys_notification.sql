@@ -1,1 +1,0 @@
-UPDATE "ntss"."sys_notification" SET "message" = '「患者グループ：[PATGROUP]が追加（編集）されました」', "additional_info" = '{"FUNC": "007", "FACILITYCD": "[FACILITYCD]"}' WHERE "notification_no" = 14;

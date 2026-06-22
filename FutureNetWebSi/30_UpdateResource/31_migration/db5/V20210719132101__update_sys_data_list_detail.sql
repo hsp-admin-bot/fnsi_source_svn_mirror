@@ -1,3 +1,0 @@
-UPDATE "ntss"."sys_data_list_detail" SET "data_set" = '[{"param": "count", "sql_cd": -11042}]', "cell_display" = '[count] 件' WHERE "data_list_detail_cd" = 11;
-UPDATE "ntss"."sys_data_list_detail" SET "data_set" = '[{"param": "count", "sql_cd": -11041}]', "cell_display" = '[count] 件' WHERE "data_list_detail_cd" = 47;
-UPDATE "ntss"."sys_data_list_detail" SET "data_set" = '[{"param": "count", "sql_cd": -11042}]', "cell_display" = '[count] 件' WHERE "data_list_detail_cd" = 48;

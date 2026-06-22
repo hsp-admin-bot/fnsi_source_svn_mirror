@@ -1,1 +1,0 @@
-update mst_medicate_timing set alert_time = 0 where alert_time is null;
