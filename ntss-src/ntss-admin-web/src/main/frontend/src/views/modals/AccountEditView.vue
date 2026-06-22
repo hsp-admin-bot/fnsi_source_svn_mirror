@@ -795,7 +795,7 @@
             </template>
             <!-- add #12462 患者共有権限 関 end -->
           </v-ons-list>
-          <v-ons-list modifier="inset">
+          <v-ons-list modifier="inset" v-if="isShowFacilitySwitch">
             <div>
               <v-ons-list-header>
                 <span>施設</span>
@@ -1092,6 +1092,7 @@ import { FUNC_SHARING_PATIENT_INFORMATION } from "@/constants/function-code.js";
 import { sendRequestGetMstFacilitySettingValue as getMstFacilitySettingValue } from "@/apis/facility-setting";
 import { sendRequestCheckMatchCurrentPassword, sendRequestIsAvailablePassword } from "@/apis/User";
 import { getInfoRetrieve, getInfoOPT } from "@/apis/facilities-can-login.js";
+import { ADVANCED_SETTINGS } from "@/constants/advancedSettings";
 import { PASSWORD_POLICY, NUM_OF_PASSWORD, pwdLvLow, pwdLvNormal, pwdLvHigh } from "@/constants/facilitySetting";
 import { SYS_USE_TYPE } from "@/constants/sysUseConstants";
 import PopoverMixin from "@/components/PopoverMixin";
@@ -1195,7 +1196,8 @@ export default {
     ...mapGetters("mst-user", { getUserOTP: "getUserOTP" }),
     ...mapGetters("user", {
       facilityCd: "getFacilityCd",
-      systemUseSetting: "getSystemUseSetting"
+      systemUseSetting: "getSystemUseSetting",
+      advancedSettings: "getAdvancedSettings"
     }),
     ...mapGetters("websocket-card", [
       "getSocketIsConnected",
@@ -1386,8 +1388,15 @@ export default {
         return 'faQuestionInactive';
         // mod redmine 5547に対応
       }
-    }
+    },
     // FNSI-修正 3849 対応 xiebzh add end
+    // 施設マスタ＞拡張機能 施設切替のON／OFF
+    isShowFacilitySwitch() {
+      if (!this.advancedSettings.func_advcds) return false;
+      return this.advancedSettings.func_advcds.some(
+        setting => setting.func_advcd === ADVANCED_SETTINGS.FACILITY_SWITCH
+      );
+    }
   },
   methods: {
     ...mapActions("account-edit", [

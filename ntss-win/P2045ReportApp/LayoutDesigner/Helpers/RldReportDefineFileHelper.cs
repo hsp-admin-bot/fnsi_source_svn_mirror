@@ -932,6 +932,9 @@ namespace LayoutDesigner
                         // add #12006 感染症がフィルタできない 高 start
                         case RldConst.FilterType.Group.INFECTION:
                         // add #12006 感染症がフィルタできない 高 end
+                        // add #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 高 start
+                        case RldConst.FilterType.Group.GOODS:
+                        // add #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 高 end
                         // add #10370 装置帳票向けの「水質管理」データ項目を検討する 高 start
                         // mod #12585 水質管理.水質検査のフィルタ処理仕様修正 高 start
                         case RldConst.FilterType.Group.WQTESTTYPE:
@@ -1281,6 +1284,12 @@ namespace LayoutDesigner
                     isMedicine = wXmlDoc.DocumentElement.FirstChild.Attributes[RldConst.FilterData.ATT_ITEM_TAG].Value == RldConst.FilterType.Group.INFECTION;
                 }
                 // add #12006 感染症がフィルタできない 高 end
+                // add #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 高 start
+                if (!isMedicine)
+                {
+                    isMedicine = wXmlDoc.DocumentElement.FirstChild.Attributes[RldConst.FilterData.ATT_ITEM_TAG].Value == RldConst.FilterType.Group.GOODS;
+                }
+                // add #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 高 end
                 // add #10370 装置帳票向けの「水質管理」データ項目を検討する 高 start
                 // mod #12585 水質管理.水質検査のフィルタ処理仕様修正 高 start
                 if (!isMedicine)
@@ -1357,6 +1366,12 @@ namespace LayoutDesigner
                                     colValue = "infection_cd";
                                 }
                                 // add #12006 感染症がフィルタできない 高 end
+                                // add #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 高 start
+                                else if (wXmlDoc.DocumentElement.FirstChild.Attributes[RldConst.FilterData.ATT_ITEM_TAG].Value == RldConst.FilterType.Group.GOODS)
+                                {
+                                    colValue = "goods_type";
+                                }
+                                // add #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 高 end
                                 // add #10370 装置帳票向けの「水質管理」データ項目を検討する 高 start
                                 // mod #12585 水質管理.水質検査のフィルタ処理仕様修正 高 start
                                 else if (wXmlDoc.DocumentElement.FirstChild.Attributes[RldConst.FilterData.ATT_ITEM_TAG].Value == RldConst.FilterType.Group.WQTESTTYPE)
@@ -1427,6 +1442,12 @@ namespace LayoutDesigner
                                     colValue = "mainte_category_cd.mainte_detail_cd";
                                 }
                                 // add #12549 現状の設定仕様では装置点検帳票の要求を満たせない limingzhe end
+                                // add #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 高 start
+                                else if (wXmlDoc.DocumentElement.FirstChild.Attributes[RldConst.FilterData.ATT_ITEM_TAG].Value == RldConst.FilterType.Group.GOODS)
+                                {
+                                    colValue = "goods_type.class_cd";
+                                }
+                                // add #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 高 end
                                 else
                                 {
                                     // ある特定の薬剤分類の通常薬剤か調製薬剤のいずれか
@@ -1476,6 +1497,12 @@ namespace LayoutDesigner
                                     colValue = "infection_cd";
                                 }
                                 // add #12006 感染症がフィルタできない 高 end
+                                // add #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 高 start
+                                else if (wXmlDoc.DocumentElement.FirstChild.Attributes[RldConst.FilterData.ATT_ITEM_TAG].Value == RldConst.FilterType.Group.GOODS)
+                                {
+                                    colValue = "goods_type.class_cd.cd";
+                                }
+                                // add #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 高 end
                                 // add #10370 装置帳票向けの「水質管理」データ項目を検討する 高 start
                                 // mod #12585 水質管理.水質検査のフィルタ処理仕様修正 高 start
                                 else if (wXmlDoc.DocumentElement.FirstChild.Attributes[RldConst.FilterData.ATT_ITEM_TAG].Value == RldConst.FilterType.Group.WQTESTTYPE)

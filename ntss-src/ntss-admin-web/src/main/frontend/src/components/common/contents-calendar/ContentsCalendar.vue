@@ -300,6 +300,7 @@ export default {
         if (!value || this.isBootstrappingDateToday) {
           return;
         }
+        this.handleDateTodayChange();
         this.bootstrapCalendarForDate(value, {
           emitBaseDate: true,
           appendWeeks: true,
@@ -436,29 +437,12 @@ export default {
     },
     /** データを読み込めている範囲の新古末端月を取得 */
     contentsMonthRange() {
-      if (!Array.isArray(this.contents) || this.contents.length === 0) {
-        if (!Array.isArray(this.getDateList) || this.getDateList.length === 0) {
-          return null;
-        }
-        const [start, end] = [this.getDateList[0], this.getDateList.at(-1)];
-        return {
-          minMonth: dayjs(start, "YYYYMMDD").startOf("month"),
-          maxMonth: dayjs(end, "YYYYMMDD").startOf("month")
-        };
-      }
-
-      const dates = this.contents
-        .map(c => dayjs(c.date, "YYYYMMDD"))
-        .filter(date => date && typeof date.startOf === "function" && date.isValid())
-        .sort((a, b) => a.valueOf() - b.valueOf());
-
-      if (dates.length === 0) {
+      if (!this.loadedDateRange?.start || !this.loadedDateRange?.end) {
         return null;
       }
-
       return {
-        minMonth: dayjs(dates[0]).startOf("month"),
-        maxMonth: dayjs(dates[dates.length - 1]).startOf("month")
+        minMonth: dayjs(this.loadedDateRange.start, "YYYYMMDD").startOf("month"),
+        maxMonth: dayjs(this.loadedDateRange.end, "YYYYMMDD").startOf("month")
       };
     }
   },
@@ -700,6 +684,8 @@ export default {
         week.scrollIntoView();
         calendarBody.scrollTop -= this.getCalendarHeaderHeight(calendarBody);
         this.$emit("update:baseDate", today);
+        // 表示年月日を今日ボタンから変更したことを親に通知
+        this.handleDateTodayChange();
       }
     },
     // add FNSI-NO547本日に移動できない 関 end

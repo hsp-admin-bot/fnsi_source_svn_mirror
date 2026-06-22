@@ -173,10 +173,10 @@ export default {
 
       console.log("OffWaterInfoEditor.vue updateIndInfo this.startLoadingScreen();");
       this.startLoadingScreen();
-      // 1つの治療予定限定時に未編集チェックを実施
-      if (
+      // 編集箇所のみ、または1つの治療予定限定時に未編集チェックを実施
+      if (structData.editOnly || (
         this._deviceSetDialogOwner().settingData.startDateEdit &&
-        this._deviceSetDialogOwner().settingData.endDateEdit
+        this._deviceSetDialogOwner().settingData.endDateEdit)
       ) {
         if (this.checkEdit()) {
           console.log("OffWaterInfoEditor.vue updateIndInfo return; this.finishLoadingScreen();");

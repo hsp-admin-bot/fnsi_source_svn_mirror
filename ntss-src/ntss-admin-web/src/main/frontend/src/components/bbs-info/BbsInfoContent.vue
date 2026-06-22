@@ -274,8 +274,6 @@ import { messageFormat } from '@/functions/common/MessageFormat';
 import { getSortedClass, addPatNameSortToList, sortableCompare } from "@/functions/SortFunctions";
 import nameDuplicationImg from "../../assets/name_duplication.png";
 
-const uriPersonalUser = `/mstInfo/mstPersonalUser`;
-
 // 個人設定
 const uriUser = "/user/get_by_id";
 // add 入院・同姓同名配布 趙 start
@@ -441,7 +439,7 @@ export default {
         return this.searchedKeepBbsList;
       }
       // add FNSI-No.554 掲示期間を広げると、検索件数が多い場合にフリーズする 追加読み込み型にする。 陳 end
-      
+
       // 患者名ソート
       return this.getSortKind(this.setSortPat());
     },
@@ -465,6 +463,7 @@ export default {
      * @summary 全てor未読のみ
      */
     searchedResults() {
+      this.computedSearchedBbsList();
       return this.searchedBbsList;
     },
 
@@ -568,24 +567,6 @@ export default {
     const keptBbs = this.searchedKeepBbsList;
     const ketpSearchCondition = this.selectedCondition;
     this.setSearchedKeepBbsList([]);
-    this.setSelectedCondition({
-      categoryFuncList: [],
-      categoryKindList: [],
-      freeWord: "",
-      noticeStartDate: dayjs().format("YYYY-MM-DD"),
-      noticeEndDate: dayjs().format("YYYY-MM-DD"),
-      dialysisDate: null,
-      kur: null,
-      roomBedGroup: { bedGroupCd: null, bedCdList: [] },
-      // add FNSI-No.554 掲示期間を広げると、検索件数が多い場合にフリーズする 追加読み込み型にする。 陳 start
-      limitFrom: 0,
-      limitTo: PAGE_SIZE,
-      /*mod FNSI-改修内容掲示板外结 任 start*/
-      /*userId: "****"*/
-      userId: null,
-      /*mod FNSI-改修内容掲示板外结 任 end*/
-      // add FNSI-No.554 掲示期間を広げると、検索件数が多い場合にフリーズする 追加読み込み型にする。 陳 end
-    });
 
     // 掲示板詳細内容の編集有無を取得
     this.onIsNotEdited = (data) => {
@@ -609,25 +590,6 @@ export default {
     } else {
       this.setIsInitialDisp(false);
     }
-// fan add メモリにて利用者マスタ一覧取得 Start
-    let mstPersonalUser = this.getMstPersonalUser();
-    // メモリにて利用者マスタ一覧情報がない場合、APIを呼出する
-    if (!mstPersonalUser) {
-      // スタッフ選択肢
-      await ApiHelper.get(uriPersonalUser, {
-        facility_cd: this.facilityCd
-      }).then(
-        responsePersonalUser => {
-          mstPersonalUser = responsePersonalUser.data;
-        }
-      );
-    }
-    // スタッフ選択肢
-    //const mstPersonalUser = responsePersonalUser.data;
-    // fan add メモリにて利用者マスタ一覧取得 End
-    // 選択肢から自身を除外、個人設定では常に選択状態へ
-    const userName = mstPersonalUser.find(
-      (mst) => mst.userId === userId).userName;
 
     // 掲示板一覧画面同様、詳細画面でもログインユーザーと掲示板登録情報を紐づけるためstoreに格納
     this.setUserId(userId);
@@ -653,8 +615,7 @@ export default {
     // 検索条件のソート条件をdataプロパティにセット ※正しいソートマークを表示
     this.settingBbs.sort_column = this.selectedCondition.sortColumn || null;
     this.settingBbs.sort_kind = this.selectedCondition.sortKind || null;
-    
-    this.search();
+
     // this.patInfoList = responsePat.data;
     // // add 入院・同姓同名配布 趙 start
     // this.patIsSameList = responseIsSame.data;
@@ -678,7 +639,7 @@ export default {
      //add 10388 施設カレンダからスケジュール表へ遷移した際の動作が正しくない yqz start
      ...mapActions("schedule-list", {
       setDispUserTime: "setDispUserTime",
-    }), 
+    }),
     ...mapActions("bbs-info", [
       "setSelectedBbs",
       "setIsLoadingBbs",
@@ -717,9 +678,6 @@ export default {
       "getPersonalSettings",
       "updatePersonalSettings",
     ]),
-    ...mapGetters("user",{
-      getMstPersonalUser:"getMstPersonalUser"
-    }),
     popoverPreShow,
     popoverPostShow,
     popoverPosthide,
@@ -727,7 +685,7 @@ export default {
       const s = value.split("\n");
       return s;
     },
-    // add 10388 施設カレンダからスケジュール表へ遷移した際の動作が正しくない yqz end    
+    // add 10388 施設カレンダからスケジュール表へ遷移した際の動作が正しくない yqz end
     onAddNew(data) {
       if (data) {
         this.search();
@@ -927,9 +885,9 @@ export default {
         // mod 7936 掲示板に連携通知がコンバートされていない 関 start
         // this.$router.push({ name: this.selectedRouterPath });
         // add 提示板一覧から患者イベント画面への移行初期表示が補正されていない 20230703 ztc start
-        //add 10388 施設カレンダからスケジュール表へ遷移した際の動作が正しくない yqz start  
+        //add 10388 施設カレンダからスケジュール表へ遷移した際の動作が正しくない yqz start
         this.setDispUserTime(this.noticeStartDate);
-        //add 10388 施設カレンダからスケジュール表へ遷移した際の動作が正しくない yqz end        
+        //add 10388 施設カレンダからスケジュール表へ遷移した際の動作が正しくない yqz end
         this.$router.push({
           name: this.selectedRouterPath,
           params: {startDate: this.noticeStartDate, endDate: this.noticeEndDate, bbsCtlNoFr: this.bbsCtlNo}
@@ -1071,14 +1029,14 @@ export default {
       if (this.sortKind === "normal") {
         return bbsInfoList;
       }
-      
+
       // システム共通患者名ソート用(フリガナ優先文字列)を追加
       bbsInfoList.forEach(bbs => {
         if (Array.isArray(bbs.pat_info.detail)) {
           bbs.pat_info.detail = addPatNameSortToList(bbs.pat_info.detail);
         }
       });
-      
+
       const isAsc = this.sortKind === "asc";
       bbsInfoList.sort((a, b) => {
         // 患者なしは前へ
@@ -1094,7 +1052,7 @@ export default {
         if (lenA !== lenB) {
           return isAsc ? lenA - lenB : lenB - lenA;
         }
-      
+
         // 患者数が同じ場合、患者名(ソート用文字列)で比較
         return sortableCompare(patA, patB, "patNameSort", isAsc);
       });
@@ -1298,9 +1256,9 @@ export default {
      * @description 掲示板一覧並び替え結果
      */
     async sortByCol() {
-      
-      this.executeWithLoadingScreen(async () => { // 共通ローダ表示 
-      
+
+      this.executeWithLoadingScreen(async () => { // 共通ローダ表示
+
         this.selectedCondition.limitFrom = 0;
         this.selectedCondition.limitTo = PAGE_SIZE;
         if (this.isOnlyUnread) {
@@ -1318,7 +1276,7 @@ export default {
           this.selectedCondition.sortKind = null;
         }
         this.setSelectedCondition(this.selectedCondition);
-  
+
         const searchCondition = { ...this.selectedCondition };
         searchCondition.noticeStartDate = this.formattedDate(
           searchCondition.noticeStartDate

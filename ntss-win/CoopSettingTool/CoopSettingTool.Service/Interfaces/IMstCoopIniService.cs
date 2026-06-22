@@ -31,6 +31,13 @@ namespace CoopSettingTool.Service
         Task<GetMstCoopIniResponse> GetMstCoopIni(string facilityCd);
 
         /// <summary>
+        /// Gets the source MST coop ini.
+        /// </summary>
+        /// <param name="key0">The vendor key.</param>
+        /// <returns>Task&lt;GetMstCoopIniResponse&gt;.</returns>
+        Task<GetMstCoopIniResponse> GetSourceMstCoopIni(string key0);
+
+        /// <summary>
         /// Submits the MST coop ini.
         /// </summary>
         /// <param name="inputEntity">The input entity.</param>

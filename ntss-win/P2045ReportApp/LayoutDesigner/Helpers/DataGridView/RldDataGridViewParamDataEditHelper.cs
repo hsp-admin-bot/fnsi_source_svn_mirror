@@ -949,6 +949,9 @@ namespace LayoutDesigner
                         || wBindData.FilterType == RldConst.FilterType.Group.WQTESTTYPE  // 水質検査
                         // mod #12585 水質管理.水質検査のフィルタ処理仕様修正 高 end
                         // add #10370 装置帳票向けの「水質管理」データ項目を検討する 高 end
+                        // add #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 高 start
+                        || wBindData.FilterType == RldConst.FilterType.Group.GOODS  // 物品情報
+                        // add #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 高 start
                         )
                 {
                     wFuncSetCellReadOnly(DesignParamData.EnumDataIndex.ButtonEditFilterText, true);

@@ -81,7 +81,9 @@ export default {
       //背景色のカラーコード
       colorCode: "",
       // ヘッダー余白再計算の予約ID
-      leftmostHeaderMarginRafId: null
+      leftmostHeaderMarginRafId: null,
+      sessionTimeoutCheckProc: null,
+      sessionTimeoutChecking: false
 
     };
   },
@@ -477,14 +479,14 @@ export default {
         return;
       }
       this.checkSessionTimeout();
-      this.sessionTimeoutCheckProc = window.setInterval(() => {
+      this.sessionTimeoutCheckProc = this.getViewWindow().setInterval(() => {
         this.checkSessionTimeout();
       }, SESSION_TIMEOUT_CHECK_INTERVAL);
     },
 
     stopSessionTimeoutCheck() {
       if (this.sessionTimeoutCheckProc !== null) {
-        clearInterval(this.sessionTimeoutCheckProc);
+        this.getViewWindow().clearInterval(this.sessionTimeoutCheckProc);
         this.sessionTimeoutCheckProc = null;
       }
     },

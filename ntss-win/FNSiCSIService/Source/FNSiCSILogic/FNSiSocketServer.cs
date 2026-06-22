@@ -410,12 +410,6 @@ namespace FNSiCSILogicLib
 
                         this.AddLogInfo(DateTime.Now, NKKLogging.LOGGING_CLASS.INFO, "データ同期:initializeCoopファイルの取得に成功しました.");
 
-                        // FTP上の取得元ファイルを削除する
-                        if (DeleteFileFromFtp(initializeCoopPath, initializeCoopFileName) == false)
-                        {
-                            this.AddLogInfo(DateTime.Now, NKKLogging.LOGGING_CLASS.ERROR, "データ同期:initializeCoopファイルの削除に失敗しました.");
-                        }
-                        
                         xmlDoc.Load(path + LocalFolder + initializeCoopFileName);
                     }
                     else if ("headsocket".Equals(tbl["Protocol"]))
@@ -1083,34 +1077,6 @@ namespace FNSiCSILogicLib
                 ftpCLient.LocalFileName = sourceFileName;
 
                 if (ftpCLient.GetData() == false)
-                {
-                    return false;
-                }
-            }
-            catch (Exception ex)
-            {
-                this.Error = ex;
-
-                return false;
-            }
-
-            return true;
-        }
-
-        /// <summary>
-        /// FTP上の取得元ファイルを削除する
-        /// </summary>
-        /// <param name="sourceFilePath">ファイルパス</param>
-        /// <param name="sourceFileName">ファイル名</param>
-        /// <returns></returns>
-        private Boolean DeleteFileFromFtp(String sourceFilePath, String sourceFileName)
-        {
-            try
-            {
-                FNSiFtpClient ftpCLient = new FNSiFtpClient(FNSiCSISetting.FtpIPAddress, FNSiCSISetting.FtpPortNo,
-                    FNSiCSISetting.FtpUserId, FNSiCSISetting.FtpPW);
-
-                if (ftpCLient.DeleteFtpFile(sourceFilePath, sourceFileName) == false)
                 {
                     return false;
                 }

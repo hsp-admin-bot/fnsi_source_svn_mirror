@@ -78,37 +78,35 @@ export default {
     this.disableElement(this.$el);
     const ownerWindow = getScopedWindow(this.$el || null);
     this._printOwnerWindow = ownerWindow;
-    this._previousOnBeforePrint = ownerWindow?.onbeforeprint || null;
-    this._previousOnAfterPrint = ownerWindow?.onafterprint || null;
     if (!ownerWindow) {
       return;
     }
-    ownerWindow.onbeforeprint = () => {
-      this._previousOnBeforePrint?.();
+    this._handleBeforePrintModal = () => {
       //印刷不要な要素を非表示にする
       const contentContainer = this.getPrintContentContainer();
       if (contentContainer) {
         contentContainer.style.display = 'none';
       }
     };
-    ownerWindow.onafterprint = () => {
+    this._handleAfterPrintModal = () => {
       //隠し要素を放す
       const contentContainer = this.getPrintContentContainer();
       if (contentContainer) {
-        contentContainer.style.display = 'block';
+        contentContainer.style.display = '';
       }
-      this._previousOnAfterPrint?.();
     };
-    window.addEventListener("beforeprint", this._handleBeforePrintModal);
-    window.addEventListener("afterprint", this._handleAfterPrintModal);
+    ownerWindow.addEventListener("beforeprint", this._handleBeforePrintModal);
+    ownerWindow.addEventListener("afterprint", this._handleAfterPrintModal);
   },
   beforeUnmount () {
     const ownerWindow = this._printOwnerWindow || getScopedWindow(this.$el || null);
     if (ownerWindow) {
-      ownerWindow.onbeforeprint = this._previousOnBeforePrint || null;
-      ownerWindow.onafterprint = this._previousOnAfterPrint || null;
+      ownerWindow.removeEventListener("beforeprint", this._handleBeforePrintModal);
+      ownerWindow.removeEventListener("afterprint", this._handleAfterPrintModal);
     }
     this._printOwnerWindow = null;
+    this._handleBeforePrintModal = null;
+    this._handleAfterPrintModal = null;
   }
 };
 </script>

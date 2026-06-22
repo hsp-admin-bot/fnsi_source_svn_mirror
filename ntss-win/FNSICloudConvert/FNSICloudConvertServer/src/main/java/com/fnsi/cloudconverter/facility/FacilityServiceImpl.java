@@ -106,21 +106,33 @@ public class FacilityServiceImpl implements FacilityService {
 
         Map<String, PgTableConfig> configByName = configByName();
         List<PgTableConfig> targets = seqReserveTargets();
+        long totalStartedAt = System.nanoTime();
 
-        for (PgTableConfig cfg : targets) {
+        log.info("[FACILITY] テーブル件数取得開始: facilityCount={}, tables={}",
+                facilityCount(facilityCodes), targets.size());
+
+        for (int i = 0; i < targets.size(); i++) {
+            PgTableConfig cfg = targets.get(i);
+            long tableStartedAt = System.nanoTime();
+            log.info("[FACILITY] テーブル件数取得中: {}/{} db={}, table={}, idColumn={}",
+                    i + 1, targets.size(), cfg.getDb(), cfg.getName(), cfg.getIdColumn());
             try {
                 long count = countDistinctIds(cfg, configByName, facilityCodes);
                 tableCounts.put(cfg.getName(), count);
+                log.info("[FACILITY] テーブル件数取得完了: {}/{} db={}, table={}, count={}, elapsedMs={}",
+                        i + 1, targets.size(), cfg.getDb(), cfg.getName(), count, elapsedMillis(tableStartedAt));
             } catch (Exception e) {
-                log.warn("[FACILITY] テーブル件数取得失敗: table={}, error={}", cfg.getName(), e.getMessage());
+                log.warn("[FACILITY] テーブル件数取得失敗: {}/{} db={}, table={}, elapsedMs={}, error={}",
+                        i + 1, targets.size(), cfg.getDb(), cfg.getName(),
+                        elapsedMillis(tableStartedAt), e.getMessage(), e);
                 tableCounts.put(cfg.getName(), 0L);
             }
         }
 
         long totalRows = tableCounts.values().stream().mapToLong(Long::longValue).sum();
 
-        log.debug("[FACILITY] 行数集計完了: facilityCodes={}, totalRows={}, tables={}",
-                facilityCodes, totalRows, tableCounts.size());
+        log.info("[FACILITY] 行数集計完了: facilityCount={}, totalRows={}, tables={}, elapsedMs={}",
+                facilityCount(facilityCodes), totalRows, tableCounts.size(), elapsedMillis(totalStartedAt));
         return new FacilityCountResponse(facilityCodes, tableCounts, totalRows, Instant.now());
     }
 
@@ -129,13 +141,26 @@ public class FacilityServiceImpl implements FacilityService {
         Map<String, PgTableConfig> configByName = configByName();
         List<PgTableConfig> targets = seqReserveTargets();
         List<FacilitySeqReservePlanItem> tablePlans = new ArrayList<>();
+        long totalStartedAt = System.nanoTime();
 
-        for (PgTableConfig cfg : targets) {
+        log.info("[FACILITY] sequence 予約件数取得開始: facilityCount={}, tables={}",
+                facilityCount(facilityCodes), targets.size());
+
+        for (int i = 0; i < targets.size(); i++) {
+            PgTableConfig cfg = targets.get(i);
+            long tableStartedAt = System.nanoTime();
+            String seqName = effectiveSeqName(cfg);
             long reserveCount;
+            log.info("[FACILITY] sequence 予約件数取得中: {}/{} db={}, table={}, idColumn={}, seqName={}",
+                    i + 1, targets.size(), cfg.getDb(), cfg.getName(), cfg.getIdColumn(), seqName);
             try {
                 reserveCount = countDistinctIds(cfg, configByName, facilityCodes);
+                log.info("[FACILITY] sequence 予約件数取得完了: {}/{} db={}, table={}, reserveCount={}, elapsedMs={}",
+                        i + 1, targets.size(), cfg.getDb(), cfg.getName(), reserveCount, elapsedMillis(tableStartedAt));
             } catch (Exception e) {
-                log.warn("[FACILITY] sequence 予約件数取得失敗: table={}, error={}", cfg.getName(), e.getMessage());
+                log.warn("[FACILITY] sequence 予約件数取得失敗: {}/{} db={}, table={}, elapsedMs={}, error={}",
+                        i + 1, targets.size(), cfg.getDb(), cfg.getName(),
+                        elapsedMillis(tableStartedAt), e.getMessage(), e);
                 reserveCount = 0L;
             }
 
@@ -143,7 +168,7 @@ public class FacilityServiceImpl implements FacilityService {
                     cfg.getName(),
                     cfg.getDb(),
                     cfg.getIdColumn(),
-                    effectiveSeqName(cfg),
+                    seqName,
                     reserveCount
             ));
         }
@@ -152,9 +177,17 @@ public class FacilityServiceImpl implements FacilityService {
                 .mapToLong(FacilitySeqReservePlanItem::reserveCount)
                 .sum();
 
-        log.debug("[FACILITY] sequence 予約プラン作成完了: facilityCodes={}, totalReserveCount={}, tables={}",
-                facilityCodes, totalReserveCount, tablePlans.size());
+        log.info("[FACILITY] sequence 予約プラン作成完了: facilityCount={}, totalReserveCount={}, tables={}, elapsedMs={}",
+                facilityCount(facilityCodes), totalReserveCount, tablePlans.size(), elapsedMillis(totalStartedAt));
         return new FacilitySeqReservePlanResponse(facilityCodes, tablePlans, totalReserveCount, Instant.now());
+    }
+
+    private int facilityCount(List<String> facilityCodes) {
+        return facilityCodes != null ? facilityCodes.size() : 0;
+    }
+
+    private long elapsedMillis(long startedAtNanos) {
+        return (System.nanoTime() - startedAtNanos) / 1_000_000L;
     }
 
     private Map<String, PgTableConfig> configByName() {
@@ -179,6 +212,16 @@ public class FacilityServiceImpl implements FacilityService {
         targetTables.add(baseConfig.getName());
         if (baseConfig.getPkGroupTables() != null) {
             targetTables.addAll(baseConfig.getPkGroupTables());
+        }
+
+        if (targetTables.size() == 1) {
+            String sql = "SELECT COUNT(*) FROM ntss." + quoteIdentifier(baseConfig.getName());
+            String where = buildWhereClause(baseConfig.getWhereTemplate(), facilityCodes);
+            if (where != null && !where.isBlank()) {
+                sql += " WHERE " + where;
+            }
+            Long count = jdbc.queryForObject(sql, Long.class);
+            return count != null ? count : 0L;
         }
 
         List<String> selects = new ArrayList<>();

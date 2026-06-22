@@ -719,6 +719,13 @@ namespace LayoutDesigner
                 public const string LOGTARGET = "logTarget";
                 // add #11625 クラス「指示履歴」の仕様変更② 高 end
 
+                // mod #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 高 start
+                /// <summary>
+                /// フィルタ種別 - 物品情報
+                /// </summary>
+                public const string GOODS = "Goods";
+                // mod #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 高 end
+
                 // add #12006 感染症がフィルタできない 高 start
                 /// <summary>
                 /// フィルタ種別 - 感染症

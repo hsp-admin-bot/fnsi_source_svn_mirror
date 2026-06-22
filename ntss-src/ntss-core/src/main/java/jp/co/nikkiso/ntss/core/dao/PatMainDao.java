@@ -121,6 +121,15 @@ public interface PatMainDao {
   @Update(sqlFile = true)
   int updateById(long pat_id, PatMain pat);
 
+  /**
+   * データリスト＞患者情報1 患者情報更新
+   * @param pat_id
+   * @param pat
+   * @return
+   */
+  @Update(sqlFile = true)
+  int updateByIdMultiPatList(long pat_id, PatMain pat);
+  
   /*
   @Delete
   int deleteByCd(long pat_id);

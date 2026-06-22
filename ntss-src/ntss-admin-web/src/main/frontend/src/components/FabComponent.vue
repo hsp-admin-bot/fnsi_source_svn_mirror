@@ -38,7 +38,7 @@
           <img :src="publicAssetPath('img/fab/theme.png')" title="テーマ切替" class="ntss-fab-icon"/>
         </v-ons-icon>
       </v-ons-speed-dial-item>
-      <v-ons-speed-dial-item v-if="!isProvisional && !isWeightMode && !isPasswordExpired" @click='hideItemPopover(), showFacilitiesBtn($event)'>
+      <v-ons-speed-dial-item v-if="!isProvisional && !isWeightMode && !isPasswordExpired && isShowFacilitySwitch" @click='hideItemPopover(), showFacilitiesBtn($event)'>
         <v-ons-icon>
           <img :src="publicAssetPath('img/fab/switch_login.png')" title="施設切替" class="ntss-fab-icon"/>
         </v-ons-icon>
@@ -276,6 +276,7 @@ import canLoginFacilities from "@/components/canLoginFacilities/canLoginFaciliti
 import { LOCAL_STORAGE_KEY } from "@/constants/localStorageConstants";
 import PopoverMixin from "@/components/PopoverMixin";
 import { sendRequestGetMstFacilitySettingValue as getMstFacilitySettingValue } from "@/apis/facility-setting";
+import { ADVANCED_SETTINGS } from "@/constants/advancedSettings";
 import { PASSWORD_VALIDITY_PERIOD } from "@/constants/facilitySetting";
 import dayjs from "@/compat/date/dayjs";
 import { getFooterMenuHeight, getFooterMenuClientHeight, getViewportHeight, getScopedWindow, getScopedLocalStorage, getScopedUserAgent, createScopedImageElement } from "@/functions/common/LayoutMeasureHelper";
@@ -468,7 +469,12 @@ export default {
     ...mapGetters("report", ["getMstReports"]),
     ...mapGetters("send-condition/weight", ["getWeightMode"]),
     ...mapGetters("toggle-dev-tool", ["isLockDevTool", "pressedKeys"]),
-    ...mapGetters("user", ["getFacilityCd","getSystemUseSetting","isSignIn"]),
+    ...mapGetters("user", {
+      getFacilityCd: "getFacilityCd",
+      getSystemUseSetting: "getSystemUseSetting",
+      isSignIn: "isSignIn",
+      advancedSettings: "getAdvancedSettings"
+    }),
     ...mapGetters("notification", ["getIsRegisteredNotification"]),
     // add FNSI-メニューに共有ON／共有OFFを追加する。 周 start
     ...mapGetters("mst-user", ["getIsRegisteredShared"]),
@@ -713,6 +719,13 @@ export default {
         this.msg2Page
       );
     },
+    // 施設マスタ＞拡張機能 施設切替のON／OFF
+    isShowFacilitySwitch() {
+      if (!this.advancedSettings.func_advcds) return false;
+      return this.advancedSettings.func_advcds.some(
+        setting => setting.func_advcd === ADVANCED_SETTINGS.FACILITY_SWITCH
+      );
+    }
   },
   watch: {
     //add 5984 機能帳票でパラメータが正しく渡されていない 吉 start
@@ -1261,8 +1274,7 @@ export default {
     // ReMSヘルプページ(PDF)表示（別タブに表示）
     async showHelp() {
       if (this.device == "notMobile") {
-        const helpWindow = (getScopedWindow(this.$el) || window).open("about:blank");
-        helpWindow.location.href = HELP_URL;
+        this.showHelpNotMobile(HELP_URL);
       } else {
         const viewer = this.getManualViewer('rems');
         this.setViewportContent('"width=device-width, initial-scale=1.0, user-scalable=yes');
@@ -1319,8 +1331,7 @@ export default {
     // FNSiヘルプページ(PDF)表示（別タブに表示）
     async showHelpFnsi() {
       if (this.device == "notMobile") {
-        const helpWindow = (getScopedWindow(this.$el) || window).open("about:blank");
-        helpWindow.location.href = FNSI_HELP_URL;
+        this.showHelpNotMobile(FNSI_HELP_URL);
       } else {
         const viewer = this.getManualViewer('fnsi');
         this.setViewportContent('"width=device-width, initial-scale=1.0, user-scalable=yes');
@@ -1889,10 +1900,11 @@ export default {
       //システム利用設定の取得
       let systemUseSetting = this.getSystemUseSetting != null ? this.getSystemUseSetting : 0;
       //favicon.icoのURLの設定
-      localStorage.setItem("faviconURL", FAVICON_URL[systemUseSetting]);
-      let helpWindow = window.open("about:blank");
-      helpWindow.location.href = url;
-      helpWindow = null;
+      getScopedLocalStorage(this.$el).setItem("faviconURL", FAVICON_URL[systemUseSetting]);
+      const helpWindow = (getScopedWindow(this.$el) || window).open("about:blank");
+      if (helpWindow) {
+        helpWindow.location.href = url;
+      }
     }
   },
   async created() {

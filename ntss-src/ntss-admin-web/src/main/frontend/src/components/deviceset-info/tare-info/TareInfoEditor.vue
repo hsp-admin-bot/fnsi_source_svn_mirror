@@ -146,10 +146,10 @@ export default {
       //add #10266  start
       structData.update_flag = this.settingIndData.update_flag;
       //add #10266  end
-      // 1つの治療予定限定時に未編集チェックを実施
-      if (
+      // 編集箇所のみ、または1つの治療予定限定時に未編集チェックを実施
+      if (structData.editOnly || (
         this._deviceSetDialogOwner().settingData.startDateEdit &&
-        this._deviceSetDialogOwner().settingData.endDateEdit
+        this._deviceSetDialogOwner().settingData.endDateEdit)
       ) {
         if (this.checkEdit()) {
           return;

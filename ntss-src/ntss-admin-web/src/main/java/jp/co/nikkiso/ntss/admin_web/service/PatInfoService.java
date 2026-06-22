@@ -488,6 +488,12 @@ public class PatInfoService {
   @Autowired
   private PatNameIdentificationDao patNameIdentificationDao;
   //add #12462 患者共有情報- 患者カレンダー  by zrx end
+  
+  /* 呼び出し元識別 */
+  enum ScreenType {
+    MULTI_PAT_LIST,
+    PAT_INFO
+  }
 
   @Transactional(TransactionManagerName.ALL)
   public Long create(Map<String, String> payload) throws Exception {
@@ -1960,15 +1966,21 @@ public class PatInfoService {
    */
   @Transactional(TransactionManagerName.ALL)
   public void updateById(Long pat_id, Map<String, String> payload,JSONObject patGroupDiff) throws Exception {
-    updateById(pat_id, payload, patGroupDiff, null);
+    updateById(pat_id, payload, patGroupDiff, null, ScreenType.PAT_INFO);
   }
   // add 10626 データリストのCTR・DW一括登録修正 房 end
 
   @Transactional(TransactionManagerName.ALL)
-  // mod 6931 【デグレ】患者情報を編集した際ログに編集していない感染症を編集した記録が残る 周安寧　start
-  //public void updateById(Long pat_id, Map<String, String> payload) throws Exception {
-  // mod 10626 データリストのCTR・DW一括登録修正 房 start
-  public void updateById(Long pat_id, Map<String, String> payload,JSONObject patGroupDiff, List<PatInfo> patInfos) throws Exception {
+  /**
+   * 患者情報のDB更新
+   * @param pat_id
+   * @param payload
+   * @param patGroupDiff
+   * @param patInfos
+   * @param screenType データリスト／患者情報のどちらから呼ばれたかをセット
+   * @throws Exception
+   */
+  public void updateById(Long pat_id, Map<String, String> payload,JSONObject patGroupDiff, List<PatInfo> patInfos, ScreenType screenType) throws Exception {
     // mod 10626 データリストのCTR・DW一括登録修正 房 end
   // mod 6931 【デグレ】患者情報を編集した際ログに編集していない感染症を編集した記録が残る 周安寧　end
     // 各レコードのJSONを対応するクラスにマッピング
@@ -2303,11 +2315,19 @@ public class PatInfoService {
           pgCustomForPg.setPatGroupCd(pg.getPatGroupCd() != null ? pg.getPatGroupCd().toString() : "");
           patGroupCustomForPgs.add(pgCustomForPg);
         }
-        patMain.setPat_group_info(mapper.writeValueAsString(patGroupCustomForPgs));
       }
+      patMain.setPat_group_info(mapper.writeValueAsString(patGroupCustomForPgs));
     }
     // mod #11309 患者グループ編集時、特定条件で保存ボタンが活性化しない ztc 20241212 end
-    patMainDao.updateById(pat_id, patMain);
+    
+    if (screenType == ScreenType.MULTI_PAT_LIST) {
+      // データリスト用処理
+      patMainDao.updateByIdMultiPatList(pat_id, patMain);
+    } else {
+      // 患者情報用処理
+      patMainDao.updateById(pat_id, patMain);
+    }
+
     // DB更新ログ出力ロジック Entity更新 OperatorIdとclientip設定 xie start
     // #9700 イベントログに出るべきではないもの、判読不可能なログがある mod yangxuewang start
     LogEventUtils.setOperatorId(patUnique,logService);
@@ -3335,7 +3355,7 @@ public class PatInfoService {
             // 患者グループの差異を検索
             JSONObject patGroupDiff = getPatGroupDiff(Long.parseLong(patRecord.get("pat_id")), patRecord);
             // mod 10626 データリストのCTR・DW一括登録修正 房 start
-            this.updateById(Long.parseLong(patRecord.get("pat_id")), patRecord,patGroupDiff, patInfos);
+            this.updateById(Long.parseLong(patRecord.get("pat_id")), patRecord,patGroupDiff, patInfos, ScreenType.MULTI_PAT_LIST);
             // mod 10626 データリストのCTR・DW一括登録修正 房 end
           }
           catch (DomaException dbException) {

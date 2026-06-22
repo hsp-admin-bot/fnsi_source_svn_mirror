@@ -227,17 +227,17 @@ export const mstPatViewerLayout =
       "subCategoryNo": 13,
       "subCategoryItem": [{
         "itemNo": 1,
-        "itemName": "Qb・Qdプログラム"
+        "itemName": "QB・QDプログラム"
       }],
-      "subCategoryName": "Qb・Qdプログラム"
+      "subCategoryName": "QB・QDプログラム"
     }, {
       "component": "i-hdf",
       "subCategoryNo": 14,
       "subCategoryItem": [{
         "itemNo": 1,
-        "itemName": "I-HDF"
+        "itemName": "I-HDF設定"
       }],
-      "subCategoryName": "I-HDF"
+      "subCategoryName": "I-HDF設定"
     }, {
       "component": "bv-ufc",
       "subCategoryNo": 15,

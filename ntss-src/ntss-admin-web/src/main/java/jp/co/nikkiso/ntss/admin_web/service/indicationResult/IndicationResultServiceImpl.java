@@ -218,14 +218,24 @@ public class IndicationResultServiceImpl implements IndicationResultService {
    * @return チェック項目数
    */
   @Override
-  public Map<String, String> getCheckNum(List<String> examSetCd) {
-    String checkNum = null;
+  public Map<String, String> getCheckNum(String facilityCd, List<String> examSetCd) {
     Map<String, String> examSetCdMap = new HashMap<>();
+    if (examSetCd == null || examSetCd.isEmpty()) {
+      return examSetCdMap;
+    }
+    Map<String, String> checkNumByExamSetCd = new HashMap<>();
+    List<ForecastInforResult> checkNumList = indicationResultDao.selectCheckNumByExamSetCdList(facilityCd, examSetCd);
+    if (checkNumList != null) {
+      for (ForecastInforResult checkNumResult : checkNumList) {
+        if (checkNumResult != null && checkNumResult.getUniqueSerial() != null) {
+          checkNumByExamSetCd.put(String.valueOf(checkNumResult.getUniqueSerial()), checkNumResult.getJsonValue());
+        }
+      }
+    }
     for (String examSetCdValue: examSetCd) {
-      List<ForecastInforResult> forecastInforResult = indicationResultDao.selectCheckNum(examSetCdValue);
-      checkNum = null;
-      if (null != forecastInforResult) {
-        examSetCdMap.put(examSetCdValue, forecastInforResult.get(0).getJsonValue());
+      String jsonValue = checkNumByExamSetCd.get(examSetCdValue);
+      if (jsonValue != null) {
+        examSetCdMap.put(examSetCdValue, jsonValue);
       }
     }
     return examSetCdMap;

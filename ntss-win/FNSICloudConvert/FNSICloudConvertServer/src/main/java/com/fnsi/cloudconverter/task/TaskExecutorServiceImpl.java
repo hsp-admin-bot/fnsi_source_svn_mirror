@@ -51,6 +51,13 @@ public class TaskExecutorServiceImpl implements TaskExecutorService {
                 if (result.success()) {
                     // DONE にセット
                     MigrationTask done = reloadTask(task.getTaskId());
+                    if (done.getStatus() == TaskStatus.FAILED) {
+                        String interrupted = done.getLastError() != null ? done.getLastError() : "中断されました";
+                        logService.warn(task.getJobId(), task.getTaskId(),
+                                "[" + task.getTaskName() + "] 中断済みのため DONE へ更新しません: " + interrupted);
+                        return TaskResult.fail(task.getTaskId(), task.getTaskName(), interrupted);
+                    }
+
                     done.setStatus(TaskStatus.DONE);
                     done.setAffectedRows(result.affectedRows());
                     done.setFinishedAt(Instant.now());

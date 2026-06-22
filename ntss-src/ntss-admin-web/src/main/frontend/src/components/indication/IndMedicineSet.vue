@@ -62,6 +62,7 @@
           :selectedItemClass="'com-basic-sub-input'"
           :backgroundColor="'#f7f7f7'"
           :btnClass="'com-basic-sub-btn'"
+          :isSelectionRequired="true"
           :btnDisabled="!getItemAuthorized('Indication', 'default_authority')"
           @popover-return="masterUpdateInput($event);"
         />

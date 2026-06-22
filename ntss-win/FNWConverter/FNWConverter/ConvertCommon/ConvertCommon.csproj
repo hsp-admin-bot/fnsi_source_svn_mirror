@@ -113,6 +113,7 @@
     <Compile Include="Common\CommonFunc.cs" />
     <Compile Include="Common\ConvertSQL.cs" />
     <Compile Include="Common\ConvertTss.cs" />
+    <Compile Include="Common\CoopMemoUtil.cs" />
     <Compile Include="Common\ExclusiveSqlDispatcher.cs" />
     <Compile Include="Common\FileControl.cs" />
     <Compile Include="Common\FileUploadControl.cs" />

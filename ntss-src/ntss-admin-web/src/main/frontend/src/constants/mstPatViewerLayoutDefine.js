@@ -133,15 +133,15 @@ export const mstPatViewerLayoutDefine = [
       },
       {
         subCategoryNo: 13,
-        subCategoryName: "Qb・Qdプログラム",
+        subCategoryName: "QB・QDプログラム",
         component: "qbqd-program",
-        subCategoryItem: [{ itemNo: 1, itemName: "Qb・Qdプログラム", itemColor: "#000000", itemPoint: "triangle" }]
+        subCategoryItem: [{ itemNo: 1, itemName: "QB・QDプログラム", itemColor: "#000000", itemPoint: "triangle" }]
       },
       {
         subCategoryNo: 14,
-        subCategoryName: "I-HDF",
+        subCategoryName: "I-HDF設定",
         component: "i-hdf",
-        subCategoryItem: [{ itemNo: 1, itemName: "I-HDF", itemColor: "#000000", itemPoint: "triangle" }]
+        subCategoryItem: [{ itemNo: 1, itemName: "I-HDF設定", itemColor: "#000000", itemPoint: "triangle" }]
       },
       {
         subCategoryNo: 15,

@@ -187,14 +187,17 @@ public class FacilityResource {
                                             @AuthenticationPrincipal NtssUser ntssUser
                                             // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
                                             ) {
-    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
-    StaffFacilityResponse staffFacility = facilityService.getStaffFacility(userId);
-    for (StaffFacility facility : staffFacility.staffFacilities) {
-      if (facility.facilityCd != null && !facility.facilityCd.equals(ntssUser.getFacilityCd())) {
-        return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+    if(!ntssUser.isNkkAdminUser()) {
+      MstUser mstUser = mstUserService.getByUserId(userId);
+      if (mstUser != null) {
+        String facilityCd = mstUser.getFacilityCd();
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+                !facilityCd.equals(ntssUser.getFacilityCd())) {
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
       }
     }
-    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     // ログ出力
     // add FNSi5712アプリケーションログが出力しない 周 start
     String mappingUrl = Uri.FACILITIES + "/staff_facility/";

@@ -437,6 +437,10 @@ namespace LayoutDesigner
                             else if (aData.FilterType == RldConst.FilterType.Group.INFECTION)    // 感染症
                                 wFuncSetCellReadOnly(!aData.CanEditFilter);
                             // add #12006 感染症がフィルタできない 高 end
+                            // add #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 高 start
+                            else if (aData.FilterType == RldConst.FilterType.Group.GOODS)       // 物品情報
+                                wFuncSetCellReadOnly(!aData.CanEditFilter);
+                            // add #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 高 end
                             // add #10370 装置帳票向けの「水質管理」データ項目を検討する 高 start
                             // mod #12585 水質管理.水質検査のフィルタ処理仕様修正 高 start
                             else if (aData.FilterType == RldConst.FilterType.Group.WQTESTTYPE)    // 水質検査種別
@@ -481,6 +485,10 @@ namespace LayoutDesigner
                             else if (aData.FilterType == RldConst.FilterType.Group.INFECTION)    // 感染症
                                 wValueCell.Value = aData.FilterState;
                             // add #12006 感染症がフィルタできない 高 end
+                            // add #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 高 start
+                            else if (aData.FilterType == RldConst.FilterType.Group.GOODS)       // 物品情報
+                                wValueCell.Value = aData.FilterState;
+                            // add #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 高 end
                             // add #10370 装置帳票向けの「水質管理」データ項目を検討する 高 start
                             // mod #12585 水質管理.水質検査のフィルタ処理仕様修正 高 start
                             else if (aData.FilterType == RldConst.FilterType.Group.WQTESTTYPE)    // 水質検査種別
@@ -849,22 +857,29 @@ namespace LayoutDesigner
                             // add #11494 データセットにカテゴリ「レセプト」を追加 limingzhe end
                             // add #11625 クラス「指示履歴」の仕様変更② 高 start
                             case RldConst.FilterType.Group.LOGTARGET:
-                                wDlg.Path = wData.GroupName;
+                                wDlg.Path = wData.GroupPath;
                                 wDlg.FilterType = frmSelectGenericFilter.EnumFilterType.logTarget;
                                 wDlg.FilterData = wData.FilterData;
                                 break;
                             // add #11625 クラス「指示履歴」の仕様変更② 高 end
                             // add #12006 感染症がフィルタできない 高 start
                             case RldConst.FilterType.Group.INFECTION:
-                                wDlg.Path = wData.GroupName;
+                                wDlg.Path = wData.GroupPath;
                                 wDlg.FilterType = frmSelectGenericFilter.EnumFilterType.Infection;
                                 wDlg.FilterData = wData.FilterData;
                                 break;
                             // add #12006 感染症がフィルタできない 高 end
+                            // add #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 高 start
+                            case RldConst.FilterType.Group.GOODS:
+                                wDlg.Path = wData.GroupPath;
+                                wDlg.FilterType = frmSelectGenericFilter.EnumFilterType.Goods;
+                                wDlg.FilterData = wData.FilterData;
+                                break;
+                            // add #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 高 end
                             // add #10370 装置帳票向けの「水質管理」データ項目を検討する 高 start
                             // mod #12585 水質管理.水質検査のフィルタ処理仕様修正 高 start
                             case RldConst.FilterType.Group.WQTESTTYPE:
-                                wDlg.Path = wData.GroupName;
+                                wDlg.Path = wData.GroupPath;
                                 wDlg.FilterType = frmSelectGenericFilter.EnumFilterType.WQTestType;
                                 wDlg.FilterData = wData.FilterData;
                                 break;
@@ -1060,6 +1075,21 @@ namespace LayoutDesigner
                     }
                 }
                 // add #12006 感染症がフィルタできない 高 end
+                // add #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 高 start
+                else if (wBindData.FilterType == RldConst.FilterType.Group.GOODS)    // 物品情報
+                {
+                    // フィルタボタン
+                    wFuncSetCellReadOnly(DesignGroupData.EnumDataIndex.ButtonEditFilterText, !wBindData.CanEditFilter);
+                    if (string.Equals(wBindData.FilterData, "<SelectSetting><Item tag=\"Goods\" checkState=\"Checked\" /></SelectSetting>"))
+                    {
+                        wBindData.FilterState = RldConst.GroupData.VAL_FILTER_STATE_ALL;
+                    }
+                    else
+                    {
+                        wBindData.FilterState = RldConst.GroupData.VAL_FILTER_STATE_PART;
+                    }
+                }
+                // add #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 高 end
                 // add #10370 装置帳票向けの「水質管理」データ項目を検討する 高 start
                 // mod #12585 水質管理.水質検査のフィルタ処理仕様修正 高 start
                 else if (wBindData.FilterType == RldConst.FilterType.Group.WQTESTTYPE)    // 水質検査種別

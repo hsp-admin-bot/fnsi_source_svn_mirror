@@ -260,6 +260,81 @@ namespace ConvertCommon.Common
 
             return condDto;
         }
+
+        //add #11902 セコム連携 COP_COOP_SEND_HST.MEMOのコンバート start
+        public static string BuildSecomSql() {
+
+            return @"WITH PAT_BASIC_INFO_NORMAL AS ( SELECT w1.PATID
+                                    FROM PAT_BASIC_INFO w1 INNER JOIN PAT_INDEX_INFO w2 ON(w1.PATID= w2.PATID AND w1.REG_DATE= w2.PAT_REG_DATE)
+                                    INNER JOIN(SELECT DISTINCT PATID, SERIES_CD
+                                    FROM (
+                                    SELECT PATID, FROM_SERIES_CD AS SERIES_CD
+                                    FROM SYS_PAT_MOVE_PLAN
+                                    UNION ALL
+                                    SELECT PATID, TO_SERIES_CD
+                                    FROM SYS_PAT_MOVE_PLAN {STATUS}
+                                    UNION ALL
+                                    SELECT PATID, SERIES_CD
+                                    FROM SYS_PAT_SERIES_FACILITY where MAIN_FLG= '1' AND  S.SERIES_CD='{SERIES_CD}'
+                                    )) s on s.PATID=w1.PATID )
+                        ,
+                        COOP_DATA AS(
+                            SELECT
+                                p.PATID,
+                                c.COOP_ID,
+                                c.MEMO,
+                                c.UP_DATE,c.SPECIFIC_KEY
+                            FROM COP_COOP_SEND_HST c
+                            INNER JOIN PAT_BASIC_INFO_NORMAL p
+                                ON p.PATID = SUBSTR(c.SPECIFIC_KEY, 16, 12)
+                            WHERE c.COOP_ID = 'SCM02' and  c.SEND_CLASS!=2 and  MEMO is not null
+                            UNION ALL
+                            SELECT
+                                p.PATID,
+                                c.COOP_ID,
+                                c.MEMO,
+                                c.UP_DATE,c.SPECIFIC_KEY
+                            FROM COP_COOP_SEND_HST c
+                            INNER JOIN RST_DIALYSIS d
+                                ON TO_CHAR(d.DIALYSIS_NO) = c.SPECIFIC_KEY
+                            INNER JOIN PAT_BASIC_INFO_NORMAL p
+                                ON p.PATID = d.PATID
+                            WHERE c.COOP_ID in ('SCM03','SCM04','SCM09')  and  c.SEND_CLASS!=2 and  MEMO is not null
+                            UNION ALL
+                            SELECT
+                                p.PATID,
+                                c.COOP_ID,
+                                c.MEMO,
+                                c.UP_DATE,c.SPECIFIC_KEY
+                            FROM COP_COOP_SEND_HST c
+                            INNER JOIN PAT_BASIC_INFO_NORMAL p
+                                ON p.PATID = SUBSTR(c.SPECIFIC_KEY, 1, 12)
+                            WHERE c.COOP_ID in ('SCM05','SCM06') and  c.SEND_CLASS!=2 and  MEMO is not null
+                        )
+                        SELECT
+                            SPECIFIC_KEY as PKEY,
+                            PATID,
+                            COOP_ID,
+                            MEMO,
+                            UP_DATE,
+                            'Secom' as COOPVERSION,
+                           '{""pkg"": ""Secom""}' as SAVE_1
+                        FROM(
+                            SELECT
+                                PATID,
+                                COOP_ID,
+                                MEMO,
+                                UP_DATE,SPECIFIC_KEY,
+                                ROW_NUMBER() OVER (
+                                    PARTITION BY PATID
+                                    ORDER BY UP_DATE DESC
+                                ) RN
+                            FROM COOP_DATA
+                        ) a
+                        WHERE RN = 1 {2}";
+
+        }
+        //add #11902 セコム連携 COP_COOP_SEND_HST.MEMOのコンバート end
     }
 
 }

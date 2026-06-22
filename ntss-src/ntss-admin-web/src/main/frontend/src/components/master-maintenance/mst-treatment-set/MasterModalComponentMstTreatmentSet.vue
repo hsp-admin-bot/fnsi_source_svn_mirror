@@ -1080,183 +1080,6 @@ export default {
         this.oldIndTreatCondIvMode = "offLine";
       }
     // mod #10150 piao end
-      // add #7236/#7762 【デグレ】治療方法セットマスタのプログラムの動作不正 付 start
-      // del #9340_#10246 ちょうせつ治療方法セットマスタ_装置設定 20240611 ztc start
-      // if (this.isEdit) {
-      //   ApiHelper.get(`/deviceSetInfo/getDeviceSetInfoMst/${this.facilityCd}`).then((res) => {
-      //     this.deviceArr = []
-      //     let ufrInfo = ""
-      //     if (this.treatMethodDeviceMode === CODES.DEVICE_MODE.HD.cd ||
-      //     this.treatMethodDeviceMode === CODES.DEVICE_MODE.ECUM.cd ||
-      //     this.treatMethodDeviceMode === CODES.DEVICE_MODE.HDF.cd ||
-      //     this.treatMethodDeviceMode === CODES.DEVICE_MODE.HF.cd ||
-      //     this.treatMethodDeviceMode === CODES.DEVICE_MODE.OHDF.cd ||
-      //     this.treatMethodDeviceMode === CODES.DEVICE_MODE.OHF.cd
-      //     ) {
-      //       res.data.ord.ihdf.dev.A[432] = '0'
-      //       //#9340  治療方法セットマスタの新規登録時の装置プログラムのデフォルトが不正。保存前後の内容が異なる。2023-09-05 卓 start
-      //       this.setDeviceInfo(this.DEVICE_TYPE_IHDF, 432, "0")
-      //       //#9340  治療方法セットマスタの新規登録時の装置プログラムのデフォルトが不正。保存前後の内容が異なる。2023-09-05 卓 end
-      //     } else if (this.treatMethodDeviceMode === CODES.DEVICE_MODE.AFBF.cd) {
-      //       res.data.ord.ihdf.dev.A[432] = '0'
-      //       res.data.ord.dc.dev.A[340] = '0'
-      //       res.data.ord.qbqd.dev.A[430] = '0'
-      //       res.data.ord.qbqd.dev.A[431] = '0'
-      //       res.data.ord.dia.dev.A[282] = '0'
-      //       //#9340  治療方法セットマスタの新規登録時の装置プログラムのデフォルトが不正。保存前後の内容が異なる。2023-09-05 卓 start
-      //       this.setDeviceInfo(this.DEVICE_TYPE_IHDF, 432, "0")
-      //       this.setDeviceInfo(this.DEVICE_TYPE_DC, 340, "0")
-      //       this.setDeviceInfo(this.DEVICE_TYPE_QBQD, 430, "0")
-      //       this.setDeviceInfo(this.DEVICE_TYPE_QBQD, 431, "0")
-      //       this.setDeviceInfo(this.DEVICE_TYPE_DIA, 282, "0")
-      //       //#9340  治療方法セットマスタの新規登録時の装置プログラムのデフォルトが不正。保存前後の内容が異なる。2023-09-05 卓 end
-      //     } else if (this.treatMethodDeviceMode === CODES.DEVICE_MODE.PURIFICATION.cd) {
-      //       res.data.ord.ihdf.dev.A[432] = '0'
-      //       res.data.ord.ufr.dev.A[290] = '0'
-      //       res.data.ord.dc.dev.A[340] = '0'
-      //       res.data.ord.na.dev.A[315] = "0"
-      //       res.data.ord.qbqd.dev.A[430] = '0'
-      //       res.data.ord.qbqd.dev.A[431] = '0'
-      //       res.data.ord.bvufc.dev.A[196] = '0'
-      //
-      //       //#9340  治療方法セットマスタの新規登録時の装置プログラムのデフォルトが不正。保存前後の内容が異なる。2023-09-05 卓 start
-      //       this.setDeviceInfo(this.DEVICE_TYPE_IHDF, 432, "0")
-      //       this.setDeviceInfo(this.DEVICE_TYPE_UFR, 290, "0")
-      //       this.setDeviceInfo(this.DEVICE_TYPE_DC, 340, "0")
-      //       this.setDeviceInfo(this.DEVICE_TYPE_NA, 315, "0")
-      //       this.setDeviceInfo(this.DEVICE_TYPE_QBQD, 430, "0")
-      //       this.setDeviceInfo(this.DEVICE_TYPE_QBQD, 431, "0")
-      //       this.setDeviceInfo(this.DEVICE_TYPE_BVUFC, 196, "0")
-      //       //#9340  治療方法セットマスタの新規登録時の装置プログラムのデフォルトが不正。保存前後の内容が異なる。2023-09-05 卓 end
-      //     }
-      //     // add #7236/#7762 【デグレ】治療方法セットマスタのプログラムの動作不正 付 start
-      //     // add #7762 【デグレ】治療方法セットマスタで設定した内容とは異なる内容で予定が作成される 王永吉 start
-      //     else if (this.treatMethodDeviceMode === CODES.DEVICE_MODE.IHDF.cd) {
-      //       //res.data.ord.ihdf.dev.A[432] = '1'
-      //       res.data.ord.bvufc.dev.A[196] = '0' // BV-UFC
-      //       res.data.ord.dia.dev.A[290] = '0' // 除水
-      //       res.data.ord.qbqd.dev.A[430] = '0' // QD
-      //       res.data.ord.qbqd.dev.A[431] = '0' // QD
-      //       //#9340 add 治療方法セットマスタの新規登録時の装置プログラムのデフォルトが不正。保存前後の内容が異なる。2023-09-13 卓 start
-      //       // 除水プログラムを強制的にOFFにして変更不可にする。スイッチ部分以外は変更可能とする。
-      //       this.setDeviceInfo(this.DEVICE_TYPE_UFR, 290, "0") //除水プログラム電源ＳＷ
-      //       // BV-UFCを強制的にOFFにして変更不可にする。スイッチ部分以外は変更可能とする。
-      //       this.setDeviceInfo(this.DEVICE_TYPE_BVUFC, 196, "0") //透析量プログラム使用選択
-      //       // 血流量、透析液流量プログラムを強制的にOFFにして変更不可にする。スイッチ部分以外は変更可能とする。
-      //       this.setDeviceInfo(this.DEVICE_TYPE_QBQD, 430, "0") //QBプログラム電源
-      //       this.setDeviceInfo(this.DEVICE_TYPE_QBQD, 431, "0") //QDプログラム電源
-      //       //#9340 add 治療方法セットマスタの新規登録時の装置プログラムのデフォルトが不正。保存前後の内容が異なる。2023-09-13 卓 end
-      //     }
-      //     // add #7762 【デグレ】治療方法セットマスタで設定した内容とは異なる内容で予定が作成される 王永吉 end
-      //     // this.getEditRecord.indDeviceSetInfo = JSON.stringify(res.data.ord)
-      //     // res.data.ord.ufr.dev.A[290] = '0'
-      //     // add #7236/#7762 【デグレ】治療方法セットマスタのプログラムの動作不正 付 end
-      //     if (res.data.ord.ufr.dev.A[290] === "0" || res.data.ord.ufr.dev.A[290] == null) {
-      //       ufrInfo = "（切り）"
-      //     } else if (res.data.ord.ufr.dev.A[290] === "1") {
-      //       ufrInfo = "（入り[ステップ]）"
-      //     } else if (res.data.ord.ufr.dev.A[290] === "2") {
-      //       ufrInfo = "（入り[コース]）"
-      //     }
-      //     let naInfo = ""
-      //     if (res.data.ord.na.dev.A[315] === "0" || res.data.ord.na.dev.A[315] == null) {
-      //       naInfo = "（切り）"
-      //     } else if (res.data.ord.na.dev.A[315] === "1") {
-      //       naInfo = "（入り[ステップ]）"
-      //     } else if (res.data.ord.na.dev.A[315] === "2") {
-      //       naInfo = "（入り[コース]）"
-      //     }
-      //     let dcInfo = ""
-      //     if (res.data.ord.dc.dev.A[340] === "0" || res.data.ord.dc.dev.A[340] == null) {
-      //       dcInfo = "（切り）"
-      //     } else if (res.data.ord.dc.dev.A[340] === "2") {
-      //       dcInfo = "（入り[ステップ]）"
-      //     } else if (res.data.ord.dc.dev.A[340] === "3") {
-      //       dcInfo = "（入り[コース]）"
-      //     }
-      //     let qbqdInfo = "（「Qdプログラム："
-      //     if (res.data.ord.qbqd.dev.A[430] === "0" || res.data.ord.qbqd.dev.A[430] == null) {
-      //       qbqdInfo += "切」「Qbプログラム："
-      //     } else if (res.data.ord.qbqd.dev.A[430] === "1") {
-      //       qbqdInfo += "入」「Qbプログラム："
-      //     }
-      //     if (res.data.ord.qbqd.dev.A[431] === "0" || res.data.ord.qbqd.dev.A[431] == null) {
-      //       qbqdInfo += "切」）"
-      //     } else if (res.data.ord.qbqd.dev.A[431] === "1") {
-      //       qbqdInfo += "入」）"
-      //     }
-      //     this.deviceArr.push(
-      //       {
-      //         name: "I-HDF",
-      //         type: this.DEVICE_TYPE_IHDF,
-      //         info: (res.data.ord.ihdf.dev.A[432] === "1") ? "（使用する）" : "（使用しない）"
-      //       }
-      //     )
-      //     // mod #7762 【デグレ】治療方法セットマスタで設定した内容とは異なる内容で予定が作成される 王永吉 start
-      //     // this.deviceArr.push(
-      //     //   {
-      //     //     name: "除水プログラム",
-      //     //     type: this.DEVICE_TYPE_UFR,
-      //     //     info: ufrInfo
-      //     //   }
-      //     // )
-      //     if (this.treatMethodDeviceMode === 10) {
-      //       this.deviceArr.push(
-      //         {
-      //           name: "除水プログラム",
-      //           type: this.DEVICE_TYPE_UFR,
-      //           info: "（切り）"
-      //         }
-      //       )
-      //     } else {
-      //       this.deviceArr.push(
-      //         {
-      //           name: "除水プログラム",
-      //           type: this.DEVICE_TYPE_UFR,
-      //           info: ufrInfo
-      //         }
-      //       )
-      //     }
-      //     // mod #7762 【デグレ】治療方法セットマスタで設定した内容とは異なる内容で予定が作成される 王永吉 end
-      //     this.deviceArr.push(
-      //       {
-      //         name: "Na注入プログラム",
-      //         type: this.DEVICE_TYPE_NA,
-      //         info: naInfo
-      //       }
-      //     )
-      //     this.deviceArr.push(
-      //       {
-      //         name: "透析液濃度プログラム",
-      //         type: this.DEVICE_TYPE_DC,
-      //         info: dcInfo
-      //       }
-      //     )
-      //     this.deviceArr.push(
-      //       {
-      //         name: "血流量・透析液流量プログラム",
-      //         type: this.DEVICE_TYPE_QBQD,
-      //         info: qbqdInfo
-      //       }
-      //     )
-      //     this.deviceArr.push(
-      //       {
-      //         name: "BV-UFC",
-      //         type: this.DEVICE_TYPE_BVUFC,
-      //         info: (res.data.ord.bvufc.dev.A[196] === "1") ? "（使用する）" : "（使用しない）"
-      //       }
-      //     )
-      //     this.deviceArr.push(
-      //       {
-      //         name: "透析量プログラム",
-      //         type: this.DEVICE_TYPE_DIA,
-      //         info: (res.data.ord.dia.dev.A[282] === "1") ? "（使用する）" : "（使用しない）"
-      //       }
-      //     )
-      //   })
-      // }
-      // del #9340_#10246 ちょうせつ治療方法セットマスタ_装置設定 20240611 ztc end
-      // add #7236/#7762 【デグレ】治療方法セットマスタのプログラムの動作不正 付 end
       const befData = this.getEditRecord.treatmentCd;
       this.setTreatmentCd(data);
       this.setDeviceMode(this.treatMethodDeviceMode);
@@ -1358,90 +1181,6 @@ export default {
         }
       });
       //add #10150 piao end
-
-      // add 治療方法セットマスタ 指示_条件送信_治療方法セットマスタ 孔 start
-      // 除水プログラムのHD/ECUMの切替をHDに強制変更して非活性。
-      // del #9340_#10246 ちょうせつ治療方法セットマスタ_装置設定 20240611 ztc start
-      // if (
-      //   this.treatMethodDeviceMode &&
-      //   (
-      //     this.treatMethodDeviceMode === CODES.DEVICE_MODE.HDF.cd || this.treatMethodDeviceMode === CODES.DEVICE_MODE.HF.cd || //HDF・HF
-      //     this.treatMethodDeviceMode === CODES.DEVICE_MODE.OHDF.cd || this.treatMethodDeviceMode === CODES.DEVICE_MODE.OHF.cd || //OHDF・OHF
-      //     this.treatMethodDeviceMode === CODES.DEVICE_MODE.AFBF.cd || //AFBF
-      //     this.treatMethodDeviceMode === CODES.DEVICE_MODE.IHDF.cd //I-HDF
-      //   )
-      // ) {
-      //   this.setDeviceInfo(this.DEVICE_TYPE_UFR, 291, "0") //治療モード1
-      //   this.setDeviceInfo(this.DEVICE_TYPE_UFR, 292, "0") //治療モード2
-      //   this.setDeviceInfo(this.DEVICE_TYPE_UFR, 293, "0") //治療モード3
-      //   this.setDeviceInfo(this.DEVICE_TYPE_UFR, 294, "0") //治療モード4
-      //   this.setDeviceInfo(this.DEVICE_TYPE_UFR, 295, "0") //治療モード5
-      //   this.setDeviceInfo(this.DEVICE_TYPE_UFR, 296, "0") //治療モード6
-      //   this.setDeviceInfo(this.DEVICE_TYPE_UFR, 297, "0") //治療モード7
-      //   this.setDeviceInfo(this.DEVICE_TYPE_UFR, 298, "0") //治療モード8
-      //   this.setDeviceInfo(this.DEVICE_TYPE_UFR, 299, "0") //治療モード9
-      //   this.setDeviceInfo(this.DEVICE_TYPE_UFR, 300, "0") //治療モード10
-      // }
-      // del #9340_#10246 ちょうせつ治療方法セットマスタ_装置設定 20240611 ztc end
-
-      //#9340 rm 治療方法セットマスタの新規登録時の装置プログラムのデフォルトが不正。保存前後の内容が異なる。2023-09-13 卓 start
-      // // 除水プログラムを強制的にOFFにして変更不可にする。スイッチ部分以外は変更可能とする。
-      // if ( this.treatMethodDeviceMode && this.treatMethodDeviceMode === CODES.DEVICE_MODE.IHDF.cd ) { //I-HDF
-      //   this.setDeviceInfo(this.DEVICE_TYPE_UFR, 290, "0") //除水プログラム電源ＳＷ
-      // }
-
-      // BV-UFCを強制的にOFFにして変更不可にする。スイッチ部分以外は変更可能とする。
-      // if ( this.treatMethodDeviceMode && this.treatMethodDeviceMode === CODES.DEVICE_MODE.IHDF.cd ) { //I-HDF
-      //   this.setDeviceInfo(this.DEVICE_TYPE_BVUFC, 196, "0") //透析量プログラム使用選択
-      // }
-      //#9340  rm 治療方法セットマスタの新規登録時の装置プログラムのデフォルトが不正。保存前後の内容が異なる。2023-09-13 卓 end
-
-      // 透析量プログラムを強制的にOFFにして変更不可にする。スイッチ部分以外は変更可能とする。
-      // del #9340_#10246 ちょうせつ治療方法セットマスタ_装置設定 20240611 ztc start
-      // if (
-      //   this.treatMethodDeviceMode &&
-      //   (
-      //     this.treatMethodDeviceMode === CODES.DEVICE_MODE.HDF.cd || this.treatMethodDeviceMode === CODES.DEVICE_MODE.HF.cd || //HDF・HF
-      //     this.treatMethodDeviceMode === CODES.DEVICE_MODE.OHDF.cd || this.treatMethodDeviceMode === CODES.DEVICE_MODE.OHF.cd || //OHDF・OHF
-      //     this.treatMethodDeviceMode === CODES.DEVICE_MODE.AFBF.cd || //AFBF
-      //     this.treatMethodDeviceMode === CODES.DEVICE_MODE.IHDF.cd || //I-HDF
-      //     this.treatMethodDeviceMode === CODES.DEVICE_MODE.PURIFICATION.cd //特殊浄化
-      //   )
-      // ) {
-      //   this.setDeviceInfo(this.DEVICE_TYPE_DIA, 282, "0") //透析量プログラム使用選択
-      // }
-      // del #9340_#10246 ちょうせつ治療方法セットマスタ_装置設定 20240611 ztc end
-
-      //#9340 rm 治療方法セットマスタの新規登録時の装置プログラムのデフォルトが不正。保存前後の内容が異なる。2023-09-13 卓 start
-      // // 透析液濃度プログラムを強制的にOFFにして変更不可にする。スイッチ部分以外は変更可能とする。
-      // if (this.treatMethodDeviceMode && this.treatMethodDeviceMode === CODES.DEVICE_MODE.AFBF.cd) { //AFBF
-      //   this.setDeviceInfo(this.DEVICE_TYPE_DC, 340, "0") //濃度プログラム電源ＳＷ
-      // }
-      //
-      // // 血流量、透析液流量プログラムを強制的にOFFにして変更不可にする。スイッチ部分以外は変更可能とする。
-      // if (this.treatMethodDeviceMode && this.treatMethodDeviceMode === CODES.DEVICE_MODE.IHDF.cd) { //I-HDF
-      //   this.setDeviceInfo(this.DEVICE_TYPE_QBQD, 430, "0") //QBプログラム電源
-      //   this.setDeviceInfo(this.DEVICE_TYPE_QBQD, 431, "0") //QDプログラム電源
-      // }
-      //#9340 rm 治療方法セットマスタの新規登録時の装置プログラムのデフォルトが不正。保存前後の内容が異なる。2023-09-13 卓 end
-      // add 治療方法セットマスタ 指示_条件送信_治療方法セットマスタ 孔 end
-      // add #7236/#7762 【デグレ】治療方法セットマスタのプログラムの動作不正 付 start
-      // del 9306 ljx start
-      // if (this.treatMethodDeviceMode && (this.treatMethodDeviceMode === CODES.DEVICE_MODE.OHDF.cd || this.treatMethodDeviceMode === CODES.DEVICE_MODE.OHF.cd)) {
-      //   const IndTreatCondDialysate = this.treatCond.find(item => item.treatCondNo === '15')
-      //   if (IndTreatCondDialysate !== undefined || IndTreatCondDialysate !== null) {
-      //     if (IndTreatCondDialysate.value === null || IndTreatCondDialysate.value === '') {
-      //       this.$set(this.treatCond[18], 'value', 0)
-      //     }
-      //   }
-      // }
-      // del 9306 ljx end
-      // add #7236/#7762 【デグレ】治療方法セットマスタのプログラムの動作不正 付 end
-      // add #7236/#7762 【デグレ】治療方法セットマスタのプログラムの動作不正 付 start
-      // del #9340_#10246 ちょうせつ治療方法セットマスタ_装置設定 20240611 ztc start
-      // this.isEdit = true
-      // del #9340_#10246 ちょうせつ治療方法セットマスタ_装置設定 20240611 ztc end
-      // add #7236/#7762 【デグレ】治療方法セットマスタのプログラムの動作不正 付 end
     },
     // #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療方法セットマスタ 20240108 linjunfeng start
     getEditRecord :{
@@ -1521,11 +1260,11 @@ export default {
             setReactive(this.deviceArr, 2, { name: '透析液濃度プログラム', type: this.DEVICE_TYPE_DC, info: '（入り[コース]）' })
           }
         } else if (this.getSelectedDeviceSetType === 'qbqd') {
-          let qbqdInfo = "（「Qdプログラム："
+          let qbqdInfo = "（「QDプログラム："
           if (data[431] === '0' || data[431] === null) {
-            qbqdInfo += "切」「Qbプログラム："
+            qbqdInfo += "切」「QBプログラム："
           } else if (data[431] === '1') {
-            qbqdInfo += "入」「Qbプログラム："
+            qbqdInfo += "入」「QBプログラム："
           }
           if (data[430] === '0' || data[430] === null) {
             qbqdInfo += "切」）"
@@ -1612,11 +1351,11 @@ export default {
         } else if (res.data.ord.dc.dev.A[340] === "3") {
           dcInfo = "（入り[コース]）"
         }
-        let qbqdInfo = "（「Qdプログラム："
+        let qbqdInfo = "（「QDプログラム："
         if (res.data.ord.qbqd.dev.A[430] === "0" || res.data.ord.qbqd.dev.A[430] == null) {
-          qbqdInfo += "切」「Qbプログラム："
+          qbqdInfo += "切」「QBプログラム："
         } else if (res.data.ord.qbqd.dev.A[430] === "1") {
-          qbqdInfo += "入」「Qbプログラム："
+          qbqdInfo += "入」「QBプログラム："
         }
         if (res.data.ord.qbqd.dev.A[431] === "0" || res.data.ord.qbqd.dev.A[431] == null) {
           qbqdInfo += "切」）"
@@ -1716,11 +1455,11 @@ export default {
       } else if (Arr.dc.dev.A[340] === "3") {
         dcInfo = "（入り[コース]）"
       }
-      let qbqdInfo = "（「Qdプログラム："
+      let qbqdInfo = "（「QDプログラム："
       if (Arr.qbqd.dev.A[431] === "0" || Arr.qbqd.dev.A[431] == null) {
-        qbqdInfo += "切」「Qbプログラム："
+        qbqdInfo += "切」「QBプログラム："
       } else if (Arr.qbqd.dev.A[431] === "1") {
-        qbqdInfo += "入」「Qbプログラム："
+        qbqdInfo += "入」「QBプログラム："
       }
       if (Arr.qbqd.dev.A[430] === "0" || Arr.qbqd.dev.A[430] == null) {
         qbqdInfo += "切」）"
@@ -1957,39 +1696,6 @@ export default {
         // そのため、この一覧では非活性を示す背景色を付けない。
         return {};
       }
-      // del #9340_#10246 ちょうせつ治療方法セットマスタ_装置設定 20240611 ztc start
-      // if (this.treatMethodDeviceMode && this.treatMethodDeviceMode === CODES.DEVICE_MODE.PURIFICATION.cd) { //特殊浄化
-      //   if (
-      //     device &&
-      //     (
-      //       device.type === this.DEVICE_TYPE_UFR || //除水プログラム
-      //       device.type === this.DEVICE_TYPE_NA || //Na注入プログラム
-      //       device.type === this.DEVICE_TYPE_DC || //透析液濃度プログラム
-      //       device.type === this.DEVICE_TYPE_IHDF || //I-HDF
-      //       device.type === this.DEVICE_TYPE_QBQD || //血流量・透析液流量プログラム
-      //       device.type === this.DEVICE_TYPE_BVUFC //BV-UFC
-      //     )
-      //   ) {
-      //     return "background-color: #696969;"
-      //   }
-      // }
-      // add redmine 6038 治療モードAFBFの時にQdQbプログラムが入りにできてしまう。宋qy start
-      // if (this.treatMethodDeviceMode === CODES.DEVICE_MODE.AFBF.cd) { //AFBF
-      //   // mod #7762【デグレ】治療方法セットマスタで設定した内容とは異なる内容で予定が作成される 付 start
-      //   if (device.type === this.DEVICE_TYPE_QBQD || device.type === this.DEVICE_TYPE_DC || device.type === this.DEVICE_TYPE_DIA) { // 血流量・透析液流量プログラムQdQb
-      //   // mod #7762【デグレ】治療方法セットマスタで設定した内容とは異なる内容で予定が作成される 付 end
-      //     return "background-color: #696969;"
-      //   }
-      // }
-      // add redmine 6038 治療モードAFBFの時にQdQbプログラムが入りにできてしまう。宋qy end
-      // add #7762 【デグレ】治療方法セットマスタで設定した内容とは異なる内容で予定が作成される 王永吉 start
-      // if (this.treatMethodDeviceMode === CODES.DEVICE_MODE.IHDF.cd) { //I-HDF
-      //   if (device.type === this.DEVICE_TYPE_QBQD || device.type === this.DEVICE_TYPE_UFR || device.type === this.DEVICE_TYPE_BVUFC) {
-      //     return "background-color: #696969;"
-      //   }
-      // }
-      // del #9340_#10246 ちょうせつ治療方法セットマスタ_装置設定 20240611 ztc end
-      // add #7762 【デグレ】治療方法セットマスタで設定した内容とは異なる内容で予定が作成される 王永吉 end
       return {}
     },
 
@@ -2053,243 +1759,10 @@ export default {
     //  }
     // del #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療方法セットマスタ 20240108 linjunfeng end
     },
-    // del #7236-治療方法セットマスタのプログラムの動作不正 徐博 start
-    // previewText(type) {
-    //   let deviceSetInfoRaw;
-    //   if (this.getEditRecord.indDeviceSetInfo) {
-    //     deviceSetInfoRaw = JSON.parse(
-    //       this.getEditRecord.indDeviceSetInfo
-    //     )
-    //       ? JSON.parse(this.getEditRecord.indDeviceSetInfo)
-    //       : this.getEditRecord.indDeviceSetInfo;
-    //   }
-    //   if (!deviceSetInfoRaw) {
-    //     // 装置設定値がnullの場合は定義された初期値を設定
-    //     deviceSetInfoRaw = defaultMstDeviceInfo.ord;
-    //   }
-    //
-    //   const deviceSetInfo = mapDeviceSetInfoEditable(deviceSetInfoRaw, type)
-    //
-    //   let text = ""
-    //   let item
-    //   let valueName = "value"
-    //   let displayTextName = "displayValue"
-    //   switch (type) {
-    //     case this.DEVICE_TYPE_IHDF:
-    //       item = deviceSetInfo.dev.A[432];
-    //       valueName = "radioValue"
-    //       displayTextName = "displayString"
-    //       item.options[0].displayString = "I-HDFプログラム使用しない";
-    //       item.options[1].displayString = "I-HDFプログラム使用する";
-    //       break;
-    //     case this.DEVICE_TYPE_UFR:
-    //       item = deviceSetInfo.dev.A[290];
-    //       break;
-    //     case this.DEVICE_TYPE_NA:
-    //       item = deviceSetInfo.dev.A[315];
-    //       break;
-    //     case this.DEVICE_TYPE_DC:
-    //       item = deviceSetInfo.dev.A[340];
-    //       break;
-    //     case this.DEVICE_TYPE_BVUFC:
-    //       item = deviceSetInfo.dev.A[196];
-    //       valueName = "radioValue"
-    //       displayTextName = "displayString"
-    //       break;
-    //     case this.DEVICE_TYPE_DIA:
-    //       item = deviceSetInfo.dev.A[282];
-    //       valueName = "radioValue"
-    //       displayTextName = "displayString"
-    //       break;
-    //     default:
-    //       break;
-    //   }
-    //
-    //   if (type !== this.DEVICE_TYPE_QBQD) {
-    //     if (item) {
-    //       const itemValue = item.value.initValue
-    //       const itemOptions = item.options
-    //       const displayValue = itemOptions.find(i => i[valueName] === itemValue)
-    //       text = displayValue ? displayValue[displayTextName] : ""
-    //     }
-    //   } else {
-    //     //QB
-    //     const QbItem = deviceSetInfo.dev.A[430]
-    //     let QbDisplayValue = QbItem.options.find(i => i.radioValue === QbItem.value.initValue)
-    //     if (!QbDisplayValue) {
-    //       QbDisplayValue = QbItem.options[0]
-    //     }
-    //     const QbText = QbDisplayValue ? "「" + QbItem.formLabel + " : " + QbDisplayValue.displayString + "」" : ""
-    //     //QD
-    //     const QdItem = deviceSetInfo.dev.A[431]
-    //     let QdDisplayValue = QdItem.options.find(i => i.radioValue === QdItem.value.initValue)
-    //     if (!QdDisplayValue) {
-    //       QdDisplayValue = QdItem.options[0]
-    //     }
-    //     const QdText = QdDisplayValue ? "「" + QdItem.formLabel + " : " + QdDisplayValue.displayString + "」" : ""
-    //
-    //     text = QdText + QbText
-    //   }
-    //
-    //   if (text.length > 0) {
-    //     text = "（" + text + "）"
-    //   }
-    //   return text
-    // },
-    // add 治療方法セットマスタ 指示_条件送信_治療方法セットマスタ end
-    // del #7236-治療方法セットマスタのプログラムの動作不正 徐博 end
 
     // add 治療方法セットマスタ 装置モードがI-HFDの場合、urfおよび血流量制御 start
     async showSubModalSpcl(device, dataSourceType){
-      // I-HDF
-      // del #9340_#10246 ちょうせつ治療方法セットマスタ_装置設定 20240611 ztc start
-      // if (device.type === this.DEVICE_TYPE_IHDF) {
-      //   if (
-      //     this.treatMethodDeviceMode === CODES.DEVICE_MODE.HD.cd    || //HD
-      //     this.treatMethodDeviceMode === CODES.DEVICE_MODE.ECUM.cd  || //ECUM
-      //     this.treatMethodDeviceMode === CODES.DEVICE_MODE.HDF.cd   || //HDF
-      //     this.treatMethodDeviceMode === CODES.DEVICE_MODE.HF.cd    || //HF
-      //     this.treatMethodDeviceMode === CODES.DEVICE_MODE.OHDF.cd  || //OHDF
-      //     this.treatMethodDeviceMode === CODES.DEVICE_MODE.OHF.cd   || //OHF
-      //     this.treatMethodDeviceMode === CODES.DEVICE_MODE.AFBF.cd   //AFBF
-      //   ) {
-      //     return;
-      //   }
-      // }
-
-      // 特殊浄化
-      // if (this.treatMethodDeviceMode && this.treatMethodDeviceMode === CODES.DEVICE_MODE.PURIFICATION.cd) {
-      //   if (device && (
-      //       device.type === this.DEVICE_TYPE_UFR  || //除水プログラム
-      //       device.type === this.DEVICE_TYPE_NA   || //Na注入プログラム
-      //       device.type === this.DEVICE_TYPE_DC   || //透析液濃度プログラム
-      //       device.type === this.DEVICE_TYPE_IHDF || //I-HDF
-      //       device.type === this.DEVICE_TYPE_QBQD || //血流量・透析液流量プログラム
-      //       device.type === this.DEVICE_TYPE_BVUFC   //BV-UFC
-      //     )) {
-      //     return;
-      //   }
-      // }
-
-      // AFBF
-      // if (this.treatMethodDeviceMode === CODES.DEVICE_MODE.AFBF.cd) {
-      //   // 血流量・透析液流量プログラムQdQb
-      //   // mod #7762【デグレ】治療方法セットマスタで設定した内容とは異なる内容で予定が作成される 付 start
-      //   if (device.type === this.DEVICE_TYPE_QBQD || device.type === this.DEVICE_TYPE_DC || device.type === this.DEVICE_TYPE_DIA) {
-      //   // mod #7762【デグレ】治療方法セットマスタで設定した内容とは異なる内容で予定が作成される 付 end
-      //     return
-      //   }
-      // }
-
-      // add #7762 【デグレ】治療方法セットマスタで設定した内容とは異なる内容で予定が作成される 王永吉 start
-      // if (this.treatMethodDeviceMode === CODES.DEVICE_MODE.IHDF.cd) { // I-HDF
-      //   if (device.type === this.DEVICE_TYPE_QBQD || device.type === this.DEVICE_TYPE_UFR || device.type === this.DEVICE_TYPE_BVUFC) {
-      //     return
-      //   }
-      // }
-      // del #9340_#10246 ちょうせつ治療方法セットマスタ_装置設定 20240611 ztc end
-      // add #7762 【デグレ】治療方法セットマスタで設定した内容とは異なる内容で予定が作成される 王永吉 end
-
       await this.showSubModal(device, dataSourceType)
-
-      // del #9340_#10246 ちょうせつ治療方法セットマスタ_装置設定 20240611 ztc start
-      // if (device.type === this.DEVICE_TYPE_UFR) {
-      //   // 除水プログラムのHD/ECUMの切替をHDに強制変更して非活性。
-      //   if (
-      //     this.treatMethodDeviceMode &&
-      //     (
-      //       this.treatMethodDeviceMode === CODES.DEVICE_MODE.HDF.cd   || //HDF
-      //       this.treatMethodDeviceMode === CODES.DEVICE_MODE.HF.cd    || //HF
-      //       this.treatMethodDeviceMode === CODES.DEVICE_MODE.OHDF.cd  || //OHDF
-      //       this.treatMethodDeviceMode === CODES.DEVICE_MODE.OHF.cd   || //OHF
-      //       this.treatMethodDeviceMode === CODES.DEVICE_MODE.AFBF.cd  || //AFBF
-      //       this.treatMethodDeviceMode === CODES.DEVICE_MODE.IHDF.cd  //I-HDF
-      //     )
-      //   ) {
-      //     this.$nextTick(() => {
-      //       setTimeout(() =>{
-      //         $(".sub-modal-mask .sub-modal-body #ufrHdEucm *").attr("disabled",true);
-      //       },1);
-      //     })
-      //   }
-      //
-      //   // 除水プログラムを強制的にOFFにして変更不可にする。スイッチ部分以外は変更可能とする。
-      //   if ( this.treatMethodDeviceMode && this.treatMethodDeviceMode === CODES.DEVICE_MODE.IHDF.cd ) { //I-HDF]
-      //     this.$nextTick(() => {
-      //       setTimeout(() =>{
-      //         $(".sub-modal-mask .sub-modal-body #ufrId *").attr("disabled",true);
-      //       },1);
-      //     })
-      //   }
-      // }
-
-      // if (device.type === this.DEVICE_TYPE_BVUFC) {
-      //   // シングルニードル使用するにした場合、BV-UFCを強制OFFに変更して、BV-UFC使用選択を変更不可にする。それ以外の項目以外は編集可能とする。
-      //   const singleNeedle = this.treatCond.find(cond => cond.treatCondNo === CODES.TREATMENT_CONDITION_ITEM.SINGLE_NEEDLE.cd)
-      //   if (singleNeedle.value == '1') { // mod #9973 value Number→文字列  shiyw
-      //     this.$nextTick(() => {
-      //       setTimeout(() =>{
-      //         $(".sub-modal-mask .sub-modal-body .device-info-content .bv-ufc-row:first *").attr("disabled",true)
-      //       },1);
-      //     })
-      //   }
-
-      //   // BV-UFCを強制的にOFFにして変更不可にする。スイッチ部分以外は変更可能とする。
-      //   if ( this.treatMethodDeviceMode && this.treatMethodDeviceMode === CODES.DEVICE_MODE.IHDF.cd ) { //I-HDF
-      //     this.$nextTick(() => {
-      //       setTimeout(() =>{
-      //         $(".sub-modal-mask .sub-modal-body .device-info-content .bv-ufc-row:first *").attr("disabled",true)
-      //       },1);
-      //     })
-      //   }
-      // }
-
-      // if (device.type === this.DEVICE_TYPE_DIA) {
-      //   // 透析量プログラムを強制的にOFFにして変更不可にする。スイッチ部分以外は変更可能とする。
-      //   if (
-      //     this.treatMethodDeviceMode &&
-      //     (
-      //       this.treatMethodDeviceMode == CODES.DEVICE_MODE.HDF.cd || this.treatMethodDeviceMode === CODES.DEVICE_MODE.HF.cd || //HDF・HF
-      //       this.treatMethodDeviceMode === CODES.DEVICE_MODE.OHDF.cd || this.treatMethodDeviceMode === CODES.DEVICE_MODE.OHF.cd || //OHDF・OHF
-      //       this.treatMethodDeviceMode === CODES.DEVICE_MODE.AFBF.cd || //AFBF
-      //       this.treatMethodDeviceMode === CODES.DEVICE_MODE.IHDF.cd || //I-HDF
-      //       this.treatMethodDeviceMode === CODES.DEVICE_MODE.PURIFICATION.cd //特殊浄化
-      //     )
-      //   ) {
-      //     this.$nextTick(() => {
-      //       setTimeout(() =>{
-      //         $(".sub-modal-mask .sub-modal-body .device-info-content .device-info-cell:first *").attr("disabled",true)
-      //       },1);
-      //     })
-      //   }
-      // }
-
-      // if (device.type === this.DEVICE_TYPE_DC) {
-      //   // 透析液濃度プログラムを強制的にOFFにして変更不可にする。スイッチ部分以外は変更可能とする。
-      //   if (
-      //     this.treatMethodDeviceMode && this.treatMethodDeviceMode === CODES.DEVICE_MODE.AFBF.cd //AFBF
-      //   ) {
-      //     this.$nextTick(() => {
-      //       setTimeout(() =>{
-      //         $(".sub-modal-mask .sub-modal-body #dcSwitch *").attr("disabled",true)
-      //       },1);
-      //     })
-      //   }
-      // }
-      //
-      // if (device.type === this.DEVICE_TYPE_QBQD) {
-      //   // 血流量、透析液流量プログラムを強制的にOFFにして変更不可にする。スイッチ部分以外は変更可能とする。
-      //   if (
-      //     this.treatMethodDeviceMode && this.treatMethodDeviceMode === CODES.DEVICE_MODE.IHDF.cd //I-HDF
-      //   ) {
-      //     this.$nextTick(() => {
-      //       setTimeout(() =>{
-      //         $(".sub-modal-mask .sub-modal-body .sub-area .sub-area-item:lt(2) *").attr("disabled",true)
-      //       },1);
-      //     })
-      //   }
-      // }
-      // del #9340_#10246 ちょうせつ治療方法セットマスタ_装置設定 20240611 ztc end
     },
     // add 治療方法セットマスタ 装置モードがI-HFDの場合、urfおよび血流量制御 end
     /**

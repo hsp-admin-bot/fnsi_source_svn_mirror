@@ -9,7 +9,6 @@ import batch.reader.FlatFileLineReader;
 import batch.writer.BatchCsvWriterDb;
 import batch.writer.JdbcBatchSqlItemWriter;
 import org.springframework.batch.core.step.Step;
-import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.core.configuration.annotation.StepScope;
@@ -29,7 +28,6 @@ import javax.sql.DataSource;
  * SQLファイルを読み込み実行するChunkStep
  */
 @Configuration
-@EnableBatchProcessing
 public class ReadSqlFileWriteDbStep extends StepStartEndListener {
 
     private final String STEP_NAME = "ReadSqlFileWriteDbStep";

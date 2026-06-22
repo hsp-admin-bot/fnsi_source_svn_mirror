@@ -104,8 +104,7 @@ public class CheckListResource {
     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
   ) {
     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
-    if (facilityCd != null && !facilityCd.isEmpty() &&
-      !facilityCd.equals(ntssUser.getFacilityCd())) {
+    if (!hasFacilityAccess(ntssUser, facilityCd)) {
       String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
       InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
       return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
@@ -144,8 +143,7 @@ public class CheckListResource {
   ) throws IOException {
     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
     OrdMain ordMain = ordMainDao.selectByOrdNo(orderNo);
-    if (ordMain != null && ordMain.getFacilityCd() != null &&
-      !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+    if (ordMain != null && !hasFacilityAccess(ntssUser, ordMain.getFacilityCd())) {
       String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "orderNo=" + orderNo + " ";
       InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
       return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
@@ -195,8 +193,7 @@ public class CheckListResource {
   ) {
     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
     OrdMain ordMain = ordMainDao.selectByOrdNo(orderNo);
-    if (ordMain != null && ordMain.getFacilityCd() != null &&
-      !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+    if (ordMain != null && !hasFacilityAccess(ntssUser, ordMain.getFacilityCd())) {
       String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "orderNo=" + orderNo + " ";
       InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
       return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
@@ -267,8 +264,7 @@ public class CheckListResource {
       // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
   ) {
     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
-    if (facilityCd != null && !facilityCd.isEmpty() &&
-      !facilityCd.equals(ntssUser.getFacilityCd())) {
+    if (!hasFacilityAccess(ntssUser, facilityCd)) {
       String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
       InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
       return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
@@ -304,8 +300,7 @@ public class CheckListResource {
   ) {
     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
     OrdMain ordMain = ordMainDao.selectByOrdNo(orderNo);
-    if (ordMain != null && ordMain.getFacilityCd() != null &&
-      !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+    if (ordMain != null && !hasFacilityAccess(ntssUser, ordMain.getFacilityCd())) {
       String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "orderNo=" + orderNo + " ";
       InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
       return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
@@ -378,8 +373,7 @@ public class CheckListResource {
   ) {
     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
     MstChecklist mstChecklist = checkListService.getMstChecklistByChecklistCd(checklistCd);
-    if (mstChecklist != null && mstChecklist.getFacilityCd() != null &&
-      !mstChecklist.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+    if (mstChecklist != null && !hasFacilityAccess(ntssUser, mstChecklist.getFacilityCd())) {
       String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + mstChecklist.getFacilityCd() + " " + "checklistCd=" + checklistCd + " ";
       InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
       return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
@@ -415,8 +409,7 @@ public class CheckListResource {
     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
     List<MstDialyzer> mstDialyzerList = checkListService.getDialyzerList(dialyzerList);
     for (MstDialyzer mstDialyzer : mstDialyzerList) {
-      if (mstDialyzer != null && mstDialyzer.getFacilityCd() != null &&
-        !mstDialyzer.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+      if (mstDialyzer != null && !hasFacilityAccess(ntssUser, mstDialyzer.getFacilityCd())) {
         String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + mstDialyzer.getFacilityCd() + " " + "dialyzerList=" + dialyzerList + " ";
         InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
         return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
@@ -453,8 +446,7 @@ public class CheckListResource {
     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
     List<MstMedicine> medicineList1 = checkListService.getMedicineList(medicineList);
     for (MstMedicine mstDialyzer : medicineList1) {
-      if (mstDialyzer != null && mstDialyzer.getFacilityCd() != null &&
-        !mstDialyzer.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+      if (mstDialyzer != null && !hasFacilityAccess(ntssUser, mstDialyzer.getFacilityCd())) {
         String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + mstDialyzer.getFacilityCd() + " " + "medicineList=" + medicineList + " ";
         InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
         return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
@@ -517,8 +509,7 @@ public class CheckListResource {
     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
     List<MstEquipment> mstDialyzerList = checkListService.getEquipList(equipList);
     for (MstEquipment mstDialyzer : mstDialyzerList) {
-      if (mstDialyzer != null && mstDialyzer.getFacilityCd() != null &&
-        !mstDialyzer.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+      if (mstDialyzer != null && !hasFacilityAccess(ntssUser, mstDialyzer.getFacilityCd())) {
         String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + mstDialyzer.getFacilityCd() + " " + "equipList=" + equipList + " ";
         InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
         return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
@@ -555,8 +546,7 @@ public class CheckListResource {
   ) {
     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
     OrdMain ordMain = ordMainDao.selectByOrdNo(orderNo);
-    if (ordMain != null && ordMain.getFacilityCd() != null &&
-      !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+    if (ordMain != null && !hasFacilityAccess(ntssUser, ordMain.getFacilityCd())) {
       String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "orderNo=" + orderNo + " ";
       InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
       return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
@@ -595,8 +585,7 @@ public class CheckListResource {
   ) {
     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
     OrdMain ordMain = ordMainDao.selectByOrdNo(orderNo);
-    if (ordMain != null && ordMain.getFacilityCd() != null &&
-      !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+    if (ordMain != null && !hasFacilityAccess(ntssUser, ordMain.getFacilityCd())) {
       String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "orderNo=" + orderNo + " ";
       InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
       return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
@@ -671,8 +660,7 @@ public class CheckListResource {
       // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
   ) {
     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
-    if (facilityCd != null &&
-      !facilityCd.equals(ntssUser.getFacilityCd())) {
+    if (!hasFacilityAccess(ntssUser, facilityCd)) {
       String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
       InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
       return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
@@ -710,8 +698,7 @@ public class CheckListResource {
   ) {
     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
     OrdMain ordMain = ordMainDao.selectByOrdNo(request.getOrdNo());
-    if (ordMain != null && ordMain.getFacilityCd() != null &&
-      !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+    if (ordMain != null && !hasFacilityAccess(ntssUser, ordMain.getFacilityCd())) {
       String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " " + "orderNo=" + request.getOrdNo() + " ";
       InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
       return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
@@ -760,8 +747,7 @@ public class CheckListResource {
       @AuthenticationPrincipal NtssUser ntssUser) {
     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
     OrdMain ordMain = ordMainDao.selectByOrdNo(orderNo);
-    if (ordMain != null && ordMain.getFacilityCd() != null &&
-            !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+    if (ordMain != null && !hasFacilityAccess(ntssUser, ordMain.getFacilityCd())) {
       return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
     }
     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
@@ -817,8 +803,7 @@ public class CheckListResource {
     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
     if (delChecklist != null && !delChecklist.isEmpty()) {
       for (OrdChecklist ordChecklist : delChecklist) {
-        if (ordChecklist != null && ordChecklist.getFacilityCd() != null &&
-          !ordChecklist.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        if (ordChecklist != null && !hasFacilityAccess(ntssUser, ordChecklist.getFacilityCd())) {
           String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordChecklist.getFacilityCd() + " ";
           InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
           return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
@@ -876,7 +861,7 @@ public class CheckListResource {
     List<OrdMain> ordMains = ordMainDao.selectByOrdNoList(ordCheckListParamsList.stream().map(OrdCheckListParams::getOrdNo).collect(Collectors.toList()));
     if (ordMains != null && !ordMains.isEmpty()) {
       for (OrdMain ordMain : ordMains) {
-        if (ordMains != null && ordMain.getFacilityCd() != null && !ordMain.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+        if (ordMain != null && !hasFacilityAccess(ntssUser, ordMain.getFacilityCd())) {
           String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + ordMain.getFacilityCd() + " ";
           InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
           return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
@@ -912,5 +897,15 @@ public class CheckListResource {
     }
     //    modify by xuguojin,bug:5564
     return new ResponseEntity<>(resultList, HttpStatus.OK);
+  }
+
+  private boolean hasFacilityAccess(NtssUser ntssUser, String facilityCd) {
+    if (ntssUser == null) {
+      return false;
+    }
+    if (ntssUser.isNkkAdminUser()) {
+      return true;
+    }
+    return facilityCd != null && !facilityCd.isEmpty() && facilityCd.equals(ntssUser.getFacilityCd());
   }
 }

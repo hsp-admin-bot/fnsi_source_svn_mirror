@@ -1423,7 +1423,7 @@
     conversion: {}
   },
   "290": {
-    name: "UFRプログラム電源SW",
+    name: "除水プログラム電源SW",
     unit: "",
     conversion: {
       0: "切り",
@@ -1512,114 +1512,72 @@
     }
   },
   "301": {
-    // FNSI-add 装置設定画面表示の修正 徐 start
-    // name: "UFRプログラム指数1",
     name: "除水プログラム指数1",
-    // FNSI-add 装置設定画面表示の修正 徐 end
     unit: "",
     conversion: {}
   },
   "302": {
-    // FNSI-add 装置設定画面表示の修正 徐 start
-    // name: "UFRプログラム指数2",
     name: "除水プログラム指数2",
-    // FNSI-add 装置設定画面表示の修正 徐 end
     unit: "",
     conversion: {}
   },
   "303": {
-    // FNSI-add 装置設定画面表示の修正 徐 start
-    // name: "UFRプログラム指数3",
     name: "除水プログラム指数3",
-    // FNSI-add 装置設定画面表示の修正 徐 end
     unit: "",
     conversion: {}
   },
   "304": {
-    // FNSI-add 装置設定画面表示の修正 徐 start
-    // name: "UFRプログラム指数4",
     name: "除水プログラム指数4",
-    // FNSI-add 装置設定画面表示の修正 徐 end
     unit: "",
     conversion: {}
   },
   "305": {
-    // FNSI-add 装置設定画面表示の修正 徐 start
-    // name: "UFRプログラム指数5",
     name: "除水プログラム指数5",
-    // FNSI-add 装置設定画面表示の修正 徐 end
     unit: "",
     conversion: {}
   },
   "306": {
-    // FNSI-add 装置設定画面表示の修正 徐 start
-    // name: "UFRプログラム指数6",
     name: "除水プログラム指数6",
-    // FNSI-add 装置設定画面表示の修正 徐 end
     unit: "",
     conversion: {}
   },
   "307": {
-    // FNSI-add 装置設定画面表示の修正 徐 start
-    // name: "UFRプログラム指数7",
     name: "除水プログラム指数7",
-    // FNSI-add 装置設定画面表示の修正 徐 end
     unit: "",
     conversion: {}
   },
   "308": {
-    // FNSI-add 装置設定画面表示の修正 徐 start
-    // name: "UFRプログラム指数8",
     name: "除水プログラム指数8",
-    // FNSI-add 装置設定画面表示の修正 徐 end
     unit: "",
     conversion: {}
   },
   "309": {
-    // FNSI-add 装置設定画面表示の修正 徐 start
-    // name: "UFRプログラム指数9",
     name: "除水プログラム指数9",
-    // FNSI-add 装置設定画面表示の修正 徐 end
     unit: "",
     conversion: {}
   },
   "310": {
-    // FNSI-add 装置設定画面表示の修正 徐 start
-    // name: "UFRプログラム指数10",
     name: "除水プログラム指数10",
-    // FNSI-add 装置設定画面表示の修正 徐 end
     unit: "",
     conversion: {}
   },
   "311": {
-    // FNSI-add 装置設定画面表示の修正 徐 start
-    // name: "UFRプログラム最終位置",
     name: "除水プログラム最終位置",
-    // FNSI-add 装置設定画面表示の修正 徐 end
     unit: "",
     conversion: {}
   },
   "312": {
-    // FNSI-add 装置設定画面表示の修正 徐 start
-    // name: "UFRプログラムコース",
     name: "除水プログラムコース",
-    // FNSI-add 装置設定画面表示の修正 徐 end
     unit: "",
     conversion: {}
   },
   "313": {
-    // FNSI-add 装置設定画面表示の修正 徐 start
-    // name: "UFRプログラム開始数値",
     name: "除水プログラム開始数値",
-    // FNSI-add 装置設定画面表示の修正 徐 end
     unit: "",
     conversion: {}
   },
   "314": {
-    // FNSI-add 装置設定画面表示の修正 徐 start
-    // name: "UFRプログラム終了数値",
     name: "除水プログラム終了数値",
-    // FNSI-add 装置設定画面表示の修正 徐 end
     unit: "",
     conversion: {}
   },
@@ -1688,7 +1646,7 @@
     conversion: {}
   },
   "327": {
-    name: "Na注入プログラム UFRプロとの連動選択",
+    name: "Na注入プログラム 除水プロとの連動選択",
     unit: "",
     conversion: {
       0: "OFF",

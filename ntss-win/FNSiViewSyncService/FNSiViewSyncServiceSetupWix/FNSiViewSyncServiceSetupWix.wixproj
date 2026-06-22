@@ -12,7 +12,7 @@
       ProductCode は UpgradeCodeGuid + ProductVersion から自動生成される（UUID v5）
       UpgradeCodeGuid は絶対に変えない
     -->
-    <ProductVersion>2.0.15</ProductVersion>
+    <ProductVersion>2.0.16</ProductVersion>
     <UpgradeCodeGuid>B2C94F10-7E91-4A2D-9B4E-C5D6E3A1F7D8</UpgradeCodeGuid>
     <!-- MSBuild プロパティとして定義（HarvestDirectory でも参照可能） -->
     <SrcBin>$(MSBuildProjectDirectory)\..\FNSiViewSyncService\bin\$(Configuration)\</SrcBin>

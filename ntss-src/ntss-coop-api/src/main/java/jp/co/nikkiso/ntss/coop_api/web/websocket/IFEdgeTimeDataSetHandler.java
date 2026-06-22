@@ -92,11 +92,9 @@ public class IFEdgeTimeDataSetHandler extends TextWebSocketHandler {
   @Value("${websocket.split.size}")
   private Integer splitSize;
 
-  /* del by chamaojia 2026-05-13 [10959] システム内でstatic変数を使っている箇所の洗い出し --start */
-  // // Update 差分機能追加 sichengbo start
-  // boolean isFirst;
-  // // Update 差分機能追加 sichengbo end
-  /* del by chamaojia 2026-05-13 [10959] システム内でstatic変数を使っている箇所の洗い出し --end */
+  // Update 差分機能追加 sichengbo start
+  boolean isFirst;
+  // Update 差分機能追加 sichengbo end
 
   /**
    * DataKeyの定数定義
@@ -207,11 +205,9 @@ public class IFEdgeTimeDataSetHandler extends TextWebSocketHandler {
           // mod 2021-01-28 No.737:NEC電子カルテはWEBAPIを提供するため、対応する必要。 孫 start
     //      if (dataSetRequest.getSqlCode() == null || dataSetRequest.getDataKey() == null) {
           List<WebSocketTimeDataSetRequest.Table> tables = dataSetRequest.getTables();
-          /* del by chamaojia 2026-05-13 [10959] システム内でstatic変数を使っている箇所の洗い出し --start */
-          // // Update 差分機能追加 sichengbo start
-          // isFirst = dataSetRequest.getTables().get(0).isFirst();
-          // // Update 差分機能追加 sichengbo end
-          /* del by chamaojia 2026-05-13 [10959] システム内でstatic変数を使っている箇所の洗い出し --end */
+          // Update 差分機能追加 sichengbo start
+          isFirst = dataSetRequest.getTables().get(0).isFirst();
+          // Update 差分機能追加 sichengbo end
           Map<String, Object> dataKey = dataSetRequest.getDataKey();
           // facility_cdを取得
           String facilityCd = "";
@@ -526,11 +522,9 @@ public class IFEdgeTimeDataSetHandler extends TextWebSocketHandler {
         String mergeKey = sysDataSetService.getMergeKeyForSqlCode(sqlcd);
         dataSetResponse = mergeSlaveToMaster(dataSetResponse, dataSetResponseTmp, mergeKey,
           sqlcds.get(0), sqlcds.get(indexSql));
-        /* del by chamaojia 2026-05-13 [10959] システム内でstatic変数を使っている箇所の洗い出し --start */
-        // for (Map map : dataSetResponse) {
-        //   map.put("isFirst", isFirst);
-        // }
-        /* del by chamaojia 2026-05-13 [10959] システム内でstatic変数を使っている箇所の洗い出し --end */
+        for (Map map : dataSetResponse) {
+          map.put("isFirst", isFirst);
+        }
       }
     } catch (NtssException e) {
       eventLogMessage.setLogMessage(e.toString());
@@ -899,7 +893,9 @@ public class IFEdgeTimeDataSetHandler extends TextWebSocketHandler {
 
   public static String generateCSVString(List<Map<String, Object>> dataList) throws IOException {
       StringWriter stringWriter = new StringWriter();
-      try (CSVPrinter printer = new CSVPrinter(stringWriter, CSVFormat.ORACLE)) {
+      // Oracle外部表のOPTIONALLY ENCLOSED BY '"'は \" を引用符エスケープとして扱わない。
+      CSVFormat csvFormat = CSVFormat.ORACLE.builder().setEscape((Character) null).get();
+      try (CSVPrinter printer = new CSVPrinter(stringWriter, csvFormat)) {
 
       	String str =">゛j^q-(";
 

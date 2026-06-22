@@ -4829,6 +4829,9 @@ namespace LayoutDesigner
                     this.XlSheetPreview = new ExcelWorksheetEx(wXlSheets, wSheetCount + 1);
                     this.XlSheetPreview.Worksheet.Name = SHEET_NAME_PREVIEW;
                 }
+                // add #12798 帳票プレビューの画像がセルのサイズに合っていない 高 start
+                this.EnsureExcelMeasureContext();
+                // add #12798 帳票プレビューの画像がセルのサイズに合っていない 高 end
 
                 // add FNSI-計算されない。・印刷、・各種プレビューデータ 孫 start
                 // 計算式の場合、レビューデータを再計算する
@@ -5357,53 +5360,141 @@ namespace LayoutDesigner
         }
 
         // add #12709 帳票プレビューで画像が表示されない 高 start
-        private void cellAddPic(string wImageFilePath, ExcelRangeEx wXlRange)
+        // mod #12798 帳票プレビューの画像がセルのサイズに合っていない 高 start
+        //private void cellAddPic(string wImageFilePath, ExcelRangeEx wXlRange)
+        //{
+        //    float cellLeft = (float)wXlRange.Range.Left;
+        //    float cellTop = (float)wXlRange.Range.Top;
+        //    float cellWidth = (float)wXlRange.GetWidth();
+        //    float cellHeight = (float)wXlRange.GetHeight();
+        //    int hAlign = GetHorizontalAlignment(wXlRange.Range);
+        //    int vAlign = GetVerticalAlignment(wXlRange.Range);
+
+        //    float margin = 1.0f;
+        //    float availableWidth = cellWidth - margin * 2;
+        //    float availableHeight = cellHeight - margin * 2;
+
+        //    using (var wXlShapes = new ExcelShapesEx(XlSheetPreview))
+        //    {
+        //        // Insert at original size first; Excel converts image DPI to points correctly
+        //        using (var wXlShape = new ExcelShapeEx(wXlShapes.Shapes.AddPicture(
+        //                wImageFilePath,
+        //                Microsoft.Office.Core.MsoTriState.msoFalse,
+        //                Microsoft.Office.Core.MsoTriState.msoTrue,
+        //                cellLeft + margin,
+        //                cellTop + margin,
+        //                0,
+        //                0)))
+        //        {
+        //            float originalWidth = (float)wXlShape.Shape.Width;
+        //            float originalHeight = (float)wXlShape.Shape.Height;
+
+        //            if (originalWidth <= 0 || originalHeight <= 0)
+        //                return;
+
+        //            float widthRatio = availableWidth / originalWidth;
+        //            float heightRatio = availableHeight / originalHeight;
+        //            float scale = Math.Min(widthRatio, heightRatio);
+
+        //            float finalWidth = originalWidth * scale;
+        //            float finalHeight = originalHeight * scale;
+
+        //            float offsetX = CalculateHorizontalOffset(availableWidth, finalWidth, hAlign);
+        //            float offsetY = CalculateVerticalOffset(availableHeight, finalHeight, vAlign);
+
+        //            wXlShape.Shape.LockAspectRatio = Microsoft.Office.Core.MsoTriState.msoFalse;
+        //            wXlShape.Shape.Width = finalWidth;
+        //            wXlShape.Shape.Height = finalHeight;
+        //            wXlShape.Shape.Left = cellLeft + margin + offsetX;
+        //            wXlShape.Shape.Top = cellTop + margin + offsetY;
+        //        }
+        //    }
+        //}
+        private void EnsureExcelMeasureContext()
         {
-            float cellLeft = (float)wXlRange.Range.Left;
-            float cellTop = (float)wXlRange.Range.Top;
-            float cellWidth = (float)wXlRange.GetWidth();
-            float cellHeight = (float)wXlRange.GetHeight();
-            int hAlign = GetHorizontalAlignment(wXlRange.Range);
-            int vAlign = GetVerticalAlignment(wXlRange.Range);
-
-            using (var wXlShapes = new ExcelShapesEx(XlSheetPreview))
+            try
             {
-                // Get original image dimensions
-                System.Drawing.Image img = System.Drawing.Image.FromFile(wImageFilePath);
-                float originalWidth = img.Width;
-                float originalHeight = img.Height;
-                img.Dispose();
+                var app = this.XlApp.Application;
+                app.ScreenUpdating = true;
 
-                // Available area (keep original margins)
-                float margin = 1.0f;
-                float availableWidth = cellWidth - margin * 2;
-                float availableHeight = cellHeight - margin * 2;
+                this.XlSheetPreview?.Worksheet?.Activate();
 
-                // Calculate scale ratio: ensure width and height do not exceed
-                float widthRatio = availableWidth / originalWidth;
-                float heightRatio = availableHeight / originalHeight;
-                float scale = Math.Min(widthRatio, heightRatio);
-
-                float finalWidth = originalWidth * scale;
-                float finalHeight = originalHeight * scale;
-
-                // Calculate offset based on alignment parameters
-                float offsetX = CalculateHorizontalOffset(availableWidth, finalWidth, hAlign);
-                float offsetY = CalculateVerticalOffset(availableHeight, finalHeight, vAlign);
-
-                using (var wXlShape = new ExcelShapeEx(wXlShapes.Shapes.AddPicture(
-                        wImageFilePath,
-                        Microsoft.Office.Core.MsoTriState.msoFalse,
-                        Microsoft.Office.Core.MsoTriState.msoTrue,
-                        cellLeft + margin + offsetX,
-                        cellTop + margin + offsetY,
-                        finalWidth,
-                        finalHeight)))
+                Excel.Window activeWindow = app.ActiveWindow;
+                if (activeWindow != null)
                 {
-                    // Image added successfully
+                    activeWindow.Zoom = 100;
+                    activeWindow.WindowState = Excel.XlWindowState.xlNormal;
+
+                    var primaryArea = Screen.PrimaryScreen.WorkingArea;
+                    activeWindow.Left = primaryArea.Left + 220d;
+                    activeWindow.Top = primaryArea.Top + 60d;
                 }
             }
+            catch
+            {
+            }
         }
+
+        private void cellAddPic(string wImageFilePath, ExcelRangeEx wXlRange)
+        {
+            float cellWidth = (float)wXlRange.GetWidth();
+            float cellHeight = (float)wXlRange.GetHeight();
+            if (cellWidth <= 0f || cellHeight <= 0f)
+                return;
+
+            Excel.Range positionRange = wXlRange.GetMeasureArea();
+            float cellLeft = (float)positionRange.Left;
+            float cellTop = (float)positionRange.Top;
+
+            int hAlign = GetHorizontalAlignment(wXlRange.Range);
+            int vAlign = GetVerticalAlignment(wXlRange.Range);
+            const float margin = 1.0f;
+            float availableWidth = cellWidth - margin * 2;
+            float availableHeight = cellHeight - margin * 2;
+            if (availableWidth <= 0f || availableHeight <= 0f)
+                return;
+
+            float finalWidth, finalHeight;
+            using (var img = System.Drawing.Image.FromFile(wImageFilePath))
+            {
+                if (img.Width <= 0 || img.Height <= 0) return;
+
+                float imgAspect = (float)img.Width / img.Height;
+                float cellAspect = availableWidth / availableHeight;
+                if (cellAspect > imgAspect)
+                {
+                    finalHeight = availableHeight;
+                    finalWidth = availableHeight * imgAspect;
+                }
+                else
+                {
+                    finalWidth = availableWidth;
+                    finalHeight = availableWidth / imgAspect;
+                }
+            }
+
+            if (finalWidth <= 0f || finalHeight <= 0f)
+                return;
+
+            float offsetX = CalculateHorizontalOffset(availableWidth, finalWidth, hAlign);
+            float offsetY = CalculateVerticalOffset(availableHeight, finalHeight, vAlign);
+            float shapeLeft = cellLeft + margin + offsetX;
+            float shapeTop = cellTop + margin + offsetY;
+
+            using (var wXlShapes = new ExcelShapesEx(XlSheetPreview))
+            using (var wXlShape = new ExcelShapeEx(wXlShapes.Shapes.AddPicture(
+                    wImageFilePath,
+                    Microsoft.Office.Core.MsoTriState.msoFalse,
+                    Microsoft.Office.Core.MsoTriState.msoTrue,
+                    shapeLeft,
+                    shapeTop,
+                    finalWidth,
+                    finalHeight)))
+            {
+                wXlShape.Shape.LockAspectRatio = Microsoft.Office.Core.MsoTriState.msoTrue;
+            }
+        }
+        // mod #12798 帳票プレビューの画像がセルのサイズに合っていない 高 end
 
         // Calculate horizontal offset
         private float CalculateHorizontalOffset(float availableWidth, float finalWidth, int hAlign)

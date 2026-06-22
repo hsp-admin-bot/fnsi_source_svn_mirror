@@ -1563,7 +1563,7 @@ public class TreatmentServiceImpl implements TreatmentService {
       JSONObject usrDev = new JSONObject();
       usrDev.put("dev", usrA);
       jsonIndDeviceSetInfo.put("ufr", usrDev);
-      treatMethodChangeHelper.addDeviceSetChangeContent("除水プログラム", "ＵＦＲプログラム電源ＳＷ", "0");
+      treatMethodChangeHelper.addDeviceSetChangeContent("除水プログラム", "除水プログラム電源ＳＷ", "0");
     }
 
     // Na注入プログラム、ONの場合は強制的にOFFに変更する。

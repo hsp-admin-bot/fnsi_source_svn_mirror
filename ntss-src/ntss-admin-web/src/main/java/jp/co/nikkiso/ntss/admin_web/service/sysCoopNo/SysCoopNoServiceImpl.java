@@ -24,6 +24,13 @@ public class SysCoopNoServiceImpl implements SysCoopNoService {
         return sysCoopNos;
     }
 
+    @Override
+    /* コピー元のSysCoopNoを選択します */
+    public List<SysCoopNo> selectSourceSysCoopNoByCoopVersion(String coopVersion) throws Exception {
+        List<SysCoopNo> sysCoopNos = sysCoopNoDao.selectSourceByCoopVersion(coopVersion);
+        return sysCoopNos;
+    }
+
     
     /* 保存 */
     @Override

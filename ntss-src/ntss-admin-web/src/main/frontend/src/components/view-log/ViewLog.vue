@@ -310,6 +310,14 @@ export default {
       displayItems: this.displayItems,
       columns: this.columns
     });
+    // add/ #9603 ログ参照画面の表示項目の内容保持されていない。 tianqidong start
+    if (this.getSelectedItem) {
+      this.$nextTick(() => {
+        this.columns = this.getSelectedItemList;
+        this.displayItems = this.getSelectedItemList;
+      });
+    }
+    // add/ #9603 ログ参照画面の表示項目の内容保持されていない。 tianqidong end
     this.clearManagedRuntimeHandlers();
     const tables = this.getDataTables();
     for (let i=0; i<tables.length;i++){

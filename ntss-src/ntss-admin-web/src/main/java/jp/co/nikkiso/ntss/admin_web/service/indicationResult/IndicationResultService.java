@@ -40,7 +40,7 @@ public interface IndicationResultService {
    * @param examSetCd 検査セットID
    * @return チェック項目数
    */
-  Map<String, String> getCheckNum(List<String> examSetCd);
+  Map<String, String> getCheckNum(String facilityCd, List<String> examSetCd);
   // add FNSI-No.342 患者イベント、検査結果、検査予定、一般撮影検査予定、処方の表示、機能遷移に対応 李 end
 
   // add FNSI-改修内容 治療単位の治療方法マスタの有効項目に応じた表示 dou start

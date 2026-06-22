@@ -508,7 +508,7 @@ export const valueInfoDc = {
         "0"
       ),
       368: new DeviceSetInfoDefinitionRadio(
-        "濃度プログラム　ＵＦＲプロとの連動選択",
+        "濃度プログラム　除水プロとの連動選択",
         "",
         [{ 0: "OFF" }, { 1: "ON" }],
         "0"
@@ -1083,7 +1083,7 @@ export const valueInfoNa = {
         //add 鞠 6152 Naプログラム▲▼キーの変化量が0.1 end
       ),
       327: new DeviceSetInfoDefinitionRadio(
-        "Ｎａ注入プログラム　ＵＦＲプロとの連動選択",
+        "Ｎａ注入プログラム　除水プロとの連動選択",
         "",
         [{ 0: "OFF" }, { 1: "ON" }],
         "0"
@@ -1220,19 +1220,13 @@ export const valueInfoUfr = {
   dev: {
     A: {
       290: new DeviceSetInfoDefinitionSelect(
-        // mod FNSI-UFRプログラムの修正 楊 start
-        // "ＵＦＲプログラム電源ＳＷ",
         "除水プログラム電源ＳＷ",
-        // mod FNSI-UFRプログラムの修正 楊 end
         "",
         [{ 0: "切り" }, { 1: "入り[ステップ]" }, { 2: "入り[コース]" }],
         "0"
       ),
       311: new DeviceSetInfoDefinitionNumber(
-        // mod FNSI-UFRプログラムの修正 楊 start
-        // "ＵＦＲプログラム最終位置",
         "除水プログラム最終工程",
-        // mod FNSI-UFRプログラムの修正 楊 end
         "",
         1,
         10,
@@ -1241,10 +1235,7 @@ export const valueInfoUfr = {
         10
       ),
       312: new DeviceSetInfoDefinitionNumber(
-        // mod FNSI-UFRプログラムの修正 楊 start
-        // "ＵＦＲプログラムコース",
         "除水プログラムコース",
-        // mod FNSI-UFRプログラムの修正 楊 end
         "",
         0.0,
         2.0,
@@ -1317,10 +1308,7 @@ export const valueInfoUfr = {
         "0"
       ),
       301: new DeviceSetInfoDefinitionNumber(
-        // mod FNSI-UFRプログラムの修正 楊 start
-        // "ＵＦＲプログラム指数１",
         "除水プログラム指数１",
-        // mod FNSI-UFRプログラムの修正 楊 end
         "",
         0,
         200,
@@ -1329,10 +1317,7 @@ export const valueInfoUfr = {
         200
       ),
       302: new DeviceSetInfoDefinitionNumber(
-        // mod FNSI-UFRプログラムの修正 楊 start
-        // "ＵＦＲプログラム指数２",
         "除水プログラム指数２",
-        // mod FNSI-UFRプログラムの修正 楊 end
         "",
         0,
         200,
@@ -1341,10 +1326,7 @@ export const valueInfoUfr = {
         150
       ),
       303: new DeviceSetInfoDefinitionNumber(
-        // mod FNSI-UFRプログラムの修正 楊 start
-        // "ＵＦＲプログラム指数３",
         "除水プログラム指数３",
-        // mod FNSI-UFRプログラムの修正 楊 end
         "",
         0,
         200,
@@ -1353,10 +1335,7 @@ export const valueInfoUfr = {
         100
       ),
       304: new DeviceSetInfoDefinitionNumber(
-        // mod FNSI-UFRプログラムの修正 楊 start
-        // "ＵＦＲプログラム指数４",
         "除水プログラム指数４",
-        // mod FNSI-UFRプログラムの修正 楊 end
         "",
         0,
         200,
@@ -1365,10 +1344,7 @@ export const valueInfoUfr = {
         50
       ),
       305: new DeviceSetInfoDefinitionNumber(
-        // mod FNSI-UFRプログラムの修正 楊 start
-        // "ＵＦＲプログラム指数５",
         "除水プログラム指数５",
-        // mod FNSI-UFRプログラムの修正 楊 end
         "",
         0,
         200,
@@ -1377,10 +1353,7 @@ export const valueInfoUfr = {
         0
       ),
       306: new DeviceSetInfoDefinitionNumber(
-        // mod FNSI-UFRプログラムの修正 楊 start
-        // "ＵＦＲプログラム指数６",
         "除水プログラム指数６",
-        // mod FNSI-UFRプログラムの修正 楊 end
         "",
         0,
         200,
@@ -1389,10 +1362,7 @@ export const valueInfoUfr = {
         0
       ),
       307: new DeviceSetInfoDefinitionNumber(
-        // mod FNSI-UFRプログラムの修正 楊 start
-        // "ＵＦＲプログラム指数７",
         "除水プログラム指数７",
-        // mod FNSI-UFRプログラムの修正 楊 end
         "",
         0,
         200,
@@ -1401,10 +1371,7 @@ export const valueInfoUfr = {
         50
       ),
       308: new DeviceSetInfoDefinitionNumber(
-        // mod FNSI-UFRプログラムの修正 楊 start
-        // "ＵＦＲプログラム指数８",
         "除水プログラム指数８",
-        // mod FNSI-UFRプログラムの修正 楊 end
         "",
         0,
         200,
@@ -1413,10 +1380,7 @@ export const valueInfoUfr = {
         100
       ),
       309: new DeviceSetInfoDefinitionNumber(
-        // mod FNSI-UFRプログラムの修正 楊 start
-        // "ＵＦＲプログラム指数９",
         "除水プログラム指数９",
-        // mod FNSI-UFRプログラムの修正 楊 end
         "",
         0,
         200,
@@ -1425,10 +1389,7 @@ export const valueInfoUfr = {
         150
       ),
       310: new DeviceSetInfoDefinitionNumber(
-        // mod FNSI-UFRプログラムの修正 楊 start
-        // "ＵＦＲプログラム指数１０",
         "除水プログラム指数１０",
-        // mod FNSI-UFRプログラムの修正 楊 end
         "",
         0,
         200,
@@ -1437,10 +1398,7 @@ export const valueInfoUfr = {
         200
       ),
       313: new DeviceSetInfoDefinitionNumber(
-        // mod FNSI-UFRプログラムの修正 楊 start
-        // "ＵＦＲプログラム開始数値",
         "除水プログラム開始数値",
-        // mod FNSI-UFRプログラムの修正 楊 end
         "",
         0,
         200,
@@ -1449,10 +1407,7 @@ export const valueInfoUfr = {
         100
       ),
       314: new DeviceSetInfoDefinitionNumber(
-        // mod FNSI-UFRプログラムの修正 楊 start
-        // "ＵＦＲプログラム終了数値",
         "除水プログラム終了数値",
-        // mod FNSI-UFRプログラムの修正 楊 end
         "",
         0,
         200,
@@ -1463,10 +1418,7 @@ export const valueInfoUfr = {
     },
     B: {
       0: new DeviceSetInfoDefinitionNumber(
-        // mod FNSI-UFRプログラムの修正 楊 start
-        // "UFRプログラム工程1の指数",
         "除水プログラム工程1の指数",
-        // mod FNSI-UFRプログラムの修正 楊 end
         "",
         0,
         50,
@@ -1475,10 +1427,7 @@ export const valueInfoUfr = {
         50
       ),
       1: new DeviceSetInfoDefinitionNumber(
-        // mod FNSI-UFRプログラムの修正 楊 start
-        // "UFRプログラム工程2の指数",
         "除水プログラム工程2の指数",
-        // mod FNSI-UFRプログラムの修正 楊 end
         "",
         0,
         50,
@@ -1487,10 +1436,7 @@ export const valueInfoUfr = {
         38
       ),
       2: new DeviceSetInfoDefinitionNumber(
-        // mod FNSI-UFRプログラムの修正 楊 start
-        // "UFRプログラム工程3の指数",
         "除水プログラム工程3の指数",
-        // mod FNSI-UFRプログラムの修正 楊 end
         "",
         0,
         50,
@@ -1499,10 +1445,7 @@ export const valueInfoUfr = {
         25
       ),
       3: new DeviceSetInfoDefinitionNumber(
-        // mod FNSI-UFRプログラムの修正 楊 start
-        // "UFRプログラム工程4の指数",
         "除水プログラム工程4の指数",
-        // mod FNSI-UFRプログラムの修正 楊 end
         "",
         0,
         50,
@@ -1511,10 +1454,7 @@ export const valueInfoUfr = {
         13
       ),
       4: new DeviceSetInfoDefinitionNumber(
-        // mod FNSI-UFRプログラムの修正 楊 start
-        // "UFRプログラム工程5の指数",
         "除水プログラム工程5の指数",
-        // mod FNSI-UFRプログラムの修正 楊 end
         "",
         0,
         50,
@@ -1523,10 +1463,7 @@ export const valueInfoUfr = {
         0
       ),
       5: new DeviceSetInfoDefinitionNumber(
-        // mod FNSI-UFRプログラムの修正 楊 start
-        // "UFRプログラム工程6の指数",
         "除水プログラム工程6の指数",
-        // mod FNSI-UFRプログラムの修正 楊 end
         "",
         0,
         50,
@@ -1535,10 +1472,7 @@ export const valueInfoUfr = {
         0
       ),
       6: new DeviceSetInfoDefinitionNumber(
-        // mod FNSI-UFRプログラムの修正 楊 start
-        // "UFRプログラム工程7の指数",
         "除水プログラム工程7の指数",
-        // mod FNSI-UFRプログラムの修正 楊 end
         "",
         0,
         50,
@@ -1547,10 +1481,7 @@ export const valueInfoUfr = {
         13
       ),
       7: new DeviceSetInfoDefinitionNumber(
-        // mod FNSI-UFRプログラムの修正 楊 start
-        // "UFRプログラム工程8の指数",
         "除水プログラム工程8の指数",
-        // mod FNSI-UFRプログラムの修正 楊 end
         "",
         0,
         50,
@@ -1559,10 +1490,7 @@ export const valueInfoUfr = {
         25
       ),
       8: new DeviceSetInfoDefinitionNumber(
-        // mod FNSI-UFRプログラムの修正 楊 start
-        // "UFRプログラム工程9の指数",
         "除水プログラム工程9の指数",
-        // mod FNSI-UFRプログラムの修正 楊 end
         "",
         0,
         50,
@@ -1571,10 +1499,7 @@ export const valueInfoUfr = {
         38
       ),
       9: new DeviceSetInfoDefinitionNumber(
-        // mod FNSI-UFRプログラムの修正 楊 start
-        // "UFRプログラム工程10の指数",
         "除水プログラム工程10の指数",
-        // mod FNSI-UFRプログラムの修正 楊 end
         "",
         0,
         50,
@@ -1724,7 +1649,7 @@ export const valueInfoQbqd = {
     A: {
       430: new DeviceSetInfoDefinitionRadio(
         "QBプログラム電源",
-        "Qbプログラム",
+        "QBプログラム",
         [{ 0: "切" }, { 1: "入" }],
         "0"
       ),
@@ -1829,7 +1754,7 @@ export const valueInfoQbqd = {
       ),
       431: new DeviceSetInfoDefinitionRadio(
         "QDプログラム電源",
-        "Qdプログラム",
+        "QDプログラム",
         [{ 0: "切" }, { 1: "入" }],
         "0"
       ),

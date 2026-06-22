@@ -440,9 +440,6 @@ export default {
         if (this.$route.name === 'treatment-observe-detail' && isSamePat) {
           return;
         }
-        if (isSamePat) {
-          return;
-        }
         this.refresh(false);
         /* modify by chamaojia 2022-10-26 [7217] 繰り返し呼び出しを削除する  --end */
       },

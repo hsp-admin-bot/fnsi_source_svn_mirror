@@ -17,7 +17,7 @@
         </div>
 
         <!-- メイン要素 -->
-        <div class="modal-body" >
+        <div class="modal-body">
           <div id="selectUnitArea" class="history-header-modal" style="overflow: auto;">
             <!-- 検索条件 -->
             <common-searcharea
@@ -1201,6 +1201,13 @@ export default {
       this.gridSetting();
       this.syncHistoryLockedResizeWidth();
     },
+    // 固定列幅変更中のtable幅にdiv幅を追随させるためのイベントハンドラ
+    onColumnResizingMouseMove(event) {
+      if (event.buttons !== 1) {
+        return;
+      }
+      this.syncHistoryLockedResizeWidth();
+    },
     syncHistoryLockedResizeWidth() {
       const root = this.getHistoryGridRootEl();
       if (!root) {
@@ -1575,6 +1582,11 @@ export default {
     EventBus.$on("requestReportParams", this.requestReportParams);
   },
   mounted() {
+    this.$el?.ownerDocument?.addEventListener(
+      "mousemove",
+      this.onColumnResizingMouseMove,
+    );
+
     this.$nextTick(() => {
       this.syncWithParentModal();
       const parentContainer = this.getParentModalContainer();
@@ -1596,6 +1608,11 @@ export default {
     }
   },
   beforeUnmount() {
+    this.$el?.ownerDocument?.removeEventListener(
+      "mousemove",
+      this.onColumnResizingMouseMove,
+    );
+
     this.parentModalResizeCleanup?.();
     this.parentModalResizeCleanup = null;
     if (this.historyGridLayoutRafId != null) {
@@ -2066,7 +2083,7 @@ const convertGridData = (localData, resultMaster, mainteMainList, userAccount) =
       cellDisable[lastUserNameIndex] = lastCellDisable;
       // 最終更新日時列の情報を生成
       const lastUpdateIndex = itemsLength + 1;
-      rowData[`column${masterIndex}${lastUpdateIndex}`] = lastUpdate
+      rowData[`column${masterIndex}${lastUpdateIndex}`] = lastUser && lastUpdate
         ? dayjs(lastUpdate).format("YYYY/MM/DD(dd) HH:mm")
         : "";
       cellDisable[lastUpdateIndex] = lastCellDisable;

@@ -367,10 +367,10 @@ namespace NKKScaleBedLib
                 NKKWebAccess.UrlEncodeFacilityHash = sys.GetSingleLineValue(CONFIG_COMMON_SECTION, "FacilityHash", String.Empty).Trim();
                 NKKWebAccess.BaseUri = sys.GetSingleLineValue(CONFIG_COMMON_SECTION, "BaseUri", String.Empty).Trim(' ', '/');
                 // 最新ファイルダウンロード先フォルダ
-                NKKScaleBedInformation.DownloadSourceFolder = sys.GetSingleLineValue(CONFIG_COMMON_SECTION, "DownloadFolder", String.Empty).Trim();
+                //NKKScaleBedInformation.DownloadSourceFolder = sys.GetSingleLineValue(CONFIG_COMMON_SECTION, "DownloadFolder", String.Empty).Trim();
 
                 // 最新ファイル取得先ファイル名
-                NKKScaleBedInformation.DownloadFileName = sys.GetSingleLineValue(CONFIG_COMMON_SECTION, "DownloadFileName", "NKKScaleBed.zip").Trim();
+                //NKKScaleBedInformation.DownloadFileName = sys.GetSingleLineValue(CONFIG_COMMON_SECTION, "DownloadFileName", "NKKScaleBed.zip").Trim();
 
                 // 体重計番号
                 NKKScaleBedInformation.WeightNo = sys.GetSingleLineValue(CONFIG_SCALEBED_SECTION, "WeightNo", "1").Trim();
@@ -433,12 +433,12 @@ namespace NKKScaleBedLib
                 this.m_Updater.ProcType = 0;
                 // システム設定項目番号
                 this.m_Updater.SystemDefineVersionNo = GET_SYSTEM_DEFINE_VERSION_NO;
-                // バケット名(ダウンロード先フォルダ)
-                this.m_Updater.Bucket = NKKScaleBedInformation.DownloadSourceFolder;
-                // ダウンロードファイル名
-                this.m_Updater.DownloadFileName = NKKScaleBedInformation.DownloadFileName;
-                // ダウンロードファイルのパスワード
-                this.m_Updater.Bucket = NKKScaleBedInformation.DownloadSourceFolder;
+                //// バケット名(ダウンロード先フォルダ)
+                //this.m_Updater.Bucket = NKKScaleBedInformation.DownloadSourceFolder;
+                //// ダウンロードファイル名
+                //this.m_Updater.DownloadFileName = NKKScaleBedInformation.DownloadFileName;
+                //// ダウンロードファイルのパスワード
+                //this.m_Updater.Bucket = NKKScaleBedInformation.DownloadSourceFolder;
                 // ダウンロードファイルのパスワード
                 this.m_Updater.DownloadFilePassword = NKKScaleBedInformation.DownloadFilePassword;
 

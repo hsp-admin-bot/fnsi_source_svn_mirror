@@ -27,7 +27,6 @@ import jp.co.nikkiso.ntss.admin_web.service.master.user.MstUserService;
 import jp.co.nikkiso.ntss.admin_web.service.sysSignManager.SysSigninManagerService;
 import jp.co.nikkiso.ntss.admin_web.service.sysSignManager.SysSigninManagerService.ForceSignOutReason;
 import jp.co.nikkiso.ntss.admin_web.service.utils.DateTimeUtils;
-import jp.co.nikkiso.ntss.admin_web.service.utils.MasterCacheHandler;
 import jp.co.nikkiso.ntss.admin_web.service.utils.StrUtils;
 import jp.co.nikkiso.ntss.admin_web.service.master.report.MstReportService;
 import jp.co.nikkiso.ntss.admin_web.web.rest.util.IndicationUtils;
@@ -299,6 +298,8 @@ import java.net.URISyntaxException;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import jp.co.nikkiso.ntss.core.config.DefaultDb;
@@ -5174,6 +5175,84 @@ public class MstInfoServiceImpl implements MstInfoService {
       return mstMedicineMix;
     }
 
+    /**
+     * mixInfoから薬剤コードを収集する
+     */
+    private void collectMedicineCdSetFromMixInfo(String mixInfo, Set<Integer> medicineCdSet) {
+      if (mixInfo == null) {
+        return;
+      }
+      JSONArray mixInfoJsonArr = new JSONArray(mixInfo);
+      for (int i = 0; i < mixInfoJsonArr.length(); i++) {
+        JSONObject jObj = (JSONObject) mixInfoJsonArr.get(i);
+        if (jObj.has("cd")) {
+          medicineCdSet.add(jObj.getInt("cd"));
+        }
+      }
+    }
+
+    /**
+     * 調製薬剤mixInfoに含まれる薬剤コードを一括取得する（N+1回避）
+     */
+    private Map<Integer, MstMedicine> buildMstMedicineMapFromMixInfo(List<MstMedicineMix> lstMstMedicineMix, String facilityCd) {
+      if (lstMstMedicineMix == null || lstMstMedicineMix.isEmpty()) {
+        return Collections.emptyMap();
+      }
+      Set<Integer> medicineCdSet = new HashSet<>();
+      for (MstMedicineMix element : lstMstMedicineMix) {
+        collectMedicineCdSetFromMixInfo(element.getMixInfo(), medicineCdSet);
+      }
+      if (medicineCdSet.isEmpty()) {
+        return Collections.emptyMap();
+      }
+      List<MstMedicine> mstMedicineList = mstMedicineDao.selectAllByCdListWithFacilityCd(
+        SelectOptions.get(), facilityCd, new ArrayList<>(medicineCdSet));
+      if (CollectionUtils.isEmpty(mstMedicineList)) {
+        return Collections.emptyMap();
+      }
+      return mstMedicineList.stream()
+        .filter(m -> m.getMedicineCd() != null)
+        .collect(Collectors.toMap(MstMedicine::getMedicineCd, Function.identity(), (a, b) -> a));
+    }
+
+    private Map<String, MstMedicine> buildMstMedicineMapFromMixInfoByFacility(List<MstMedicineMix> lstMstMedicineMix) {
+      if (lstMstMedicineMix == null || lstMstMedicineMix.isEmpty()) {
+        return Collections.emptyMap();
+      }
+      Map<String, Set<Integer>> medicineCdSetMap = new HashMap<>();
+      for (MstMedicineMix element : lstMstMedicineMix) {
+        if (element == null || StringUtils.isEmpty(element.getFacilityCd())) {
+          continue;
+        }
+        Set<Integer> medicineCdSet = medicineCdSetMap.computeIfAbsent(element.getFacilityCd(), key -> new HashSet<>());
+        collectMedicineCdSetFromMixInfo(element.getMixInfo(), medicineCdSet);
+      }
+      if (medicineCdSetMap.isEmpty()) {
+        return Collections.emptyMap();
+      }
+      Map<String, MstMedicine> mstMedicineMap = new HashMap<>();
+      for (Map.Entry<String, Set<Integer>> entry : medicineCdSetMap.entrySet()) {
+        if (entry.getValue().isEmpty()) {
+          continue;
+        }
+        List<MstMedicine> mstMedicineList = mstMedicineDao.selectAllByCdListWithFacilityCd(
+          SelectOptions.get(), entry.getKey(), new ArrayList<>(entry.getValue()));
+        if (CollectionUtils.isEmpty(mstMedicineList)) {
+          continue;
+        }
+        for (MstMedicine mstMedicine : mstMedicineList) {
+          if (mstMedicine != null && mstMedicine.getMedicineCd() != null) {
+            mstMedicineMap.put(buildFacilityMedicineKey(entry.getKey(), mstMedicine.getMedicineCd()), mstMedicine);
+          }
+        }
+      }
+      return mstMedicineMap;
+    }
+
+    private String buildFacilityMedicineKey(String facilityCd, Integer medicineCd) {
+      return facilityCd + ":" + medicineCd;
+    }
+
     @Override
     public List<MstMedicineMixDto> findMstMedicineMixTabooAllergy(String facilityCd, Long patId, Integer selectMedicineCd, boolean... isDelFlg) {
       SelectOptions selectOptions = SelectOptions.get();
@@ -5212,13 +5291,13 @@ public class MstInfoServiceImpl implements MstInfoService {
         }
       };
       List<MstMedicineClass> mstMedicineClassList = mstMedicineClassDao.selectAllIncludeDeleted(selectOptions, paramClass);
+      Map<Integer, MstMedicine> mstMedicineMap = buildMstMedicineMapFromMixInfo(lstMstMedicineMix, facilityCd);
 
       MstTabooAllergy mstTabooAllergyParams = new MstTabooAllergy();
       mstTabooAllergyParams.setFacilityCd(facilityCd);
       // 禁忌・アレルギーマスタ情報を取得
       List<MstTabooAllergy> mstTabooAllergyList = mstTabooAllergyDao.selectAllIncludeDeleted(selectOptions, mstTabooAllergyParams);
 
-      MasterCacheHandler masterCacheHandler = MasterCacheHandler.get();
       //add 9706 ljx start
       //???患者の場合、patIdが「-1」である、判断追加、後の処理を実行しない。
       if(-1 == patId){
@@ -5253,7 +5332,7 @@ public class MstInfoServiceImpl implements MstInfoService {
                 JSONObject jObj = (JSONObject) mixInfoJsonArr.get(i);
                 if (jObj.has("cd")) {
                   Integer cd = jObj.getInt("cd");
-                  MstMedicine mstMedicine = masterCacheHandler.getMstMedicineByCd(cd);
+                  MstMedicine mstMedicine = mstMedicineMap.get(cd);
                   if (mstMedicine != null) {
                     String isDisp = mstMedicine.getIsDisp();
                     String isDel = mstMedicine.getIsDel();
@@ -5311,7 +5390,7 @@ public class MstInfoServiceImpl implements MstInfoService {
                 JSONObject jObj = (JSONObject) mixInfoJsonArr.get(i);
                 if (jObj.has("cd")) {
                   Integer cd = jObj.getInt("cd");
-                  MstMedicine mstMedicine = masterCacheHandler.getMstMedicineByCd(cd);
+                  MstMedicine mstMedicine = mstMedicineMap.get(cd);
                   if (mstMedicine != null) {
                     String isDisp = mstMedicine.getIsDisp();
                     String isDel = mstMedicine.getIsDel();
@@ -5513,7 +5592,7 @@ public class MstInfoServiceImpl implements MstInfoService {
     SelectOptions selectOptions = SelectOptions.get();
     List<MstMedicineMix> mstMedicineMixList = mstMedicineMixDao.selectAllIncludeDeleted(selectOptions, params);
     if (mstMedicineMixList != null && !mstMedicineMixList.isEmpty()) {
-      MasterCacheHandler masterCacheHandler = MasterCacheHandler.get();
+      Map<String, MstMedicine> mstMedicineMap = buildMstMedicineMapFromMixInfoByFacility(mstMedicineMixList);
       for (MstMedicineMix mstMedicineMix : mstMedicineMixList) {
         MstMedicineMixExtendsDto mstMedicineMixExtendsDto = new MstMedicineMixExtendsDto();
         BeanUtils.copyProperties(mstMedicineMix, mstMedicineMixExtendsDto);
@@ -5525,7 +5604,7 @@ public class MstInfoServiceImpl implements MstInfoService {
             JSONObject jObj = (JSONObject) mixInfoJsonArr.get(i);
             if (jObj.has("cd")) {
               Integer cd = jObj.getInt("cd");
-              MstMedicine mstMedicine = masterCacheHandler.getMstMedicineByCd(cd);
+              MstMedicine mstMedicine = mstMedicineMap.get(buildFacilityMedicineKey(mstMedicineMix.getFacilityCd(), cd));
               if (mstMedicine != null) {
                 String isDisp = mstMedicine.getIsDisp();
                 String isDel = mstMedicine.getIsDel();
@@ -6946,245 +7025,305 @@ public class MstInfoServiceImpl implements MstInfoService {
    */
   public Map<String, Object> getMstInfo(MstInfoRequest mstInfoRequest){
     String facilityCd = mstInfoRequest.getFacilityCd();
-    Map<String, Object> response = new HashMap<>();
+    // add #12778 並列DBクエリ start
+    Map<String, Object> response = new ConcurrentHashMap<>();
     List<String> reqMstNames = Arrays.stream(mstInfoRequest.getReqMstNames().split(",")).toList();
+    List<CompletableFuture<Void>> futures = new ArrayList<>();
 
     // 禁忌・アレルギークラス (削除されたを含む)
     if(reqMstNames.contains(MstInfoRequest.ReqMstName.MST_TABOO_ALLERGY_INCLUDE_DELETED.getName())){
-      MstTabooAllergy mstParams = new MstTabooAllergy();
-      mstParams.setFacilityCd(facilityCd);
-      List<MstTabooAllergy> mstDataList = mstTabooAllergyDao.selectAllIncludeDeleted( SelectOptions.get(), mstParams);
-      response.put(MstInfoRequest.ReqMstName.MST_TABOO_ALLERGY_INCLUDE_DELETED.getName(), mstDataList);
+      futures.add(CompletableFuture.runAsync(() -> {
+        MstTabooAllergy mstParams = new MstTabooAllergy();
+        mstParams.setFacilityCd(facilityCd);
+        List<MstTabooAllergy> mstDataList = mstTabooAllergyDao.selectAllIncludeDeleted( SelectOptions.get(), mstParams);
+        response.put(MstInfoRequest.ReqMstName.MST_TABOO_ALLERGY_INCLUDE_DELETED.getName(), mstDataList);
+      }));
     }
 
     // 禁忌・アレルギークラス
     if(reqMstNames.contains(MstInfoRequest.ReqMstName.MST_TABOO_ALLERGY.getName())){
-      List<MstTabooAllergy> mstDataList = mstTabooAllergyDao.getMstTabooAllergyInfoByFacilityCd(facilityCd);
-      response.put(MstInfoRequest.ReqMstName.MST_TABOO_ALLERGY.getName(), mstDataList);
+      futures.add(CompletableFuture.runAsync(() -> {
+        List<MstTabooAllergy> mstDataList = mstTabooAllergyDao.getMstTabooAllergyInfoByFacilityCd(facilityCd);
+        response.put(MstInfoRequest.ReqMstName.MST_TABOO_ALLERGY.getName(), mstDataList);
+      }));
     }
 
     // 薬剤クラス
     if(reqMstNames.contains(MstInfoRequest.ReqMstName.MST_MEDICINE.getName())){
-      MstMedicine mstParams = new MstMedicine();
-      mstParams.setFacilityCd(facilityCd);
-      List<MstMedicine> mstDataList = mstMedicineDao.selectAll(SelectOptions.get(), mstParams);
-      response.put(MstInfoRequest.ReqMstName.MST_MEDICINE.getName(), mstDataList);
+      futures.add(CompletableFuture.runAsync(() -> {
+        MstMedicine mstParams = new MstMedicine();
+        mstParams.setFacilityCd(facilityCd);
+        List<MstMedicine> mstDataList = mstMedicineDao.selectAll(SelectOptions.get(), mstParams);
+        response.put(MstInfoRequest.ReqMstName.MST_MEDICINE.getName(), mstDataList);
+      }));
     }
 
     // 薬剤クラス (削除されたを含む)
     if(reqMstNames.contains(MstInfoRequest.ReqMstName.MST_MEDICINE_INCLUDE_DELETED.getName())){
-      MstMedicine mstParams = new MstMedicine();
-      mstParams.setFacilityCd(facilityCd);
-      List<MstMedicine> mstDataList = mstMedicineDao.selectAllIncludeDeleted(SelectOptions.get(), mstParams);
-      response.put(MstInfoRequest.ReqMstName.MST_MEDICINE_INCLUDE_DELETED.getName(), mstDataList);
+      futures.add(CompletableFuture.runAsync(() -> {
+        MstMedicine mstParams = new MstMedicine();
+        mstParams.setFacilityCd(facilityCd);
+        List<MstMedicine> mstDataList = mstMedicineDao.selectAllIncludeDeleted(SelectOptions.get(), mstParams);
+        response.put(MstInfoRequest.ReqMstName.MST_MEDICINE_INCLUDE_DELETED.getName(), mstDataList);
+      }));
     }
 
     // 薬剤分類クラス
     if(reqMstNames.contains(MstInfoRequest.ReqMstName.MST_MEDICINE_CLASS.getName())){
-      MstMedicineClass mstParams = new MstMedicineClass();
-      mstParams.setFacilityCd(facilityCd);
-      List<MstMedicineClass> mstDataList = mstMedicineClassDao.selectAll(SelectOptions.get(), mstParams);
-      response.put(MstInfoRequest.ReqMstName.MST_MEDICINE_CLASS.getName(), mstDataList);
+      futures.add(CompletableFuture.runAsync(() -> {
+        MstMedicineClass mstParams = new MstMedicineClass();
+        mstParams.setFacilityCd(facilityCd);
+        List<MstMedicineClass> mstDataList = mstMedicineClassDao.selectAll(SelectOptions.get(), mstParams);
+        response.put(MstInfoRequest.ReqMstName.MST_MEDICINE_CLASS.getName(), mstDataList);
+      }));
     }
     // 薬剤分類クラス (削除されたを含む)
     if(reqMstNames.contains(MstInfoRequest.ReqMstName.MST_MEDICINE_CLASS_INCLUDE_DELETED.getName())){
-      MstMedicineClass mstParams = new MstMedicineClass();
-      mstParams.setFacilityCd(facilityCd);
-      List<MstMedicineClass> mstDataList = mstMedicineClassDao.selectAllIncludeDeleted(SelectOptions.get(), mstParams);
-      response.put(MstInfoRequest.ReqMstName.MST_MEDICINE_CLASS_INCLUDE_DELETED.getName(), mstDataList);
+      futures.add(CompletableFuture.runAsync(() -> {
+        MstMedicineClass mstParams = new MstMedicineClass();
+        mstParams.setFacilityCd(facilityCd);
+        List<MstMedicineClass> mstDataList = mstMedicineClassDao.selectAllIncludeDeleted(SelectOptions.get(), mstParams);
+        response.put(MstInfoRequest.ReqMstName.MST_MEDICINE_CLASS_INCLUDE_DELETED.getName(), mstDataList);
+      }));
     }
 
     // 医療材料クラス
     if(reqMstNames.contains(MstInfoRequest.ReqMstName.MST_EQUIPMENT.getName())){
-      MstEquipment mstParams = new MstEquipment();
-      mstParams.setFacilityCd(facilityCd);
-      List<MstEquipment> mstDataList = mstEquipmentDao.selectAll(SelectOptions.get(), mstParams);
-      response.put(MstInfoRequest.ReqMstName.MST_EQUIPMENT.getName(), mstDataList);
+      futures.add(CompletableFuture.runAsync(() -> {
+        MstEquipment mstParams = new MstEquipment();
+        mstParams.setFacilityCd(facilityCd);
+        List<MstEquipment> mstDataList = mstEquipmentDao.selectAll(SelectOptions.get(), mstParams);
+        response.put(MstInfoRequest.ReqMstName.MST_EQUIPMENT.getName(), mstDataList);
+      }));
     }
     // 医療材料クラス (削除されたを含む)
     if(reqMstNames.contains(MstInfoRequest.ReqMstName.MST_EQUIPMENT_INCLUDE_DELETED.getName())){
-      MstEquipment mstParams = new MstEquipment();
-      mstParams.setFacilityCd(facilityCd);
-      List<MstEquipment> mstDataList = mstEquipmentDao.selectAllIncludeDeleted(SelectOptions.get(), mstParams);
-      response.put(MstInfoRequest.ReqMstName.MST_EQUIPMENT_INCLUDE_DELETED.getName(), mstDataList);
+      futures.add(CompletableFuture.runAsync(() -> {
+        MstEquipment mstParams = new MstEquipment();
+        mstParams.setFacilityCd(facilityCd);
+        List<MstEquipment> mstDataList = mstEquipmentDao.selectAllIncludeDeleted(SelectOptions.get(), mstParams);
+        response.put(MstInfoRequest.ReqMstName.MST_EQUIPMENT_INCLUDE_DELETED.getName(), mstDataList);
+      }));
     }
 
     // 医療材料分類クラス
     if(reqMstNames.contains(MstInfoRequest.ReqMstName.MST_EQUIPMENT_CLASS.getName())){
-      MstEquipmentClass mstParams = new MstEquipmentClass();
-      mstParams.setFacilityCd(facilityCd);
-      List<MstEquipmentClass> mstDataList = mstEquipmentClassDao.selectAll(SelectOptions.get(), mstParams);
-      response.put(MstInfoRequest.ReqMstName.MST_EQUIPMENT_CLASS.getName(), mstDataList);
+      futures.add(CompletableFuture.runAsync(() -> {
+        MstEquipmentClass mstParams = new MstEquipmentClass();
+        mstParams.setFacilityCd(facilityCd);
+        List<MstEquipmentClass> mstDataList = mstEquipmentClassDao.selectAll(SelectOptions.get(), mstParams);
+        response.put(MstInfoRequest.ReqMstName.MST_EQUIPMENT_CLASS.getName(), mstDataList);
+      }));
     }
 
     // ダイアライザクラス (削除されたを含む)
     if(reqMstNames.contains(MstInfoRequest.ReqMstName.MST_DIALYZER_INCLUDE_DELETED.getName())){
-      MstDialyzer mstParams = new MstDialyzer();
-      mstParams.setFacilityCd(facilityCd);
-      List<MstDialyzer> mstDataList = mstDialyzerDao.selectAllIncludeDeleted(SelectOptions.get(), mstParams);
-      response.put(MstInfoRequest.ReqMstName.MST_DIALYZER_INCLUDE_DELETED.getName(), mstDataList);
+      futures.add(CompletableFuture.runAsync(() -> {
+        MstDialyzer mstParams = new MstDialyzer();
+        mstParams.setFacilityCd(facilityCd);
+        List<MstDialyzer> mstDataList = mstDialyzerDao.selectAllIncludeDeleted(SelectOptions.get(), mstParams);
+        response.put(MstInfoRequest.ReqMstName.MST_DIALYZER_INCLUDE_DELETED.getName(), mstDataList);
+      }));
     }
 
     // 一般名処方クラス (削除されたを含む)
     if(reqMstNames.contains(MstInfoRequest.ReqMstName.SYS_GENERIC_MEDICINE_INCLUDE_DELETED.getName())){
-      List<SysGenericMedicine> mstDataList = sysGenericMedicineDao.selectAllIncludeDeleted(SelectOptions.get());
-      response.put(MstInfoRequest.ReqMstName.SYS_GENERIC_MEDICINE_INCLUDE_DELETED.getName(), mstDataList);
+      futures.add(CompletableFuture.runAsync(() -> {
+        List<SysGenericMedicine> mstDataList = sysGenericMedicineDao.selectAllIncludeDeleted(SelectOptions.get());
+        response.put(MstInfoRequest.ReqMstName.SYS_GENERIC_MEDICINE_INCLUDE_DELETED.getName(), mstDataList);
+      }));
     }
 
     // 調製薬剤マスタクラス
     if(reqMstNames.contains(MstInfoRequest.ReqMstName.MST_MEDICINE_MIX.getName())){
-      MstMedicineMix mstParams = new MstMedicineMix();
-      mstParams.setFacilityCd(facilityCd);
-      List<MstMedicineMix> mstDataList = mstMedicineMixDao.selectAll(SelectOptions.get(), mstParams);
-      response.put(MstInfoRequest.ReqMstName.MST_MEDICINE_MIX.getName(), mstDataList);
+      futures.add(CompletableFuture.runAsync(() -> {
+        MstMedicineMix mstParams = new MstMedicineMix();
+        mstParams.setFacilityCd(facilityCd);
+        List<MstMedicineMix> mstDataList = mstMedicineMixDao.selectAll(SelectOptions.get(), mstParams);
+        response.put(MstInfoRequest.ReqMstName.MST_MEDICINE_MIX.getName(), mstDataList);
+      }));
     }
     // 調製薬剤マスタクラス (削除されたを含む)
     if(reqMstNames.contains(MstInfoRequest.ReqMstName.MST_MEDICINE_MIX_INCLUDE_DELETED.getName())){
-      MstMedicineMix mstParams = new MstMedicineMix();
-      mstParams.setFacilityCd(facilityCd);
-      List<MstMedicineMix> mstDataList = mstMedicineMixDao.selectAllIncludeDeleted(SelectOptions.get(), mstParams);
+      futures.add(CompletableFuture.runAsync(() -> {
+        MstMedicineMix mstParams = new MstMedicineMix();
+        mstParams.setFacilityCd(facilityCd);
+        List<MstMedicineMix> mstDataList = mstMedicineMixDao.selectAllIncludeDeleted(SelectOptions.get(), mstParams);
 
-      List<MstMedicineMixExtendsDto> res = new ArrayList<>();
-      if (mstDataList != null && !mstDataList.isEmpty()) {
-        MasterCacheHandler masterCacheHandler = MasterCacheHandler.get();
-        for (MstMedicineMix mstMedicineMix : mstDataList) {
-          MstMedicineMixExtendsDto mstMedicineMixExtendsDto = new MstMedicineMixExtendsDto();
-          BeanUtils.copyProperties(mstMedicineMix, mstMedicineMixExtendsDto);
-          mstMedicineMixExtendsDto.setIsIncludeDel(false);
-          String mixInfo = mstMedicineMix.getMixInfo();
-          if (mixInfo != null) {
-            JSONArray mixInfoJsonArr = new JSONArray(mixInfo);
-            for (int i = 0; i < mixInfoJsonArr.length(); i++) {
-              JSONObject jObj = (JSONObject) mixInfoJsonArr.get(i);
-              if (jObj.has("cd")) {
-                Integer cd = jObj.getInt("cd");
-                MstMedicine mstMedicine = masterCacheHandler.getMstMedicineByCd(cd);
-                if (mstMedicine != null) {
-                  String isDisp = mstMedicine.getIsDisp();
-                  String isDel = mstMedicine.getIsDel();
-                  boolean isNot = "0".equals(isDisp) || "1".equals(isDel);
-                  mstMedicineMixExtendsDto.setIsIncludeDel(isNot);
-                  if(isNot){
-                    break;
+        List<MstMedicineMixExtendsDto> res = new ArrayList<>();
+        if (mstDataList != null && !mstDataList.isEmpty()) {
+          Map<Integer, MstMedicine> mstMedicineMap = buildMstMedicineMapFromMixInfo(mstDataList, facilityCd);
+          for (MstMedicineMix mstMedicineMix : mstDataList) {
+            MstMedicineMixExtendsDto mstMedicineMixExtendsDto = new MstMedicineMixExtendsDto();
+            BeanUtils.copyProperties(mstMedicineMix, mstMedicineMixExtendsDto);
+            mstMedicineMixExtendsDto.setIsIncludeDel(false);
+            String mixInfo = mstMedicineMix.getMixInfo();
+            if (mixInfo != null) {
+              JSONArray mixInfoJsonArr = new JSONArray(mixInfo);
+              for (int i = 0; i < mixInfoJsonArr.length(); i++) {
+                JSONObject jObj = (JSONObject) mixInfoJsonArr.get(i);
+                if (jObj.has("cd")) {
+                  Integer cd = jObj.getInt("cd");
+                  MstMedicine mstMedicine = mstMedicineMap.get(cd);
+                  if (mstMedicine != null) {
+                    String isDisp = mstMedicine.getIsDisp();
+                    String isDel = mstMedicine.getIsDel();
+                    boolean isNot = "0".equals(isDisp) || "1".equals(isDel);
+                    mstMedicineMixExtendsDto.setIsIncludeDel(isNot);
+                    if(isNot){
+                      break;
+                    }
                   }
                 }
               }
             }
+            res.add(mstMedicineMixExtendsDto);
           }
-          res.add(mstMedicineMixExtendsDto);
         }
-      }
 
-      response.put(MstInfoRequest.ReqMstName.MST_MEDICINE_MIX_INCLUDE_DELETED.getName(), res);
+        response.put(MstInfoRequest.ReqMstName.MST_MEDICINE_MIX_INCLUDE_DELETED.getName(), res);
+      }));
     }
 
     // インプラントクラス
     if(reqMstNames.contains(MstInfoRequest.ReqMstName.MST_IMPLANT.getName())){
-      MstImplant mstParams = new MstImplant();
-      mstParams.setFacilityCd(facilityCd);
-      List<MstImplant> mstDataList = mstImplantDao.selectAll(SelectOptions.get(), mstParams);
-      response.put(MstInfoRequest.ReqMstName.MST_IMPLANT.getName(), mstDataList);
+      futures.add(CompletableFuture.runAsync(() -> {
+        MstImplant mstParams = new MstImplant();
+        mstParams.setFacilityCd(facilityCd);
+        List<MstImplant> mstDataList = mstImplantDao.selectAll(SelectOptions.get(), mstParams);
+        response.put(MstInfoRequest.ReqMstName.MST_IMPLANT.getName(), mstDataList);
+      }));
     }
 
     // 感染症クラ
     if(reqMstNames.contains(MstInfoRequest.ReqMstName.MST_INFECTION.getName())){
-      MstInfection mstParams = new MstInfection();
-      mstParams.setFacilityCd(facilityCd);
-      List<MstInfection> mstDataList = mstInfectionDao.selectAll(SelectOptions.get(), mstParams);
-      response.put(MstInfoRequest.ReqMstName.MST_INFECTION.getName(), mstDataList);
+      futures.add(CompletableFuture.runAsync(() -> {
+        MstInfection mstParams = new MstInfection();
+        mstParams.setFacilityCd(facilityCd);
+        List<MstInfection> mstDataList = mstInfectionDao.selectAll(SelectOptions.get(), mstParams);
+        response.put(MstInfoRequest.ReqMstName.MST_INFECTION.getName(), mstDataList);
+      }));
     }
 
     // VAクラス
     if(reqMstNames.contains(MstInfoRequest.ReqMstName.MST_VA.getName())){
-      MstVa mstParams = new MstVa();
-      mstParams.setFacilityCd(facilityCd);
-      List<MstVa> mstDataList = mstVaDao.selectAll(SelectOptions.get(), mstParams);
-      response.put(MstInfoRequest.ReqMstName.MST_VA.getName(), mstDataList);
+      futures.add(CompletableFuture.runAsync(() -> {
+        MstVa mstParams = new MstVa();
+        mstParams.setFacilityCd(facilityCd);
+        List<MstVa> mstDataList = mstVaDao.selectAll(SelectOptions.get(), mstParams);
+        response.put(MstInfoRequest.ReqMstName.MST_VA.getName(), mstDataList);
+      }));
     }
 
     //  VAクラス(削除された)
     if(reqMstNames.contains(MstInfoRequest.ReqMstName.MST_VA_DELETED.getName())){
-      MstVa mstParams = new MstVa();
-      mstParams.setFacilityCd(facilityCd);
-      List<MstVa> mstDataList = mstVaDao.selectAllNoDel(SelectOptions.get(), mstParams);
-      response.put(MstInfoRequest.ReqMstName.MST_VA_DELETED.getName(), mstDataList);
+      futures.add(CompletableFuture.runAsync(() -> {
+        MstVa mstParams = new MstVa();
+        mstParams.setFacilityCd(facilityCd);
+        List<MstVa> mstDataList = mstVaDao.selectAllNoDel(SelectOptions.get(), mstParams);
+        response.put(MstInfoRequest.ReqMstName.MST_VA_DELETED.getName(), mstDataList);
+      }));
     }
 
     // ダイアライザクラス
     if(reqMstNames.contains(MstInfoRequest.ReqMstName.MST_DIALYZE.getName())){
-      MstDialyzer mstParams = new MstDialyzer();
-      mstParams.setFacilityCd(facilityCd);
-      List<MstDialyzer> mstDataList = mstDialyzerDao.selectAll(SelectOptions.get(), mstParams);
-      response.put(MstInfoRequest.ReqMstName.MST_DIALYZE.getName(), mstDataList);
+      futures.add(CompletableFuture.runAsync(() -> {
+        MstDialyzer mstParams = new MstDialyzer();
+        mstParams.setFacilityCd(facilityCd);
+        List<MstDialyzer> mstDataList = mstDialyzerDao.selectAll(SelectOptions.get(), mstParams);
+        response.put(MstInfoRequest.ReqMstName.MST_DIALYZE.getName(), mstDataList);
+      }));
     }
 
     //  ダイアライザクラス(削除された)
     if(reqMstNames.contains(MstInfoRequest.ReqMstName.MST_DIALYZE_DELETED.getName())){
-      MstDialyzer mstParams = new MstDialyzer();
-      mstParams.setFacilityCd(facilityCd);
-      List<MstDialyzer> mstDataList = mstDialyzerDao.selectAllNoDel(SelectOptions.get(), mstParams);
-      response.put(MstInfoRequest.ReqMstName.MST_DIALYZE_DELETED.getName(), mstDataList);
+      futures.add(CompletableFuture.runAsync(() -> {
+        MstDialyzer mstParams = new MstDialyzer();
+        mstParams.setFacilityCd(facilityCd);
+        List<MstDialyzer> mstDataList = mstDialyzerDao.selectAllNoDel(SelectOptions.get(), mstParams);
+        response.put(MstInfoRequest.ReqMstName.MST_DIALYZE_DELETED.getName(), mstDataList);
+      }));
     }
 
     // 手技クラス
     if(reqMstNames.contains(MstInfoRequest.ReqMstName.MST_PROCEDURE.getName())){
-      MstProcedure mstParams = new MstProcedure();
-      mstParams.setFacilityCd(facilityCd);
-      List<MstProcedure> mstDataList = mstProcedureDao.selectAll(SelectOptions.get(), mstParams);
-      response.put(MstInfoRequest.ReqMstName.MST_PROCEDURE.getName(), mstDataList);
+      futures.add(CompletableFuture.runAsync(() -> {
+        MstProcedure mstParams = new MstProcedure();
+        mstParams.setFacilityCd(facilityCd);
+        List<MstProcedure> mstDataList = mstProcedureDao.selectAll(SelectOptions.get(), mstParams);
+        response.put(MstInfoRequest.ReqMstName.MST_PROCEDURE.getName(), mstDataList);
+      }));
     }
 
     // 投与タイミングクラス
     if(reqMstNames.contains(MstInfoRequest.ReqMstName.MST_MEDICATE_TIMING.getName())){
-      MstMedicateTiming mstParams = new MstMedicateTiming();
-      mstParams.setFacilityCd(facilityCd);
-      List<MstMedicateTiming> mstDataList = mstMedicateTimingDao.selectAll(SelectOptions.get(), mstParams);
-      response.put(MstInfoRequest.ReqMstName.MST_MEDICATE_TIMING.getName(), mstDataList);
+      futures.add(CompletableFuture.runAsync(() -> {
+        MstMedicateTiming mstParams = new MstMedicateTiming();
+        mstParams.setFacilityCd(facilityCd);
+        List<MstMedicateTiming> mstDataList = mstMedicateTimingDao.selectAll(SelectOptions.get(), mstParams);
+        response.put(MstInfoRequest.ReqMstName.MST_MEDICATE_TIMING.getName(), mstDataList);
+      }));
     }
 
     // 投薬支援マスタ
     if(reqMstNames.contains(MstInfoRequest.ReqMstName.MNT_MEDICINE_SUPPORT.getName())){
-      List<MntMedicineSupport> mstDataList = mstSupportDao.selectMedicineSupport(facilityCd);
-      response.put(MstInfoRequest.ReqMstName.MNT_MEDICINE_SUPPORT.getName(), mstDataList);
+      futures.add(CompletableFuture.runAsync(() -> {
+        List<MntMedicineSupport> mstDataList = mstSupportDao.selectMedicineSupport(facilityCd);
+        response.put(MstInfoRequest.ReqMstName.MNT_MEDICINE_SUPPORT.getName(), mstDataList);
+      }));
     }
 
     // 治療方法マスタ
     if(reqMstNames.contains(MstInfoRequest.ReqMstName.MST_TREATMENT.getName())){
-      MstTreatment mstParams = new MstTreatment();
-      mstParams.setFacilityCd(facilityCd);
-      List<MstTreatment> mstDataList = mstTreatmentDao.selectAll(SelectOptions.get(), mstParams);
-      response.put(MstInfoRequest.ReqMstName.MST_TREATMENT.getName(), mstDataList);
+      futures.add(CompletableFuture.runAsync(() -> {
+        MstTreatment mstParams = new MstTreatment();
+        mstParams.setFacilityCd(facilityCd);
+        List<MstTreatment> mstDataList = mstTreatmentDao.selectAll(SelectOptions.get(), mstParams);
+        response.put(MstInfoRequest.ReqMstName.MST_TREATMENT.getName(), mstDataList);
+      }));
     }
 
     // 治療方法マスタ(削除された)
     if(reqMstNames.contains(MstInfoRequest.ReqMstName.MST_TREATMENT_DELETED.getName())){
-      MstTreatment mstParams = new MstTreatment();
-      mstParams.setFacilityCd(facilityCd);
-      List<MstTreatment> mstDataList = mstTreatmentDao.selectAllDel(SelectOptions.get(), mstParams);
-      response.put(MstInfoRequest.ReqMstName.MST_TREATMENT_DELETED.getName(), mstDataList);
+      futures.add(CompletableFuture.runAsync(() -> {
+        MstTreatment mstParams = new MstTreatment();
+        mstParams.setFacilityCd(facilityCd);
+        List<MstTreatment> mstDataList = mstTreatmentDao.selectAllDel(SelectOptions.get(), mstParams);
+        response.put(MstInfoRequest.ReqMstName.MST_TREATMENT_DELETED.getName(), mstDataList);
+      }));
     }
 
     // 治療方法マスタ (削除されたを含む)
     if(reqMstNames.contains(MstInfoRequest.ReqMstName.MST_TREATMENT_INCLUDE_DELETED.getName())){
-      MstTreatment mstParams = new MstTreatment();
-      mstParams.setFacilityCd(facilityCd);
-      List<MstTreatment> mstDataList = mstTreatmentDao.selectAllIncludeDeleted(SelectOptions.get(), mstParams);
-      response.put(MstInfoRequest.ReqMstName.MST_TREATMENT_INCLUDE_DELETED.getName(), mstDataList);
+      futures.add(CompletableFuture.runAsync(() -> {
+        MstTreatment mstParams = new MstTreatment();
+        mstParams.setFacilityCd(facilityCd);
+        List<MstTreatment> mstDataList = mstTreatmentDao.selectAllIncludeDeleted(SelectOptions.get(), mstParams);
+        response.put(MstInfoRequest.ReqMstName.MST_TREATMENT_INCLUDE_DELETED.getName(), mstDataList);
+      }));
     }
 
     // クールクラス
     if(reqMstNames.contains(MstInfoRequest.ReqMstName.MST_KUR.getName())){
-      List<MstKur> mstDataList = mstKurDao.selectByFacilityCd(SelectOptions.get(), facilityCd, "0");
-      response.put(MstInfoRequest.ReqMstName.MST_KUR.getName(), mstDataList);
+      futures.add(CompletableFuture.runAsync(() -> {
+        List<MstKur> mstDataList = mstKurDao.selectByFacilityCd(SelectOptions.get(), facilityCd, "0");
+        response.put(MstInfoRequest.ReqMstName.MST_KUR.getName(), mstDataList);
+      }));
     }
 
     // ベッドマスタ
     if(reqMstNames.contains(MstInfoRequest.ReqMstName.MST_BED.getName())){
-      List<MstBed> mstDataList = mstBedDao.selectAllByFacilityCd(facilityCd);
-      response.put(MstInfoRequest.ReqMstName.MST_BED.getName(), mstDataList);
+      futures.add(CompletableFuture.runAsync(() -> {
+        List<MstBed> mstDataList = mstBedDao.selectAllByFacilityCd(facilityCd);
+        response.put(MstInfoRequest.ReqMstName.MST_BED.getName(), mstDataList);
+      }));
     }
 
-    return response;
+    if (!futures.isEmpty()) {
+      CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+    }
+    return new HashMap<>(response);
+    // add #12778 並列DBクエリ end
   }
   //add #10236 api要求をマージして、ブラウザ要求スレッドのスタックをできるだけ減らす shiyw end
 
@@ -7292,7 +7431,7 @@ public class MstInfoServiceImpl implements MstInfoService {
       }
       List<MstMedicineMixExtendsDto> res = new ArrayList<>();
       if (mstDataList != null && !mstDataList.isEmpty()) {
-        MasterCacheHandler masterCacheHandler = MasterCacheHandler.get();
+        Map<String, MstMedicine> mstMedicineMap = buildMstMedicineMapFromMixInfoByFacility(mstDataList);
         for (MstMedicineMix mstMedicineMix : mstDataList) {
           MstMedicineMixExtendsDto mstMedicineMixExtendsDto = new MstMedicineMixExtendsDto();
           BeanUtils.copyProperties(mstMedicineMix, mstMedicineMixExtendsDto);
@@ -7304,7 +7443,7 @@ public class MstInfoServiceImpl implements MstInfoService {
               JSONObject jObj = (JSONObject) mixInfoJsonArr.get(i);
               if (jObj.has("cd")) {
                 Integer cd = jObj.getInt("cd");
-                MstMedicine mstMedicine = masterCacheHandler.getMstMedicineByCd(cd);
+                MstMedicine mstMedicine = mstMedicineMap.get(buildFacilityMedicineKey(mstMedicineMix.getFacilityCd(), cd));
                 if (mstMedicine != null) {
                   String isDisp = mstMedicine.getIsDisp();
                   String isDel = mstMedicine.getIsDel();
@@ -7546,6 +7685,7 @@ public class MstInfoServiceImpl implements MstInfoService {
   private void editUnKnowMstMedicineMix(String facilityCd, MstMasterResponse mstMasterResponse, List<MstMedicineMix> lstMstMedicineMix
     ,List<MstMedicineMixDto> mstMedicineMixDtoList, List<MstMedicineClass> mstMedicineClassList) {
     if (lstMstMedicineMix != null && !lstMstMedicineMix.isEmpty()) {
+      Map<Integer, MstMedicine> mstMedicineMap = buildMstMedicineMapFromMixInfo(lstMstMedicineMix, facilityCd);
       for (MstMedicineMix element : lstMstMedicineMix) {
         MstMedicineMixDto newElement = new MstMedicineMixDto();
         BeanUtils.copyProperties(element, newElement);
@@ -7576,7 +7716,7 @@ public class MstInfoServiceImpl implements MstInfoService {
             JSONObject jObj = (JSONObject) mixInfoJsonArr.get(i);
             if (jObj.has("cd")) {
               Integer cd = jObj.getInt("cd");
-              MstMedicine mstMedicine = MasterCacheHandler.get().getMstMedicineByCd(cd);
+              MstMedicine mstMedicine = mstMedicineMap.get(cd);
               if (mstMedicine != null) {
                 String isDisp = mstMedicine.getIsDisp();
                 String isDel = mstMedicine.getIsDel();
@@ -7949,6 +8089,7 @@ public class MstInfoServiceImpl implements MstInfoService {
     ArrayList<String> lstAllergyMedicine = new ArrayList<String>();
 
     if (lstMstMedicineMix != null && !lstMstMedicineMix.isEmpty()) {
+      Map<Integer, MstMedicine> mstMedicineMap = buildMstMedicineMapFromMixInfo(lstMstMedicineMix, facilityCd);
       for (MstMedicineMix element : lstMstMedicineMix) {
         MstMedicineMixDto newElement = new MstMedicineMixDto();
         BeanUtils.copyProperties(element, newElement);
@@ -7975,7 +8116,7 @@ public class MstInfoServiceImpl implements MstInfoService {
             JSONObject jObj = (JSONObject) mixInfoJsonArr.get(i);
             if (jObj.has("cd")) {
               Integer cd = jObj.getInt("cd");
-              MstMedicine mstMedicine = MasterCacheHandler.get().getMstMedicineByCd(cd);
+              MstMedicine mstMedicine = mstMedicineMap.get(cd);
               if (mstMedicine != null) {
                 String isDisp = mstMedicine.getIsDisp();
                 String isDel = mstMedicine.getIsDel();

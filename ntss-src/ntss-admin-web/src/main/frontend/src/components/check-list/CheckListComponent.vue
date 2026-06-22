@@ -575,15 +575,18 @@ export default {
         width: column.width?.[this.selectedFontSize] || column.width || "",
         hasTemplate: !!column.template
       });
-      return JSON.stringify([
-        ...(this.checkGridColumnsHeader || []).map(summarize),
-        ...(this.getChecklistColumn || []).map(summarize)
-      ]);
+      return JSON.stringify({
+        lockFlg: this.lockFlg,
+        columns: [
+          ...(this.checkGridColumnsHeader || []).map(summarize),
+          ...(this.getChecklistColumn || []).map(summarize)
+        ]
+      });
     },
     buildDirectGridColumns() {
       const headerColumns = (this.checkGridColumnsHeader || []).map(column => ({
         field: column.field,
-        locked: column.field === "bedName",
+        locked: this.lockFlg,
         title: this.$sanitize ? this.$sanitize(column.title) : column.title,
         width: column.width?.[this.selectedFontSize] || column.width,
       }));
@@ -1749,7 +1752,10 @@ export default {
      * 列固定切り替え(印刷時)
      */
     changeLock(){
+      const scrollPosition = this.captureGridScrollPosition();
       this.lockFlg = !this.lockFlg;
+      this.initDirectGridIfReady();
+      this.$nextTick(() => this.restoreGridScrollPosition(scrollPosition));
     },
     clearGridSelection() {
       const grid = this.getGridWidget();

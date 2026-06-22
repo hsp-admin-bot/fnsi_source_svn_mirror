@@ -32,6 +32,10 @@ namespace CoopSettingTool.App.Views
     /// <seealso cref="CoopSettingTool.App.Views.IOrderNumberSettingView" />
     public partial class OrderNumberSettingView : BaseView, IOrderNumberSettingView
     {
+        private const string FacilityCdColumnName = "FacilityCd";
+        private const string CoopVersionColumnName = "CoopVersion";
+        private const string OrdCdsColumnName = "OrdCds";
+
         /// <summary>
         /// The controller
         /// </summary>
@@ -62,8 +66,40 @@ namespace CoopSettingTool.App.Views
             openFileDialog.Title = "読み込む";
             openFileDialog.Filter = "Csv Files (*.csv)|*.csv";
 
+            InitializeOrderSettingColumns();
+
             controller = new OrderNumberSettingController(this, model);
             this.RegisterEvent();
+        }
+
+        private void InitializeOrderSettingColumns()
+        {
+            this.dgvOrderSetting.AutoGenerateColumns = false;
+            this.dgvOrderSetting.Columns.Clear();
+
+            AddTextColumn(FacilityCdColumnName, "施設コード", true);
+            AddTextColumn(CoopVersionColumnName, "連携名", true);
+            AddTextColumn(OrdCdsColumnName, "連携オーダ種別", true);
+            AddTextColumn("CurCoopOrdNo", "現在の連携オーダ番号");
+            AddTextColumn("NoOfDigit", "桁数");
+            AddTextColumn("PaddingChar", "パディング文字");
+            AddTextColumn("PaddingPos", "パディング位置");
+            AddTextColumn("RangeMax", "最大値");
+            AddTextColumn("RangeMin", "最小値");
+            AddTextColumn("PrefixChar", "前置文字");
+            AddTextColumn("SuffixChar", "後置文字");
+            AddTextColumn("CoopCd", "連携種別");
+            AddTextColumn("CoopCdIndex", "付帯情報（電文）");
+        }
+
+        private void AddTextColumn(string dataPropertyName, string headerText, bool readOnly = false)
+        {
+            DataGridViewTextBoxColumn column = new DataGridViewTextBoxColumn();
+            column.DataPropertyName = dataPropertyName;
+            column.HeaderText = headerText;
+            column.Name = dataPropertyName;
+            column.ReadOnly = readOnly;
+            this.dgvOrderSetting.Columns.Add(column);
         }
 
         /// <summary>
@@ -134,7 +170,9 @@ namespace CoopSettingTool.App.Views
         /// <param name="e">The <see cref="DataGridViewCellEventArgs" /> instance containing the event data.</param>
         private void DgvOrderSetting_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
         {
-            if (e.ColumnIndex == 0 && e.RowIndex >= 0)
+            if (e.RowIndex >= 0
+                && e.ColumnIndex >= 0
+                && this.dgvOrderSetting.Columns[e.ColumnIndex].DataPropertyName == OrdCdsColumnName)
             {
                 if (coopCdSelectDialogue.ShowDialog(this, this.dgvOrderSetting.Rows[e.RowIndex].Cells[e.ColumnIndex].Value as string) == DialogResult.OK)
                 {
@@ -150,7 +188,11 @@ namespace CoopSettingTool.App.Views
         private void BtnAdd_Click(object sender, EventArgs e)
         {
             this.controller.AddBlankOrderNumberSetting();
-            this.dgvOrderSetting.CurrentCell = this.dgvOrderSetting.Rows[this.dgvOrderSetting.Rows.Count - 1].Cells[0];
+            int ordCdsColumnIndex = GetColumnIndex(OrdCdsColumnName);
+            if (this.dgvOrderSetting.Rows.Count > 0 && ordCdsColumnIndex >= 0)
+            {
+                this.dgvOrderSetting.CurrentCell = this.dgvOrderSetting.Rows[this.dgvOrderSetting.Rows.Count - 1].Cells[ordCdsColumnIndex];
+            }
         }
 
         /// <summary>
@@ -264,6 +306,19 @@ namespace CoopSettingTool.App.Views
                     this.dgvOrderSetting.DataSource = this.controller.Model.SysCoopNoList;
                 }
             }
+        }
+
+        private int GetColumnIndex(string dataPropertyName)
+        {
+            foreach (DataGridViewColumn column in this.dgvOrderSetting.Columns)
+            {
+                if (column.DataPropertyName == dataPropertyName)
+                {
+                    return column.Index;
+                }
+            }
+
+            return -1;
         }
 
         /// <summary>

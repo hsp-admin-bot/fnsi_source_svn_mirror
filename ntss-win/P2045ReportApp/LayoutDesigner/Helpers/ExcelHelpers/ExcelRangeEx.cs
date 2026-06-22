@@ -902,6 +902,58 @@ namespace LayoutDesigner
             return wRet;
         }
 
+        // add #10446 テンプレート繰返しでの計算式繰返しの制限事項対応②（「=」で始まる計算式） 高 start
+        /// <summary>
+        /// セルに数式が設定されているかを取得します。
+        /// 結合セルの場合は左上のセルを参照します。
+        /// </summary>
+        /// <returns></returns>
+        public bool HasFormula()
+        {
+            Object wMergeCell = this.Range.MergeCells;
+
+            if (wMergeCell != System.DBNull.Value && (Boolean)wMergeCell)
+            {
+                using (var wXlRange = new ExcelRangeEx(this.Range.Cells[1, 1]))
+                    return GetHasFormulaFromRange(wXlRange.Range);
+            }
+
+            return GetHasFormulaFromRange(this.Range);
+        }
+
+        /// <summary>
+        /// セルの数式を取得します。
+        /// 結合セルの場合は左上のセルの数式を取得します。
+        /// </summary>
+        /// <returns></returns>
+        public string GetFormula()
+        {
+            Object wMergeCell = this.Range.MergeCells;
+
+            if (wMergeCell != System.DBNull.Value && (Boolean)wMergeCell)
+            {
+                using (var wXlRange = new ExcelRangeEx(this.Range.Cells[1, 1]))
+                    return Convert.ToString(wXlRange.Range.Formula);
+            }
+
+            return Convert.ToString(this.Range.Formula);
+        }
+
+        /// <summary>
+        /// Range.HasFormula を安全に bool へ変換します。
+        /// 結合セルなどで DBNull が返る場合は false とします。
+        /// </summary>
+        private static bool GetHasFormulaFromRange(Excel.Range aRange)
+        {
+            Object wHasFormula = aRange.HasFormula;
+
+            if (wHasFormula == null || wHasFormula == System.DBNull.Value)
+                return false;
+
+            return (Boolean)wHasFormula;
+        }
+        // add #10446 テンプレート繰返しでの計算式繰返しの制限事項対応②（「=」で始まる計算式） 高 end
+
         /// <summary>
         /// セルの幅を取得します。
         /// 結合セルの場合は範囲の幅を取得します。
@@ -941,6 +993,24 @@ namespace LayoutDesigner
 
             return wRet;
         }
+
+        // add #12798 帳票プレビューの画像がセルのサイズに合っていない 高 start
+        /// <summary>
+        /// 結合セルを含む測定・配置用の Range を取得します。
+        /// </summary>
+        public Excel.Range GetMeasureArea()
+        {
+            Excel.Range range = this.Range;
+            Object wMergeCells = range.MergeCells;
+
+            if (wMergeCells != System.DBNull.Value)
+                if ((Boolean)wMergeCells)
+                    if (range.Count == 1)
+                        return range.MergeArea;
+
+            return range;
+        }
+        // add #12798 帳票プレビューの画像がセルのサイズに合っていない 高 end
 
         /// <summary>
         /// セルを矩形領域として取得します。

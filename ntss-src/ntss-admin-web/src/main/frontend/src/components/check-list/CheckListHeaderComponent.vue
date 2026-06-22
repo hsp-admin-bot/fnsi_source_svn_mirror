@@ -508,19 +508,20 @@ export default {
         this.localCondition.kurCd = this.defaultCondition.kurCd;
         this.changeIsDisplayTreatingMode(this.defaultCondition.dispMode === "1" ? true : false);
         // mod 不具合 #6265 dou end
+      }
         this.localCondition.treatDate = treatDate;
         this.setCondition(deepCopy(this.localCondition));
-      } else {
-        this.setCondition({
-          bedGroupCd: -1,
-          nextPat: 0,
-          treatDate: treatDate,
-          kurCd: -1,
-          viewTreatDate: false,
-          isAutoReload: false,
-          isShowUsageGuide: false
-        });
-      }
+      //} else {
+      //  this.setCondition({
+      //    bedGroupCd: -1,
+      //    nextPat: 0,
+      //    treatDate: treatDate,
+      //    kurCd: -1,
+      //    viewTreatDate: false,
+      //    isAutoReload: false,
+      //    isShowUsageGuide: false
+      //  });
+      //}
       //mod FNSI修正 redmine5023 房 end
     }
     //mod FNSI修正 redmine4255 房 end

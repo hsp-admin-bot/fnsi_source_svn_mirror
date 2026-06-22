@@ -4296,7 +4296,14 @@ public class ReportServiceImpl implements ReportService {
 //                }
                 ReportXmlParam gParam = groupSql.get(sqlCodeStr);
                 if(gParam == null) continue;
-                if(gParam.getReportXmlGroup().getFilterType().equals("Medicine") || gParam.getReportXmlGroup().getFilterType().equals("Equip") || gParam.getReportXmlGroup().getFilterType().equals("Category")) {
+                // mod #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 sunsy start
+//                if(gParam.getReportXmlGroup().getFilterType().equals("Medicine") || gParam.getReportXmlGroup().getFilterType().equals("Equip") || gParam.getReportXmlGroup().getFilterType().equals("Category")) {
+                if(gParam.getReportXmlGroup().getFilterType().equals("Medicine")
+                  || gParam.getReportXmlGroup().getFilterType().equals("Equip")
+                  || gParam.getReportXmlGroup().getFilterType().equals("Category")
+                  || gParam.getReportXmlGroup().getFilterType().equals("EquipDia")
+                ) {
+                // mod #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 sunsy end
                   List<Map<String, Object>> info = innerEntry.getValue();
                   info = filterReportInfo(gParam, info);
                   length = info.size();
@@ -4364,7 +4371,14 @@ public class ReportServiceImpl implements ReportService {
               else {
                 ReportXmlParam gParam = groupSql.get(sqlCodeStr);
                 if(gParam == null) continue;
-                if(gParam.getReportXmlGroup().getFilterType().equals("Medicine") || gParam.getReportXmlGroup().getFilterType().equals("Equip") || gParam.getReportXmlGroup().getFilterType().equals("Category")) {
+                // mod #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 sunsy start
+//                if(gParam.getReportXmlGroup().getFilterType().equals("Medicine") || gParam.getReportXmlGroup().getFilterType().equals("Equip") || gParam.getReportXmlGroup().getFilterType().equals("Category")) {
+                if(gParam.getReportXmlGroup().getFilterType().equals("Medicine")
+                  || gParam.getReportXmlGroup().getFilterType().equals("Equip")
+                  || gParam.getReportXmlGroup().getFilterType().equals("Category")
+                  || gParam.getReportXmlGroup().getFilterType().equals("EquipDia")
+                ) {
+                // mod #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 sunsy end
                   List<Map<String, Object>> info = innerEntry.getValue();
                   info = filterReportInfo(gParam, info);
                   length = info.size();
@@ -4904,6 +4918,9 @@ public class ReportServiceImpl implements ReportService {
                     // add #10531 検査日と検査区分がフィルタを超えて繰り返される limingzhe start
                     || param.getFilterType().equals("ExamNull")
                     // add #10531 検査日と検査区分がフィルタを超えて繰り返される limingzhe end
+                    // add #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 sunsy start
+                    || param.getFilterType().equals("EquipDia")
+                    // add #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 sunsy end
                   ) {
                   // mod #12006 感染症がフィルタできない sunsy end
                   // mod #11935 検査結果(指定日)が指定日以外の検査結果を抽出する limingzhe end
@@ -6836,7 +6853,10 @@ public class ReportServiceImpl implements ReportService {
     }
 
     // filterType 毎に処理を分ける
-    if (filterType.equals("Medicine") || filterType.equals("Equip")) {
+    // mod #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 sunsy start
+//    if (filterType.equals("Medicine") || filterType.equals("Equip")) {
+    if (filterType.equals("Medicine") || filterType.equals("Equip") || filterType.equals("Goods")) {
+    // mod #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 sunsy end
       // 薬剤、医療材料のフィルタ処理
 
       if (param.getReportXmlGroup() == null || CollectionUtils.isEmpty(param.getReportXmlGroup().getReportXmlFilters())) {
@@ -19650,53 +19670,6 @@ public class ReportServiceImpl implements ReportService {
       // del #12231 グループ繰り返しOFFの項目群が2ページ目に1ページ目と同じ内容にならない 高 start
 //      params = paramsReplaceTmpValue(params,reportInfoIndexMap.get(patIds.get(indexPat)));
       // del #12231 グループ繰り返しOFFの項目群が2ページ目に1ページ目と同じ内容にならない 高 end
-      // add #11698 帳票の投薬、医材の出力順が施設設定に準じていない 高 start
-      List<Map<String, Object>> reportIndicateResult = reportInfoIndexMap.get(
-        patIds.get(indexPat)).get(Long.valueOf(getKeyValue(reportInfoIndexMap.get(patIds.get(indexPat)),99999,4)));
-      List<Map<String, Object>> reportRealityResult = reportInfoIndexMap.get(
-        patIds.get(indexPat)).get(Long.valueOf(getKeyValue(reportInfoIndexMap.get(patIds.get(indexPat)),99999,74)));
-      List<Map<String, Object>> reportIndicate = reportInfoIndexMap.get(
-        patIds.get(indexPat)).get(Long.valueOf(getKeyValue(reportInfoIndexMap.get(patIds.get(indexPat)),99999,8)));
-      List<Map<String, Object>> reportReality = reportInfoIndexMap.get(
-        patIds.get(indexPat)).get(Long.valueOf(getKeyValue(reportInfoIndexMap.get(patIds.get(indexPat)),99999,97)));
-      // add #10042 カテゴリ「指示」の出力不正 03 sunsy start
-      List<Map<String, Object>> reportFutureActive = reportInfoIndexMap.get(
-        patIds.get(indexPat)).get(Long.valueOf(getKeyValue(reportInfoIndexMap.get(patIds.get(indexPat)),99999,141)));
-      List<Map<String, Object>> reportRealityMedDeg = reportInfoIndexMap.get(
-        patIds.get(indexPat)).get(Long.valueOf(getKeyValue(reportInfoIndexMap.get(patIds.get(indexPat)),99999,190)));
-      // add #10042 カテゴリ「指示」の出力不正 03 sunsy end
-      if (reportIndicateResult != null && reportIndicateResult.size() > 0){
-        // 施設設定マスタNo.107 投与薬剤表示順 設定値
-        //List<String> displayOrderList = getFacilitySettingOrderListToMedicine2(String.valueOf(dataKey.get("facilityCd")), "3007");
-        reportIndicateResult = sortReportInfo(reportIndicateResult, displayOrderList3007, 9999999);
-        reportInfoIndexMap.get(patIds.get(indexPat)).put(Long.valueOf(getKeyValue(reportInfoIndexMap.get(patIds.get(indexPat)),99999,4)), reportIndicateResult);
-      }
-      if (reportIndicate != null && reportIndicate.size() > 0){
-        //List<String> displayOrderList = getFacilitySettingOrderListToMedicine2(String.valueOf(dataKey.get("facilityCd")), "3007");
-        reportIndicate = sortReportInfo(reportIndicate, displayOrderList3007, 9999999);
-        reportInfoIndexMap.get(patIds.get(indexPat)).put(Long.valueOf(getKeyValue(reportInfoIndexMap.get(patIds.get(indexPat)),99999,8)), reportIndicate);
-      }
-      // add #10042 カテゴリ「指示」の出力不正 03 sunsy start
-      if (reportFutureActive != null && reportFutureActive.size() > 0){
-        reportFutureActive = sortReportInfo(reportFutureActive, displayOrderList3007, 9999999);
-        reportInfoIndexMap.get(patIds.get(indexPat)).put(Long.valueOf(getKeyValue(reportInfoIndexMap.get(patIds.get(indexPat)),99999,141)), reportFutureActive);
-      }
-      if (reportRealityMedDeg != null && reportRealityMedDeg.size() > 0){
-        reportRealityMedDeg = sortReportInfo(reportRealityMedDeg, displayOrderList3007, 9999999);
-        reportInfoIndexMap.get(patIds.get(indexPat)).put(Long.valueOf(getKeyValue(reportInfoIndexMap.get(patIds.get(indexPat)),99999,190)), reportRealityMedDeg);
-      }
-      // add #10042 カテゴリ「指示」の出力不正 03 sunsy end
-      if (reportRealityResult != null && reportRealityResult.size() > 0) {
-        //List<String> displayOrderList = getFacilitySettingOrderListToEquipment2(String.valueOf(dataKey.get("facilityCd")), "3006");
-        reportRealityResult = sortReportInfo(reportRealityResult, displayOrderList3006, 9999999);
-        reportInfoIndexMap.get(patIds.get(indexPat)).put(Long.valueOf(getKeyValue(reportInfoIndexMap.get(patIds.get(indexPat)),99999,74)), reportRealityResult);
-      }
-      if (reportReality != null && reportReality.size() > 0) {
-        //List<String> displayOrderList = getFacilitySettingOrderListToEquipment2(String.valueOf(dataKey.get("facilityCd")), "3006");
-        reportReality = sortReportInfo(reportReality, displayOrderList3006, 9999999);
-        reportInfoIndexMap.get(patIds.get(indexPat)).put(Long.valueOf(getKeyValue(reportInfoIndexMap.get(patIds.get(indexPat)),99999,97)), reportReality);
-      }
-      // add #11698 帳票の投薬、医材の出力順が施設設定に準じていない 高 end
       // add #12231 グループ繰り返しOFFの項目群が2ページ目に1ページ目と同じ内容にならない 高 start
       List<Map<String, Object>> rec = getPrintedInfo(params, dataKey, reportInfoIndexMap.get(patIds.get(indexPat)));
       reportInfoIndexMap.get(patIds.get(indexPat)).put(PRINT_INFO_CODE, rec);
@@ -21113,46 +21086,6 @@ public class ReportServiceImpl implements ReportService {
           }
         }
       }
-      // add #10042 カテゴリ「指示」の出力不正 03 sunsy start
-      List<Map<String, Object>> reportIndicateResult = reportInfoIndex.get(Long.valueOf(getKeyValue(reportInfoIndex,99999,4)));
-      List<Map<String, Object>> reportRealityResult = reportInfoIndex.get(Long.valueOf(getKeyValue(reportInfoIndex,99999,74)));
-      List<Map<String, Object>> reportIndicate = reportInfoIndex.get(Long.valueOf(getKeyValue(reportInfoIndex,99999,8)));
-      List<Map<String, Object>> reportReality = reportInfoIndex.get(Long.valueOf(getKeyValue(reportInfoIndex,99999,97)));
-      List<Map<String, Object>> reportFutureActive = reportInfoIndex.get(Long.valueOf(getKeyValue(reportInfoIndex,99999,141)));
-      List<Map<String, Object>> reportRealityMedDeg = reportInfoIndex.get(Long.valueOf(getKeyValue(reportInfoIndex,99999,190)));;
-
-      if (reportIndicateResult != null && reportIndicateResult.size() > 0){
-        // 施設設定マスタNo.107 投与薬剤表示順 設定値
-        List<String> displayOrderList = getFacilitySettingOrderListToMedicine2(String.valueOf(dataKey.get("facilityCd")), "3007");
-        reportIndicateResult = sortReportInfo(reportIndicateResult, displayOrderList, 9999999);
-        reportInfoIndex.put(Long.valueOf(getKeyValue(reportInfoIndex,99999,4)), reportIndicateResult);
-      }
-      if (reportIndicate != null && reportIndicate.size() > 0){
-        List<String> displayOrderList = getFacilitySettingOrderListToMedicine2(String.valueOf(dataKey.get("facilityCd")), "3007");
-        reportIndicate = sortReportInfo(reportIndicate, displayOrderList, 9999999);
-        reportInfoIndex.put(Long.valueOf(getKeyValue(reportInfoIndex,99999,8)), reportIndicate);
-      }
-      if (reportFutureActive != null && reportFutureActive.size() > 0){
-        List<String> displayOrderList = getFacilitySettingOrderListToMedicine2(String.valueOf(dataKey.get("facilityCd")), "3007");
-        reportFutureActive = sortReportInfo(reportFutureActive, displayOrderList, 9999999);
-        reportInfoIndex.put(Long.valueOf(getKeyValue(reportInfoIndex,99999,141)), reportFutureActive);
-      }
-      if (reportRealityMedDeg != null && reportRealityMedDeg.size() > 0){
-        List<String> displayOrderList = getFacilitySettingOrderListToMedicine2(String.valueOf(dataKey.get("facilityCd")), "3007");
-        reportRealityMedDeg = sortReportInfo(reportRealityMedDeg, displayOrderList, 9999999);
-        reportInfoIndex.put(Long.valueOf(getKeyValue(reportInfoIndex,99999,190)), reportRealityMedDeg);
-      }
-      if (reportRealityResult != null && reportRealityResult.size() > 0) {
-        List<String> displayOrderList = getFacilitySettingOrderListToEquipment2(String.valueOf(dataKey.get("facilityCd")), "3006");
-        reportRealityResult = sortReportInfo(reportRealityResult, displayOrderList, 9999999);
-        reportInfoIndex.put(Long.valueOf(getKeyValue(reportInfoIndex,99999,74)), reportRealityResult);
-      }
-      if (reportReality != null && reportReality.size() > 0) {
-        List<String> displayOrderList = getFacilitySettingOrderListToEquipment2(String.valueOf(dataKey.get("facilityCd")), "3006");
-        reportReality = sortReportInfo(reportReality, displayOrderList, 9999999);
-        reportInfoIndex.put(Long.valueOf(getKeyValue(reportInfoIndex,99999,97)), reportReality);
-      }
-      // add #10042 カテゴリ「指示」の出力不正 03 sunsy end
       // mod #11583 治療経過表の「処方カテゴリ」出力の修正 limingzhe end
 //     // add #10857 １帳票内に同項目が複数あると設定値を取り違える 高 start
       List<Map<String, Object>> rec = getPrintedInfo(params, dataKey, reportInfoIndex);
@@ -21192,33 +21125,6 @@ public class ReportServiceImpl implements ReportService {
 //        }
         // del #10042 カテゴリ「指示」の出力不正 03 sunsy end
       }
-      // del #10042 カテゴリ「指示」の出力不正 03 sunsy start
-//      List<Map<String, Object>> reportIndicateResult = reportInfo.get(Long.valueOf(getKeyValue(reportInfo,99999,4)));
-//      List<Map<String, Object>> reportRealityResult = reportInfo.get(Long.valueOf(getKeyValue(reportInfo,99999,74)));
-//      List<Map<String, Object>> reportIndicate = reportInfo.get(Long.valueOf(getKeyValue(reportInfo,99999,8)));
-//      List<Map<String, Object>> reportReality = reportInfo.get(Long.valueOf(getKeyValue(reportInfo,99999,97)));
-//      if (reportIndicateResult != null && reportIndicateResult.size() > 0){
-//        // 施設設定マスタNo.107 投与薬剤表示順 設定値
-//        List<String> displayOrderList = getFacilitySettingOrderListToMedicine2(String.valueOf(dataKey.get("facilityCd")), "3007");
-//        reportIndicateResult = sortReportInfo(reportIndicateResult, displayOrderList, 9999999);
-//        reportInfo.put(Long.valueOf(getKeyValue(reportInfo,99999,4)), reportIndicateResult);
-//      }
-//      if (reportIndicate != null && reportIndicate.size() > 0){
-//        List<String> displayOrderList = getFacilitySettingOrderListToMedicine2(String.valueOf(dataKey.get("facilityCd")), "3007");
-//        reportIndicate = sortReportInfo(reportIndicate, displayOrderList, 9999999);
-//        reportInfo.put(Long.valueOf(getKeyValue(reportInfo,99999,8)), reportIndicate);
-//      }
-//      if (reportRealityResult != null && reportRealityResult.size() > 0) {
-//        List<String> displayOrderList = getFacilitySettingOrderListToEquipment2(String.valueOf(dataKey.get("facilityCd")), "3006");
-//        reportRealityResult = sortReportInfo(reportRealityResult, displayOrderList, 9999999);
-//        reportInfo.put(Long.valueOf(getKeyValue(reportInfo,99999,74)), reportRealityResult);
-//      }
-//      if (reportReality != null && reportReality.size() > 0) {
-//        List<String> displayOrderList = getFacilitySettingOrderListToEquipment2(String.valueOf(dataKey.get("facilityCd")), "3006");
-//        reportReality = sortReportInfo(reportReality, displayOrderList, 9999999);
-//        reportInfo.put(Long.valueOf(getKeyValue(reportInfo,99999,97)), reportReality);
-//      }
-      // del #10042 カテゴリ「指示」の出力不正 03 sunsy end
       // add #11698 帳票の投薬、医材の出力順が施設設定に準じていない 高 end
     }
     Map<String, String> reportOutputInfo = new HashMap<>();
@@ -25797,46 +25703,6 @@ public class ReportServiceImpl implements ReportService {
     return displayOrderList;
   }
 
-  public List<Map<String, Object>> sortReportInfo(List<Map<String, Object>> reportInfo, List<String> displayOrderList, Integer maxIndex){
-    int sortSize = displayOrderList.size();
-    int[] compareResultArr = new int[sortSize];
-    String[] colArr = new String[sortSize];
-    for(int x = 0; x < sortSize; x++) {
-      compareResultArr[x]= 0;
-      colArr[x] = displayOrderList.get(x);
-    }
-    Collections.sort(reportInfo, new Comparator<Map<String, Object>>() {
-      public int compare(Map<String, Object> o1, Map<String, Object> o2) {
-        for (int x = 0, len = sortSize; x < len; x++) {
-          // mod #11698 帳票の投薬、医材の出力順が施設設定に準じていない 高 start
-//          if (o1.get(colArr[x]) == null || o1.get(colArr[x]) == "" || o1.get(colArr[x]).equals(o2.get(colArr[x]))) {
-//            Integer v1 = (o1.get("json_idx") == null || o1.get(colArr[x]) == "") ? maxIndex : Integer.parseInt(o1.get("json_idx").toString());
-//            Integer v2 = (o2.get("json_idx") == null || o2.get(colArr[x]) == "") ? maxIndex : Integer.parseInt(o2.get("json_idx").toString());
-//            compareResultArr[x] = v1.compareTo(v2);
-//            if (compareResultArr[x] != 0) {
-//              return compareResultArr[x];
-//            }
-//          } else {
-//            Integer v1 = (o1.get(colArr[x]) == null || o1.get(colArr[x]) == "") ? maxIndex : Integer.parseInt(o1.get(colArr[x]).toString());
-//            Integer v2 = (o2.get(colArr[x]) == null || o2.get(colArr[x]) == "") ? maxIndex : Integer.parseInt(o2.get(colArr[x]).toString());
-//            compareResultArr[x] = v1.compareTo(v2);
-//            if (compareResultArr[x] != 0) {
-//              return compareResultArr[x];
-//            }
-//          }
-          Integer v1 = (o1.get(colArr[x]) == null || o1.get(colArr[x]) == "") ? maxIndex : Integer.parseInt(o1.get(colArr[x]).toString());
-          Integer v2 = (o2.get(colArr[x]) == null || o2.get(colArr[x]) == "") ? maxIndex : Integer.parseInt(o2.get(colArr[x]).toString());
-          compareResultArr[x] = v1.compareTo(v2);
-          if (compareResultArr[x] != 0) {
-            return compareResultArr[x];
-          }
-          // mod #11698 帳票の投薬、医材の出力順が施設設定に準じていない 高 end
-        }
-        return 0;
-      }
-    });
-    return reportInfo;
-  }
 
   /**
    * テンプレートのページ総数を取得します.

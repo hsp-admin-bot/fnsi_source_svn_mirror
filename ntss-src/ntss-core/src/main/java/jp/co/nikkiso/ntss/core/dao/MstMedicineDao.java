@@ -42,6 +42,16 @@ public interface MstMedicineDao extends MasterDao<Map<String,Object>>, UnifiedBy
   @Select
   List<MstMedicine> selectAllByCdList(SelectOptions options, List<Integer> medicineList);
 
+  /**
+   * selectByMediCdの一括版（施設指定、is_del='0'のみ）
+   * @param options 検索オプション
+   * @param facilityCd 施設コード
+   * @param medicineList 薬剤コードリスト
+   * @return 薬剤リスト
+   */
+  @Select
+  List<MstMedicine> selectAllByCdListWithFacilityCd(SelectOptions options, String facilityCd, List<Integer> medicineList);
+
   //add 10310 薬剤マスタから情報取得 gjn start
   @Select
   List<MstMedicine> selectAllByCdListCheckList(SelectOptions options, List<Integer> medicineList, String facilityCd);

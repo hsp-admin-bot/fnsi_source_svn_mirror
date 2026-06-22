@@ -4,8 +4,8 @@
     class="main-content-area master-maintenance-page status-list-page"
     :style="{ height: mainHeight + 'px' }"
   >
-    <div :style="tableContainerStyle">
-      <table class="ntss-list" :style="tableStyle">
+    <div :style="tableContainerStyle" ref="tableContainer">
+      <table class="ntss-list" style="width: max-content; table-layout: fixed;">
         <thead>
           <tr>
             <th
@@ -366,16 +366,16 @@ import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
 // 印刷フラグの定数
 const FLG_TRUE = 1;
 const DEFAULT_COLUMN_WIDTH_LIST = [
-  "100px",
-  "120px",
-  "120px",
-  "80px",
-  "100px",
-  "100px",
-  "100px",
-  "100px",
-  "100px",
-  "100px",
+  "7em",
+  "8em",
+  "8em",
+  "5em",
+  "7em",
+  "7em",
+  "7em",
+  "7em",
+  "7em",
+  "7em",
 ];
 
 /**
@@ -490,8 +490,8 @@ export default {
           sortable: false,
         },
       ],
-      columnWidthList: [...DEFAULT_COLUMN_WIDTH_LIST],
-      initialColumnWidthList: [...DEFAULT_COLUMN_WIDTH_LIST],
+      columnWidthList: [],
+      initialColumnWidthList: [],
     };
   },
   computed: {
@@ -500,12 +500,13 @@ export default {
       "getSortSetting",
       "getKurListData",
       "getMstBedGroupList",
-      "getColumnResizeData",
     ]),
     ...mapGetters("send-condition/weight", ["getMstWeightList"]),
     ...mapGetters("window-size", {
       windowHeight: "getWindowHeight",
       windowWidth: "getWindowWidth",
+      // サイドバー幅
+      sidebarWidth: "getSidebarWidth",
     }),
     ...mapGetters("account-edit", {
       isDispMenu: "isDispMenu",
@@ -533,16 +534,6 @@ export default {
       return {
         overflowX: "auto",
         position: "relative",
-      };
-    },
-    tableStyle() {
-      const tableWidth = this.columnWidthList.reduce((sum, width) => {
-        const parsed = parseFloat(width);
-        return sum + (isNaN(parsed) ? 0 : parsed);
-      }, 0);
-      return {
-        width: `${tableWidth}px`,
-        tableLayout: "fixed",
       };
     },
     /**
@@ -620,7 +611,16 @@ export default {
       this.calculateGridHeight();
     },
     getFontSize() {
+      this.adjustAllWidth();
+      this.$nextTick(() => {
+        this.calculateGridHeight();
+        this.adjustPatNameWidth(true);
+      });
+    },
+    /** サイドバー開閉時 */
+    sidebarWidth() {
       this.calculateGridHeight();
+      this.adjustPatNameWidth(true);
     },
   },
   methods: {
@@ -646,7 +646,7 @@ export default {
       "setWeightConfigInfo",
       "clearWeightConfigInfo",
     ]),
-    ...mapActions("scale-bed/list", ["setSortSetting", "setColumnResizeData"]),
+    ...mapActions("scale-bed/list", ["setSortSetting"]),
     ...mapActions("scale-bed/send-cond", ["setScaleBedToWeightView"]),
     ...mapActions("send-condition/weight", [
       "fetchMstWeightList",
@@ -1062,13 +1062,6 @@ export default {
 
       return returnValue;
     },
-    saveColumnWidths() {
-      const widths = this.columnWidthList.map((width) => {
-        const parsed = parseFloat(width);
-        return isNaN(parsed) ? null : parsed;
-      });
-      this.setColumnResizeData(widths);
-    },
     setupColResizeListeners() {
       if (this.colResizeInfo) {
         removeColResizeListeners(this.colResizeInfo);
@@ -1087,10 +1080,49 @@ export default {
             this.columnWidthList[index] = `${width}px`;
           }
         },
-        onFinishResize: () => {
-          this.saveColumnWidths();
-        },
       });
+    },
+    /** フォントサイズに応じた列幅の算出（em->px） */
+    adjustAllWidth() {
+      const container = this.$refs.tableContainer;
+      if (!container) {
+        // テーブルコンテナ要素が取得できない場合は、ルートのフォントサイズを代用
+        const fallback = parseFloat(getComputedStyle(document.documentElement).fontSize);
+        this.columnWidthList = DEFAULT_COLUMN_WIDTH_LIST.map(em => Math.round(parseFloat(em) * fallback) + "px");
+        this.initialColumnWidthList = [...this.columnWidthList];
+        return;
+      }
+      const fontSize = parseFloat(getComputedStyle(container).fontSize);
+      const pxList = DEFAULT_COLUMN_WIDTH_LIST.map(em => {
+        const val = parseFloat(em);
+        return isNaN(val) ? "0px" : Math.round(val * fontSize) + "px";
+      });
+      this.columnWidthList = [...pxList];
+      this.initialColumnWidthList = [...pxList];
+    },
+    /** 患者名列幅調整（※ウィンドウサイズに応じた列幅調整）*/
+    adjustPatNameWidth(isSidebarOpen = false) {
+      // コンテナ幅取得
+      const container = this.$refs.tableContainer;
+      if (!container) return;
+
+      const headers = this.$el.querySelectorAll("thead th");
+      let otherWidth = 0;
+      // サイドバー開閉時の列ごとの補正（レンダリング後はpadding分が列幅に含まれるため）
+      const adjustNum = isSidebarOpen ? -8 : 0;
+      const patIndex = this.dataColumns.findIndex(c => c.field === 'patName');
+      // patName以外の列幅合計
+      headers.forEach((th, index) => {
+        const col = this.dataColumns[index];
+        if (!col || col.field === 'patName') return;
+        otherWidth += th.getBoundingClientRect().width + adjustNum;
+      });
+      // patNameの最小幅
+      const minWidth = parseFloat(this.initialColumnWidthList[patIndex]) || 120;
+      // patNameの幅を設定 (患者名列以外の9列分の左右パディング：9列 × 10px = 90px)
+      const remain = Math.max(container.clientWidth - otherWidth - 90, minWidth);
+      // NOTE: -2 は患者名列の左右ボーダー分
+      this.$set(this.columnWidthList, patIndex, `${Math.floor(remain - 2)}px`);
     },
   },
   created() {
@@ -1127,31 +1159,15 @@ export default {
     });
   },
   mounted() {
-    // 列幅復元処理
-    // 注意 列幅登録処理は、親ScaleBedVide.vueの「beforeRouteLeave」で行う
-    const savedWidths = this.getColumnResizeData;
-    if (savedWidths && Array.isArray(savedWidths)) {
-      for (let i = 0; i < savedWidths.length; i++) {
-        if (savedWidths[i]) {
-          const minWidth = parseFloat(this.initialColumnWidthList[i]);
-          const restoredWidth = Math.max(
-            savedWidths[i],
-            isNaN(minWidth) ? 0 : minWidth
-          );
-          this.columnWidthList.splice(i, 1, restoredWidth + "px");
-          const target = this.$el?.getElementsByClassName("manual-width")?.[i];
-          if (target) {
-            target.style.width = restoredWidth + "px";
-          }
-        }
-      }
-    }
+    // 列幅を定義から画面表示用への変換
+    this.adjustAllWidth();
     this.getFacilitySettings().then(() => {
       this.refresh();
     });
     this.$nextTick(() => {
       this.calculateGridHeight();
       this.setupColResizeListeners();
+      this.adjustPatNameWidth();
     });
   },
   beforeUnmount() {

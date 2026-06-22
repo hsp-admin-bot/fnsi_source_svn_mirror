@@ -44,6 +44,17 @@ namespace CoopSettingTool.Service
         }
 
         /// <summary>
+        /// Gets the source system coop no.
+        /// </summary>
+        /// <param name="coopVersion">The coop version.</param>
+        /// <returns>GetSysCoopNoResponse.</returns>
+        public async Task<GetSysCoopNoResponse> GetSourceSysCoopNo(string coopVersion)
+        {
+            GetSysCoopNoResponse res = (await ServerAccess.GetInstance().GetAsync<List<SysCoopNoEntity>>(Constant.GET_SOURCE_SYS_COOP_NO + "/" + Uri.EscapeDataString(coopVersion ?? string.Empty), null)).ToClass<List<SysCoopNoEntity>, GetSysCoopNoResponse>();
+            return res;
+        }
+
+        /// <summary>
         /// Updates the system coop no.
         /// </summary>
         /// <param name="inputEntity">The input entity.</param>

@@ -485,4 +485,9 @@ tr:nth-child(2n){
   box-sizing: border-box;
   overflow: hidden;
 }
+@media print {
+  :global(.sub-modal-mask .sub-modal-container) {
+    width: fit-content !important;
+  }
+}
 </style>

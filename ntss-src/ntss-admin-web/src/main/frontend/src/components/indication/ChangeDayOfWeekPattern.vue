@@ -1069,6 +1069,7 @@ export default {
     // drag中の矢印描画用canvasの縦、横サイズをdiv-parentに合わせる
     this.setCanvasSize();
     this.getScopedOwnerWindow()?.addEventListener("resize", this.setCanvasSize);
+    this.getScopedOwnerWindow()?.addEventListener("afterprint", this.setCanvasSize);
     // iPadでドラッグ中にスクロールが起きないようにする
     const parent = this.getScopedElementByIdSafe('div-parent');
     parent?.addEventListener?.('touchmove', (e) => {
@@ -5453,6 +5454,7 @@ export default {
     }
 
     this.getScopedOwnerWindow()?.removeEventListener("resize", this.setCanvasSize);
+    this.getScopedOwnerWindow()?.removeEventListener("afterprint", this.setCanvasSize);
   }
   // add FNSI-性能を最適化する 李 end
 };

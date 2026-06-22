@@ -174,14 +174,13 @@ namespace CoopSettingTool.App.Controllers
             {
                 // 変数を初期化する
                 MstCoopFacilityEntity mstCoopFacilityEntity = null;
-                MstCoopIniEntity mstCoopIniEntity = null;
-                List<CoopIniInfo> coopIniInfos = new List<CoopIniInfo>();
 
                 List<MstCoopLayoutEntity> mstCoopLayoutEntities = new List<MstCoopLayoutEntity>();
                 List<MstCoopLayoutDetailEntity> mstCoopLayoutDetailEntities = new List<MstCoopLayoutDetailEntity>();
                 List<MstCoopDistributeEntity> mstCoopDistributeEntities = new List<MstCoopDistributeEntity>();
                 List<MstCoopFilenameEntity> mstCoopFilenameEntities = new List<MstCoopFilenameEntity>();
                 List<MstCoopApilinkEntity> mstCoopApilinkEntities = new List<MstCoopApilinkEntity>();
+                List<MstCoopIniEntity> mstCoopIniEntities = new List<MstCoopIniEntity>();
                 List<SysCoopNoEntity> sysCoopNoEntities = new List<SysCoopNoEntity>();
                 Dictionary<string, List<MstCoopDistributeEntity>> dicDistribute = new Dictionary<string, List<MstCoopDistributeEntity>>();
 
@@ -229,6 +228,11 @@ namespace CoopSettingTool.App.Controllers
                         return false;
                     }
 
+                    if (!AddCurrentSysCoopNos(sysCoopNoEntities, this.Model.Facility.FacilityCd))
+                    {
+                        return false;
+                    }
+
                     // MstCoopApilinkを取得する
                     var getApilinkRs = mstCoopApilinkService.GetMstCoopApilink(this.Model.Facility.FacilityCd).Result;
                     if (getApilinkRs != null && getApilinkRs.StatusCode == HttpStatusCode.OK)
@@ -243,18 +247,7 @@ namespace CoopSettingTool.App.Controllers
                         return false;
                     }
 
-                    // MstCoopIniを取得する
-                    var getCoopIniRs = mstCoopIniService.GetMstCoopIni(this.Model.Facility.FacilityCd).Result;
-                    if (getCoopIniRs != null && getCoopIniRs.StatusCode == HttpStatusCode.OK)
-                    {
-                        mstCoopIniEntity = getCoopIniRs.Data.FirstOrDefault();
-
-                        if (mstCoopIniEntity != null)
-                        {
-                            coopIniInfos = mstCoopIniEntity.GetCoopIniInfos();
-                        }
-                    }
-                    else
+                    if (!AddCurrentMstCoopInis(mstCoopIniEntities, this.Model.Facility.FacilityCd))
                     {
                         return false;
                     }
@@ -278,8 +271,11 @@ namespace CoopSettingTool.App.Controllers
                 UpdateUnselectedMstCoopLayoutDetails(mstCoopLayoutDetailEntities, selectedOrdCds);
                 UpdateUnselectedMstCoopFilenames(mstCoopFilenameEntities, selectedOrdCds);
                 UpdateUnselectedMstCoopApilinks(mstCoopApilinkEntities, selectedOrdCds);
+                UpdateUnselectedMstCoopInis(mstCoopIniEntities, selectedOrdCds);
+                UpdateUnselectedSysCoopNos(sysCoopNoEntities, selectedOrdCds);
 
-                object selectedCommonSettingObject = CreateCommonSettingObject(sourceCoopFacilityEntity, selectedCoopFacilityArtifacts);
+                MstCoopFacilityEntity currentCoopFacilityEntity = mstCoopFacilityEntity;
+                object selectedCommonSettingObject = CreateCommonSettingObject(sourceCoopFacilityEntity, currentCoopFacilityEntity, selectedCoopFacilityArtifacts);
 
                 // MstCoopFacility
                 if (mstCoopFacilityEntity == null)
@@ -293,9 +289,7 @@ namespace CoopSettingTool.App.Controllers
                 }
 
                 mstCoopFacilityEntity.CommonSettingObject = selectedCommonSettingObject;
-                mstCoopFacilityEntity.IfEdgeSetting = CreateIfEdgeSetting(sourceCoopFacilityEntity, selectedOrdCds);
-
-                string sourceFacilityCd = sourceCoopFacilityEntity.FacilityCd;
+                mstCoopFacilityEntity.IfEdgeSetting = CreateIfEdgeSetting(sourceCoopFacilityEntity, currentCoopFacilityEntity, selectedOrdCds);
 
                 // MstCoopDistributeを取得する
                 if (!AddSourceMstCoopDistributes(mstCoopDistributeEntities, selectedOrdCds))
@@ -366,54 +360,13 @@ namespace CoopSettingTool.App.Controllers
                 }
 
                 // MstCoopIniを取得する
-                var getSourceCoopIniRs = mstCoopIniService.GetMstCoopIni(sourceFacilityCd).Result;
-                if (getSourceCoopIniRs != null && getSourceCoopIniRs.StatusCode == HttpStatusCode.OK)
-                {
-                    MstCoopIniEntity mstCoopIniEntity1 = getSourceCoopIniRs.Data.FirstOrDefault();
-
-                    if (mstCoopIniEntity1 != null)
-                    {
-                        List<CoopIniInfo> coopIniInfos1 = mstCoopIniEntity1.GetCoopIniInfos();
-                        coopIniInfos1 = coopIniInfos1.FindAll(x => IsSelectedCoopIniInfo(x, selectedOrdCds));
-
-                        if (coopIniInfos1.Count > 0 && mstCoopIniEntity == null)
-                        {
-                            mstCoopIniEntity = mstCoopIniEntity1;
-                            mstCoopIniEntity.CoopIniCd = null;
-                            coopIniInfos = new List<CoopIniInfo>();
-                        }
-
-                        foreach (CoopIniInfo coopIni in coopIniInfos1)
-                        {
-                            if (!coopIniInfos.Exists(x => IsSameCoopIniInfo(x, coopIni)))
-                            {
-                                coopIniInfos.Add(coopIni);
-                            }
-                        }
-                    }
-                }
-                else
+                if (!AddSourceMstCoopInis(mstCoopIniEntities, selectedOrdCds))
                 {
                     return false;
                 }
 
                 // SysCoopNoを取得する
-                var getSysCoopNoRs = sysCoopNoService.GetSysCoopNo(sourceFacilityCd).Result;
-                if (getSysCoopNoRs != null && getSysCoopNoRs.StatusCode == HttpStatusCode.OK)
-                {
-                    foreach (var sysCoopNo in getSysCoopNoRs.Data)
-                    {
-                        if (!IsSelectedCoopSetting(sysCoopNo.CoopCd, sysCoopNo.CoopCdIndex, null, sysCoopNo.CoopVersion, selectedOrdCds))
-                        {
-                            continue;
-                        }
-
-                        sysCoopNo.CtlNo = null;
-
-                        sysCoopNoEntities.Add(sysCoopNo);
-                    }
-                }
-                else
+                if (!AddSourceSysCoopNos(sysCoopNoEntities, selectedOrdCds))
                 {
                     return false;
                 }
@@ -513,11 +466,15 @@ namespace CoopSettingTool.App.Controllers
                 }
 
                 // MstCoopIniの登録
-                if (mstCoopIniEntity != null)
+                foreach (MstCoopIniEntity mstCoopIni in mstCoopIniEntities)
                 {
-                    mstCoopIniEntity.FacilityCd = this.Model.Facility.FacilityCd;
-                    mstCoopIniEntity.SetCoopIniInfos(coopIniInfos);
-                    var saveCoopIniRes = mstCoopIniService.SubmitMstCoopIni(mstCoopIniEntity).Result;
+                    if (mstCoopIni.CoopIniCd != null && !IsDeletedMstCoopIni(mstCoopIni))
+                    {
+                        continue;
+                    }
+
+                    mstCoopIni.FacilityCd = this.Model.Facility.FacilityCd;
+                    var saveCoopIniRes = mstCoopIniService.SubmitMstCoopIni(mstCoopIni).Result;
                     if (saveCoopIniRes == null || saveCoopIniRes.StatusCode != HttpStatusCode.OK)
                     {
                         return false;
@@ -527,6 +484,11 @@ namespace CoopSettingTool.App.Controllers
                 // SysCoopNoの登録
                 foreach (SysCoopNoEntity sysCoopNo in sysCoopNoEntities)
                 {
+                    if (sysCoopNo.CtlNo != null && !IsDeletedSysCoopNo(sysCoopNo))
+                    {
+                        continue;
+                    }
+
                     sysCoopNo.FacilityCd = this.Model.Facility.FacilityCd;
                     var saveCoopNoRes = sysCoopNoService.SubmitSysCoopNo(sysCoopNo).Result;
                     if (saveCoopNoRes == null || saveCoopNoRes.StatusCode != HttpStatusCode.OK)
@@ -792,6 +754,11 @@ namespace CoopSettingTool.App.Controllers
         private List<OrdCd> GetCoopOrdCds(List<MstCoopFacilityEntity> coopFacilityArtifacts)
         {
             List<OrdCd> result = new List<OrdCd>();
+            if (coopFacilityArtifacts == null)
+            {
+                return result;
+            }
+
             foreach (MstCoopFacilityEntity coopFacilityArtifact in coopFacilityArtifacts)
             {
                 CommonSetting commonSetting = GetCommonSetting(coopFacilityArtifact);
@@ -983,6 +950,32 @@ namespace CoopSettingTool.App.Controllers
             return true;
         }
 
+        private bool AddCurrentMstCoopInis(List<MstCoopIniEntity> mstCoopIniEntities, string facilityCd)
+        {
+            var getCoopIniRs = mstCoopIniService.GetMstCoopIni(facilityCd).Result;
+            if (getCoopIniRs == null || getCoopIniRs.StatusCode != HttpStatusCode.OK)
+            {
+                return false;
+            }
+
+            mstCoopIniEntities.AddRange(getCoopIniRs.Data ?? new List<MstCoopIniEntity>());
+
+            return true;
+        }
+
+        private bool AddCurrentSysCoopNos(List<SysCoopNoEntity> sysCoopNoEntities, string facilityCd)
+        {
+            var getSysCoopNoRs = sysCoopNoService.GetSysCoopNo(facilityCd).Result;
+            if (getSysCoopNoRs == null || getSysCoopNoRs.StatusCode != HttpStatusCode.OK)
+            {
+                return false;
+            }
+
+            sysCoopNoEntities.AddRange(getSysCoopNoRs.Data ?? new List<SysCoopNoEntity>());
+
+            return true;
+        }
+
         private bool AddSourceMstCoopDistributes(List<MstCoopDistributeEntity> mstCoopDistributeEntities, List<OrdCd> selectedOrdCds)
         {
             HashSet<string> sourceKeys = new HashSet<string>(StringComparer.Ordinal);
@@ -1170,6 +1163,88 @@ namespace CoopSettingTool.App.Controllers
             return true;
         }
 
+        private bool AddSourceMstCoopInis(List<MstCoopIniEntity> mstCoopIniEntities, List<OrdCd> selectedOrdCds)
+        {
+            HashSet<string> sourceKeys = new HashSet<string>(StringComparer.Ordinal);
+            foreach (OrdCd selectedOrdCd in selectedOrdCds ?? new List<OrdCd>())
+            {
+                string key0 = GetSelectedMstCoopIniKey0(selectedOrdCd);
+                if (string.IsNullOrWhiteSpace(key0) || !sourceKeys.Add(key0))
+                {
+                    continue;
+                }
+
+                if (HasActiveMstCoopIniForKey0(mstCoopIniEntities, key0))
+                {
+                    continue;
+                }
+
+                var getSourceRs = mstCoopIniService.GetSourceMstCoopIni(key0).Result;
+                if (getSourceRs == null || getSourceRs.StatusCode != HttpStatusCode.OK)
+                {
+                    return false;
+                }
+
+                foreach (MstCoopIniEntity sourceMstCoopIni in getSourceRs.Data ?? new List<MstCoopIniEntity>())
+                {
+                    if (!IsSourceMstCoopIni(sourceMstCoopIni) || !IsSameSettingField(GetMstCoopIniKey0(sourceMstCoopIni), key0))
+                    {
+                        continue;
+                    }
+
+                    MstCoopIniEntity newMstCoopIni = sourceMstCoopIni.JsonClone();
+                    newMstCoopIni.CoopIniCd = null;
+                    mstCoopIniEntities.Add(newMstCoopIni);
+                    break;
+                }
+            }
+
+            return true;
+        }
+
+        private bool AddSourceSysCoopNos(List<SysCoopNoEntity> sysCoopNoEntities, List<OrdCd> selectedOrdCds)
+        {
+            HashSet<string> sourceKeys = new HashSet<string>(StringComparer.Ordinal);
+            foreach (OrdCd selectedOrdCd in selectedOrdCds ?? new List<OrdCd>())
+            {
+                if (selectedOrdCd == null || string.IsNullOrWhiteSpace(selectedOrdCd.CoopVersion))
+                {
+                    continue;
+                }
+
+                string coopVersion = selectedOrdCd.CoopVersion.Trim();
+                if (!sourceKeys.Add(coopVersion))
+                {
+                    continue;
+                }
+
+                var getSourceRs = sysCoopNoService.GetSourceSysCoopNo(coopVersion).Result;
+                if (getSourceRs == null || getSourceRs.StatusCode != HttpStatusCode.OK)
+                {
+                    return false;
+                }
+
+                foreach (SysCoopNoEntity sourceSysCoopNo in getSourceRs.Data ?? new List<SysCoopNoEntity>())
+                {
+                    if (!IsSourceSysCoopNo(sourceSysCoopNo) || !IsSelectedSysCoopNo(sourceSysCoopNo, selectedOrdCds))
+                    {
+                        continue;
+                    }
+
+                    if (HasActiveSameSysCoopNo(sysCoopNoEntities, sourceSysCoopNo))
+                    {
+                        continue;
+                    }
+
+                    SysCoopNoEntity newSysCoopNo = sourceSysCoopNo.JsonClone();
+                    newSysCoopNo.CtlNo = null;
+                    sysCoopNoEntities.Add(newSysCoopNo);
+                }
+            }
+
+            return true;
+        }
+
         private string GetSourceKey(params string[] values)
         {
             return string.Join("\t", values.Select(x => (x ?? string.Empty).Trim()));
@@ -1241,6 +1316,48 @@ namespace CoopSettingTool.App.Controllers
                 if (!IsSelectedMstCoopFilename(filename, selectedOrdCds))
                 {
                     MarkDeleted(filename);
+                }
+            }
+        }
+
+        private void UpdateUnselectedMstCoopInis(List<MstCoopIniEntity> mstCoopIniEntities, List<OrdCd> selectedOrdCds)
+        {
+            if (mstCoopIniEntities == null)
+            {
+                return;
+            }
+
+            foreach (MstCoopIniEntity mstCoopIni in mstCoopIniEntities)
+            {
+                if (string.IsNullOrWhiteSpace(GetMstCoopIniKey0(mstCoopIni)))
+                {
+                    continue;
+                }
+
+                if (!IsSelectedMstCoopIni(mstCoopIni, selectedOrdCds))
+                {
+                    MarkDeleted(mstCoopIni);
+                }
+            }
+        }
+
+        private void UpdateUnselectedSysCoopNos(List<SysCoopNoEntity> sysCoopNoEntities, List<OrdCd> selectedOrdCds)
+        {
+            if (sysCoopNoEntities == null)
+            {
+                return;
+            }
+
+            foreach (SysCoopNoEntity sysCoopNo in sysCoopNoEntities)
+            {
+                if (GetSysCoopNoOrdCds(sysCoopNo).Count == 0)
+                {
+                    continue;
+                }
+
+                if (!IsSelectedSysCoopNo(sysCoopNo, selectedOrdCds))
+                {
+                    MarkDeleted(sysCoopNo);
                 }
             }
         }
@@ -1324,6 +1441,60 @@ namespace CoopSettingTool.App.Controllers
             return false;
         }
 
+        private bool IsSelectedMstCoopIni(MstCoopIniEntity mstCoopIni, List<OrdCd> selectedOrdCds)
+        {
+            if (mstCoopIni == null || selectedOrdCds == null)
+            {
+                return false;
+            }
+
+            string key0 = GetMstCoopIniKey0(mstCoopIni);
+            if (string.IsNullOrWhiteSpace(key0))
+            {
+                return false;
+            }
+
+            foreach (OrdCd selectedOrdCd in selectedOrdCds)
+            {
+                if (IsSameSettingField(key0, GetSelectedMstCoopIniKey0(selectedOrdCd)))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool IsSelectedSysCoopNo(SysCoopNoEntity sysCoopNo, List<OrdCd> selectedOrdCds)
+        {
+            if (sysCoopNo == null || selectedOrdCds == null)
+            {
+                return false;
+            }
+
+            HashSet<string> sysCoopNoOrdCds = GetSysCoopNoOrdCds(sysCoopNo);
+            if (sysCoopNoOrdCds.Count == 0)
+            {
+                return false;
+            }
+
+            foreach (OrdCd selectedOrdCd in selectedOrdCds)
+            {
+                if (selectedOrdCd == null)
+                {
+                    continue;
+                }
+
+                if (IsRequiredSettingFieldMatched(sysCoopNo.CoopVersion, selectedOrdCd.CoopVersion)
+                    && sysCoopNoOrdCds.Contains((selectedOrdCd.CoopCd ?? string.Empty).Trim()))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         private bool IsSourceMstCoopDistribute(MstCoopDistributeEntity distribute)
         {
             return distribute != null && IsSourceCtlNo(distribute.CtlNo);
@@ -1344,6 +1515,16 @@ namespace CoopSettingTool.App.Controllers
             return filename != null && IsSourceCtlNo(filename.CtlNo);
         }
 
+        private bool IsSourceMstCoopIni(MstCoopIniEntity mstCoopIni)
+        {
+            return mstCoopIni != null && IsSourceCtlNo(mstCoopIni.CoopIniCd);
+        }
+
+        private bool IsSourceSysCoopNo(SysCoopNoEntity sysCoopNo)
+        {
+            return sysCoopNo != null && IsSourceCtlNo(sysCoopNo.CtlNo);
+        }
+
         private bool IsDeletedMstCoopDistribute(MstCoopDistributeEntity distribute)
         {
             return distribute != null && IsDeletedSetting(distribute.IsDel);
@@ -1362,6 +1543,16 @@ namespace CoopSettingTool.App.Controllers
         private bool IsDeletedMstCoopFilename(MstCoopFilenameEntity filename)
         {
             return filename != null && IsDeletedSetting(filename.IsDel);
+        }
+
+        private bool IsDeletedMstCoopIni(MstCoopIniEntity mstCoopIni)
+        {
+            return mstCoopIni != null && IsDeletedSetting(mstCoopIni.IsDel);
+        }
+
+        private bool IsDeletedSysCoopNo(SysCoopNoEntity sysCoopNo)
+        {
+            return sysCoopNo != null && IsDeletedSetting(sysCoopNo.IsDel);
         }
 
         private bool IsDeletedSetting(string isDel)
@@ -1391,6 +1582,18 @@ namespace CoopSettingTool.App.Controllers
         {
             filename.IsDel = "1";
             filename.IsDisp = "0";
+        }
+
+        private void MarkDeleted(MstCoopIniEntity mstCoopIni)
+        {
+            mstCoopIni.IsDel = "1";
+            mstCoopIni.IsDisp = "0";
+        }
+
+        private void MarkDeleted(SysCoopNoEntity sysCoopNo)
+        {
+            sysCoopNo.IsDel = "1";
+            sysCoopNo.IsDisp = "0";
         }
 
         /// <summary>
@@ -1450,6 +1653,142 @@ namespace CoopSettingTool.App.Controllers
             return string.Equals((source ?? string.Empty).Trim(), (target ?? string.Empty).Trim(), StringComparison.Ordinal);
         }
 
+        private bool HasActiveMstCoopIniForKey0(List<MstCoopIniEntity> mstCoopIniEntities, string key0)
+        {
+            foreach (MstCoopIniEntity mstCoopIni in mstCoopIniEntities ?? new List<MstCoopIniEntity>())
+            {
+                if (!IsDeletedMstCoopIni(mstCoopIni) && IsSameSettingField(GetMstCoopIniKey0(mstCoopIni), key0))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private string GetMstCoopIniKey0(MstCoopIniEntity mstCoopIni)
+        {
+            try
+            {
+                CoopIniInfo firstCoopIniInfo = mstCoopIni?.GetCoopIniInfos()?.FirstOrDefault();
+                return (firstCoopIniInfo?.Key0 ?? string.Empty).Trim();
+            }
+            catch (JsonException)
+            {
+                return string.Empty;
+            }
+        }
+
+        private string GetSelectedMstCoopIniKey0(OrdCd selectedOrdCd)
+        {
+            if (selectedOrdCd == null)
+            {
+                return string.Empty;
+            }
+
+            return string.IsNullOrWhiteSpace(selectedOrdCd.Key0)
+                ? (selectedOrdCd.CoopVersion ?? string.Empty).Trim()
+                : selectedOrdCd.Key0.Trim();
+        }
+
+        private bool HasActiveSameSysCoopNo(List<SysCoopNoEntity> sysCoopNoEntities, SysCoopNoEntity sourceSysCoopNo)
+        {
+            foreach (SysCoopNoEntity sysCoopNo in sysCoopNoEntities ?? new List<SysCoopNoEntity>())
+            {
+                if (IsDeletedSysCoopNo(sysCoopNo))
+                {
+                    continue;
+                }
+
+                if (IsSameSysCoopNoRecord(sysCoopNo, sourceSysCoopNo))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool IsSameSysCoopNoRecord(SysCoopNoEntity source, SysCoopNoEntity target)
+        {
+            return source != null
+                && target != null
+                && IsSameSettingField(source.CoopVersion, target.CoopVersion)
+                && IsSameSysCoopNoOrdCds(source.OrdCds, target.OrdCds);
+        }
+
+        private bool IsSameSysCoopNoOrdCds(string source, string target)
+        {
+            JArray sourceOrdCdArray = GetSysCoopNoOrdCdArray(source);
+            JArray targetOrdCdArray = GetSysCoopNoOrdCdArray(target);
+            if (sourceOrdCdArray == null || targetOrdCdArray == null)
+            {
+                return IsSameSettingField(source, target);
+            }
+
+            return JToken.DeepEquals(sourceOrdCdArray, targetOrdCdArray);
+        }
+
+        private HashSet<string> GetSysCoopNoOrdCds(SysCoopNoEntity sysCoopNo)
+        {
+            HashSet<string> result = new HashSet<string>(StringComparer.Ordinal);
+            if (sysCoopNo == null || string.IsNullOrWhiteSpace(sysCoopNo.OrdCds))
+            {
+                return result;
+            }
+
+            JArray ordCdArray = GetSysCoopNoOrdCdArray(sysCoopNo.OrdCds);
+            if (ordCdArray == null)
+            {
+                return result;
+            }
+
+            foreach (JToken ordCdToken in ordCdArray)
+            {
+                if (ordCdToken == null || ordCdToken.Type != JTokenType.Object)
+                {
+                    continue;
+                }
+
+                string ordCd = GetJsonString(ordCdToken, "ord_cd");
+                if (!string.IsNullOrWhiteSpace(ordCd))
+                {
+                    result.Add(ordCd.Trim());
+                }
+            }
+
+            return result;
+        }
+
+        private JArray GetSysCoopNoOrdCdArray(string ordCds)
+        {
+            try
+            {
+                JToken token = JToken.Parse(ordCds);
+                if (token.Type == JTokenType.String)
+                {
+                    token = JToken.Parse(token.ToObject<string>());
+                }
+
+                if (token.Type == JTokenType.Object)
+                {
+                    JToken coopOrdCdToken = token["coop_ord_cd"];
+                    if (coopOrdCdToken != null && coopOrdCdToken.Type == JTokenType.String)
+                    {
+                        coopOrdCdToken = JToken.Parse(coopOrdCdToken.ToObject<string>());
+                    }
+
+                    return coopOrdCdToken as JArray;
+                }
+
+                return token as JArray;
+            }
+            catch (JsonReaderException)
+            {
+                return null;
+            }
+        }
+
         /// <summary>
         /// Determines whether the MST coop API link is a source template.
         /// </summary>
@@ -1494,12 +1833,16 @@ namespace CoopSettingTool.App.Controllers
         /// <summary>
         /// Creates the selected common setting object.
         /// </summary>
-        /// <param name="baseCoopFacility">The base coop facility.</param>
+        /// <param name="sourceCoopFacility">The source coop facility.</param>
+        /// <param name="currentCoopFacility">The current coop facility.</param>
         /// <param name="selectedCoopFacilityArtifacts">The selected coop facility artifacts.</param>
         /// <returns>The selected common setting object.</returns>
-        private object CreateCommonSettingObject(MstCoopFacilityEntity baseCoopFacility, List<MstCoopFacilityEntity> selectedCoopFacilityArtifacts)
+        private object CreateCommonSettingObject(MstCoopFacilityEntity sourceCoopFacility, MstCoopFacilityEntity currentCoopFacility, List<MstCoopFacilityEntity> selectedCoopFacilityArtifacts)
         {
-            JObject commonSettingObject = GetCommonSettingJObject(baseCoopFacility);
+            JObject sourceCommonSettingObject = GetCommonSettingJObject(sourceCoopFacility);
+            JObject commonSettingObject = currentCoopFacility == null
+                ? sourceCommonSettingObject
+                : GetCommonSettingJObject(currentCoopFacility);
             JArray selectedCoopOrdCds = new JArray();
 
             foreach (MstCoopFacilityEntity selectedCoopFacilityArtifact in selectedCoopFacilityArtifacts)
@@ -1517,10 +1860,91 @@ namespace CoopSettingTool.App.Controllers
                 }
             }
 
-            commonSettingObject["coop_ord_cd"] = selectedCoopOrdCds;
+            if (currentCoopFacility == null)
+            {
+                commonSettingObject["coop_ord_cd"] = selectedCoopOrdCds;
+            }
+            else
+            {
+                commonSettingObject["coop_ord_cd"] = MergeCoopOrdCds(commonSettingObject["coop_ord_cd"] as JArray, selectedCoopOrdCds);
+                if (sourceCommonSettingObject["coop_ope_cd"] != null)
+                {
+                    commonSettingObject["coop_ope_cd"] = sourceCommonSettingObject["coop_ope_cd"].DeepClone();
+                }
+            }
+
             UpdateCoopOpeCdStatus(commonSettingObject, selectedCoopOrdCds);
 
             return commonSettingObject;
+        }
+
+        /// <summary>
+        /// Merges selected coop order codes into the current setting.
+        /// </summary>
+        /// <param name="currentCoopOrdCds">The current coop order codes.</param>
+        /// <param name="selectedCoopOrdCds">The selected coop order codes.</param>
+        /// <returns>The merged coop order codes.</returns>
+        private JArray MergeCoopOrdCds(JArray currentCoopOrdCds, JArray selectedCoopOrdCds)
+        {
+            JArray result = new JArray();
+            List<OrdCd> allArtifactOrdCds = GetCoopOrdCds(this.Model.CoopFacilityArtifacts);
+            List<OrdCd> selectedOrdCds = CreateCoopOrdCds(selectedCoopOrdCds);
+
+            if (currentCoopOrdCds != null)
+            {
+                foreach (JToken currentCoopOrdCd in currentCoopOrdCds)
+                {
+                    OrdCd currentOrdCd = CreateCoopOrdCd(currentCoopOrdCd);
+                    if (IsInstalledCoopOrdCd(currentOrdCd, allArtifactOrdCds)
+                        && !IsInstalledCoopOrdCd(currentOrdCd, selectedOrdCds))
+                    {
+                        continue;
+                    }
+
+                    result.Add(currentCoopOrdCd.DeepClone());
+                }
+            }
+
+            if (selectedCoopOrdCds != null)
+            {
+                foreach (JToken selectedCoopOrdCd in selectedCoopOrdCds)
+                {
+                    OrdCd selectedOrdCd = CreateCoopOrdCd(selectedCoopOrdCd);
+                    if (IsInstalledCoopOrdCd(selectedOrdCd, CreateCoopOrdCds(result)))
+                    {
+                        continue;
+                    }
+
+                    result.Add(selectedCoopOrdCd.DeepClone());
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Creates coop order codes from JSON array.
+        /// </summary>
+        /// <param name="coopOrdCds">The coop order code JSON array.</param>
+        /// <returns>The coop order codes.</returns>
+        private List<OrdCd> CreateCoopOrdCds(JArray coopOrdCds)
+        {
+            List<OrdCd> result = new List<OrdCd>();
+            if (coopOrdCds == null)
+            {
+                return result;
+            }
+
+            foreach (JToken coopOrdCd in coopOrdCds)
+            {
+                OrdCd ordCd = CreateCoopOrdCd(coopOrdCd);
+                if (ordCd != null)
+                {
+                    result.Add(ordCd);
+                }
+            }
+
+            return result;
         }
 
         /// <summary>
@@ -1631,7 +2055,7 @@ namespace CoopSettingTool.App.Controllers
                     continue;
                 }
 
-                coopOpeCdSettingObject["status"] = selectedOpeCds.Contains(NormalizeOpeCd(opeCd)) ? "ON" : "OFF";
+                coopOpeCdSettingObject["status"] = selectedOpeCds.Contains(NormalizeOpeCd(opeCd)) ? "on" : "off";
             }
         }
 
@@ -1659,39 +2083,156 @@ namespace CoopSettingTool.App.Controllers
         /// <summary>
         /// Creates the selected IF edge setting.
         /// </summary>
-        /// <param name="baseCoopFacility">The base coop facility.</param>
+        /// <param name="sourceCoopFacility">The source coop facility.</param>
+        /// <param name="currentCoopFacility">The current coop facility.</param>
         /// <param name="selectedOrdCds">The selected order codes.</param>
         /// <returns>The selected IF edge setting.</returns>
-        private string CreateIfEdgeSetting(MstCoopFacilityEntity baseCoopFacility, List<OrdCd> selectedOrdCds)
+        private string CreateIfEdgeSetting(MstCoopFacilityEntity sourceCoopFacility, MstCoopFacilityEntity currentCoopFacility, List<OrdCd> selectedOrdCds)
         {
-            if (baseCoopFacility == null || string.IsNullOrWhiteSpace(baseCoopFacility.IfEdgeSetting))
+            if (sourceCoopFacility == null || string.IsNullOrWhiteSpace(sourceCoopFacility.IfEdgeSetting))
             {
-                return null;
+                return currentCoopFacility?.IfEdgeSetting;
             }
 
-            JObject ifEdgeSettingObject = ParseIfEdgeSettingJObject(baseCoopFacility.IfEdgeSetting);
+            JObject sourceIfEdgeSettingObject = ParseIfEdgeSettingJObject(sourceCoopFacility.IfEdgeSetting);
+            if (!sourceIfEdgeSettingObject.HasValues)
+            {
+                return currentCoopFacility?.IfEdgeSetting ?? sourceCoopFacility.IfEdgeSetting;
+            }
+
+            JObject ifEdgeSettingObject = currentCoopFacility == null
+                ? sourceIfEdgeSettingObject
+                : ParseIfEdgeSettingJObject(currentCoopFacility.IfEdgeSetting);
+
             if (!ifEdgeSettingObject.HasValues)
             {
-                return baseCoopFacility.IfEdgeSetting;
+                ifEdgeSettingObject = new JObject();
             }
 
-            JArray timerSettings = ifEdgeSettingObject["timer"] as JArray;
-            if (timerSettings != null)
+            JArray sourceTimerSettings = sourceIfEdgeSettingObject["timer"] as JArray;
+            if (sourceTimerSettings != null)
             {
-                ifEdgeSettingObject["timer"] = FilterIfEdgeSettings(timerSettings, selectedOrdCds);
+                JArray selectedTimerSettings = FilterIfEdgeSettings(sourceTimerSettings, selectedOrdCds);
+                ifEdgeSettingObject["timer"] = currentCoopFacility == null
+                    ? selectedTimerSettings
+                    : MergeIfEdgeSettings(ifEdgeSettingObject["timer"] as JArray, selectedTimerSettings, selectedOrdCds);
             }
 
-            JObject receiveSetting = ifEdgeSettingObject["receive"] as JObject;
-            if (receiveSetting != null)
+            JObject sourceReceiveSetting = sourceIfEdgeSettingObject["receive"] as JObject;
+            JArray sourceWatchSettings = sourceReceiveSetting?["watch"] as JArray;
+            if (sourceWatchSettings != null)
             {
-                JArray watchSettings = receiveSetting["watch"] as JArray;
-                if (watchSettings != null)
+                JObject receiveSetting = ifEdgeSettingObject["receive"] as JObject;
+                if (receiveSetting == null)
                 {
-                    receiveSetting["watch"] = FilterIfEdgeSettings(watchSettings, selectedOrdCds);
+                    receiveSetting = new JObject();
+                    ifEdgeSettingObject["receive"] = receiveSetting;
                 }
+
+                JArray selectedWatchSettings = FilterIfEdgeSettings(sourceWatchSettings, selectedOrdCds);
+                receiveSetting["watch"] = currentCoopFacility == null
+                    ? selectedWatchSettings
+                    : MergeIfEdgeSettings(receiveSetting["watch"] as JArray, selectedWatchSettings, selectedOrdCds);
             }
 
             return ifEdgeSettingObject.ToString(Formatting.None);
+        }
+
+        /// <summary>
+        /// Merges selected IF edge settings into the current setting.
+        /// </summary>
+        /// <param name="currentSettings">The current settings.</param>
+        /// <param name="selectedSettings">The selected settings.</param>
+        /// <param name="selectedOrdCds">The selected order codes.</param>
+        /// <returns>The merged settings.</returns>
+        private JArray MergeIfEdgeSettings(JArray currentSettings, JArray selectedSettings, List<OrdCd> selectedOrdCds)
+        {
+            JArray result = new JArray();
+            List<OrdCd> allArtifactOrdCds = GetCoopOrdCds(this.Model.CoopFacilityArtifacts);
+
+            if (currentSettings != null)
+            {
+                foreach (JToken currentSetting in currentSettings)
+                {
+                    if (IsSelectedIfEdgeSetting(currentSetting, allArtifactOrdCds)
+                        && !IsSelectedIfEdgeSetting(currentSetting, selectedOrdCds))
+                    {
+                        continue;
+                    }
+
+                    result.Add(currentSetting.DeepClone());
+                }
+            }
+
+            if (selectedSettings != null)
+            {
+                foreach (JToken selectedSetting in selectedSettings)
+                {
+                    if (ContainsIfEdgeSetting(result, selectedSetting))
+                    {
+                        continue;
+                    }
+
+                    result.Add(selectedSetting.DeepClone());
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Determines whether the IF edge setting array contains the target setting.
+        /// </summary>
+        /// <param name="settings">The settings.</param>
+        /// <param name="targetSetting">The target setting.</param>
+        /// <returns><c>true</c> if the settings contain the target setting; otherwise, <c>false</c>.</returns>
+        private bool ContainsIfEdgeSetting(JArray settings, JToken targetSetting)
+        {
+            if (settings == null || targetSetting == null)
+            {
+                return false;
+            }
+
+            foreach (JToken setting in settings)
+            {
+                if (IsSameIfEdgeSetting(setting, targetSetting))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Determines whether IF edge settings represent the same setting.
+        /// </summary>
+        /// <param name="left">The left setting.</param>
+        /// <param name="right">The right setting.</param>
+        /// <returns><c>true</c> if the settings are same; otherwise, <c>false</c>.</returns>
+        private bool IsSameIfEdgeSetting(JToken left, JToken right)
+        {
+            return IsJsonFieldMatched(left, right, "coop_version")
+                && IsJsonFieldMatched(left, right, "datatype")
+                && IsJsonFieldMatched(left, right, "ope_cd")
+                && IsJsonFieldMatched(left, right, "protocol")
+                && IsJsonFieldMatched(left, right, "socket-type")
+                && IsJsonFieldMatched(left, right, "watch_model")
+                && IsJsonFieldMatched(left, right, "description");
+        }
+
+        /// <summary>
+        /// Determines whether JSON string fields match.
+        /// </summary>
+        /// <param name="left">The left token.</param>
+        /// <param name="right">The right token.</param>
+        /// <param name="propertyName">Name of the property.</param>
+        /// <returns><c>true</c> if the field values match; otherwise, <c>false</c>.</returns>
+        private bool IsJsonFieldMatched(JToken left, JToken right, string propertyName)
+        {
+            string leftValue = GetJsonString(left, propertyName) ?? string.Empty;
+            string rightValue = GetJsonString(right, propertyName) ?? string.Empty;
+            return string.Equals(leftValue.Trim(), rightValue.Trim(), StringComparison.Ordinal);
         }
 
         /// <summary>
@@ -1829,49 +2370,6 @@ namespace CoopSettingTool.App.Controllers
             }
 
             return string.Equals(targetValue, selectedValue, StringComparison.Ordinal);
-        }
-
-        /// <summary>
-        /// Determines whether the coop ini info is selected.
-        /// </summary>
-        /// <param name="coopIniInfo">The coop ini info.</param>
-        /// <param name="selectedOrdCds">The selected order codes.</param>
-        /// <returns><c>true</c> if the coop ini info is selected; otherwise, <c>false</c>.</returns>
-        private bool IsSelectedCoopIniInfo(CoopIniInfo coopIniInfo, List<OrdCd> selectedOrdCds)
-        {
-            if (coopIniInfo == null)
-            {
-                return false;
-            }
-
-            if (string.IsNullOrWhiteSpace(coopIniInfo.Key0))
-            {
-                return true;
-            }
-
-            foreach (OrdCd selectedOrdCd in selectedOrdCds)
-            {
-                if (string.Equals(coopIniInfo.Key0, selectedOrdCd.Key0, StringComparison.Ordinal)
-                    || string.Equals(coopIniInfo.Key0, selectedOrdCd.CoopVersion, StringComparison.Ordinal))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// Determines whether the coop ini info is same.
-        /// </summary>
-        /// <param name="left">The left coop ini info.</param>
-        /// <param name="right">The right coop ini info.</param>
-        /// <returns><c>true</c> if the coop ini info is same; otherwise, <c>false</c>.</returns>
-        private bool IsSameCoopIniInfo(CoopIniInfo left, CoopIniInfo right)
-        {
-            return string.Equals(left.Key0, right.Key0, StringComparison.Ordinal)
-                && string.Equals(left.Key1, right.Key1, StringComparison.Ordinal)
-                && string.Equals(left.Key2, right.Key2, StringComparison.Ordinal);
         }
 
         /// <summary>

@@ -92,19 +92,8 @@ public class SysSigninManagerResource {
    */
   @GetMapping("/autoLogin")
   public ResponseEntity<?> getLoginInfo(@RequestParam("userId") String userId
-          , @RequestParam("facilityCd") String facilityCd,
-          // #11205 -ペンテスト2－4認可制御の不備  add 20260512 start
-          @AuthenticationPrincipal NtssUser ntssUser
-          // #11205 -ペンテスト2－4認可制御の不備  add 20260512 end
+          , @RequestParam("facilityCd") String facilityCd
 ) {
-    // #11205 -ペンテスト2－4認可制御の不備  add 20260512 start
-    // 施設越え抑止: 既に認証済みセッションがある場合のみ有効（未認証は Security 側で 401、本 if はスキップ）
-    if (ntssUser != null && !ntssUser.isNkkAdminUser() && facilityCd != null
-        && !facilityCd.equals(ntssUser.getFacilityCd())) {
-      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
-    }
-    // #11205 -ペンテスト2－4認可制御の不備  add 20260512 end
-
     try {
       return new ResponseEntity<>(sysSigninManagerService.getAutoLoginInfo(userId, facilityCd), HttpStatus.OK);
     } catch (Exception e) {

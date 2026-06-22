@@ -1,13 +1,13 @@
 
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.0.31903.59
+# Visual Studio Version 18
+VisualStudioVersion = 18.7.11903.348 stable
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FNSICloudConvertClient", "FNSICloudConvertClient\FNSICloudConvertClient.csproj", "{1C2D3E4F-5A6B-7C8D-9E0F-1A2B3C4D5E6F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MockServer", "MockServer\MockServer.csproj", "{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}"
 EndProject
-Project("{930C7802-8A8C-48F9-8165-68863BCCD9DD}") = "FNSICloudConvertClient.Setup", "Setup\FNSICloudConvertClient.Setup.wixproj", "{B5C6D7E8-F9A0-1B2C-3D4E-5F6A7B8C9D0E}"
+Project("{B7DD6F7E-DEF8-4E67-B5B7-07EF123DB6F0}") = "FNSICloudConvertClient.Setup", "Setup\FNSICloudConvertClient.Setup.wixproj", "{B5C6D7E8-F9A0-1B2C-3D4E-5F6A7B8C9D0E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -25,7 +25,6 @@ Global
 		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Release|Any CPU.Build.0 = Release|Any CPU
 		{B5C6D7E8-F9A0-1B2C-3D4E-5F6A7B8C9D0E}.Debug|Any CPU.ActiveCfg = Debug|x86
 		{B5C6D7E8-F9A0-1B2C-3D4E-5F6A7B8C9D0E}.Release|Any CPU.ActiveCfg = Release|x86
-		{B5C6D7E8-F9A0-1B2C-3D4E-5F6A7B8C9D0E}.Release|Any CPU.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

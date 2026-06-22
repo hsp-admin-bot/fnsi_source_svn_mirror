@@ -101,7 +101,7 @@ export default {
         payload.updateList.forEach(item => {
           let temp = {
             cd: item.additionCd, // 加算コード
-            name: item.additionName,
+            name: item.orditem_name ? item.orditem_name : item.additionName,
             is_enable: "1",
             start_date: item.start_date ? dayjs(item.start_date).format("YYYYMMDD") : ""
           };

@@ -66,7 +66,7 @@
             </v-ons-col>
             <v-ons-col width="60%" vertical-align="center" class="daily-machine-type-select">
               <kendo-multiselect
-                :data-source="machineInspection"
+                :data-source="getMachineTypeList"
                 data-text-field="machineType"
                 data-value-field="machineTypeCd"
                 filter="contains"
@@ -182,7 +182,6 @@ export default {
       popoverVisibleAdd: false,
       localCondition: deepCopy(DefaultCondition),
       bedGroupList: [],
-      machineInspection: [],
     };
   },
   computed: {
@@ -190,6 +189,7 @@ export default {
       "getDailyDateSearch",
       "getCondition",
     ]),
+    ...mapGetters("mst-layout", ["getMachineTypeList"]),
     ...mapGetters("account-edit", ["getDefaultSetting"]),
 
     dateString() {
@@ -264,6 +264,7 @@ export default {
       "setCondition",
       "setConditionForReportParams",
     ]),
+    ...mapActions("mst-layout", ["sendRequestGetMachineTypeList"]),
     // 共通ローダー設定
     ...mapActions("loading-screen", [
       "startLoadingScreen",
@@ -317,7 +318,7 @@ export default {
       return !findItem ? "" : findItem.roomBedGroupName;
     },
     getMachineType(cd) {
-      const findItem = this.machineInspection.find(r => r.machineTypeCd === cd);
+      const findItem = this.getMachineTypeList.find(r => r.machineTypeCd === cd);
       return !findItem ? "" : findItem.machineType;
     },
     getConditionText(name) {
@@ -434,17 +435,13 @@ export default {
     // 共通ローダー:表示開始
     this.startLoadingScreen();
 
-    const [
-      // 型式リストを取得する
-      responseMachineTypeList,
-      responseBedGroupList,
-    ] = await Promise.all([
-      ApiHelper.get("mente-main/getMachineTypeList"),
+    // マスタデータを取得
+    const [responseBedGroupList] = await Promise.all([
       ApiHelper.get("mente-main/getBedGroupList"),
+      this.sendRequestGetMachineTypeList(),
     ]).catch(error => {
       getErrorMessage("DailyInspectionHeaderComponent.vue", "created", error);
     });
-    this.machineInspection = responseMachineTypeList.data;
     this.bedGroupList = responseBedGroupList.data;
     this.bedGroupList.unshift({
       roomBedGroupCd: null,

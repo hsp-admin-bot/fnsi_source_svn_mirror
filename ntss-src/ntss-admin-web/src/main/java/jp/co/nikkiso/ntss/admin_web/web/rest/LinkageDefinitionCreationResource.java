@@ -39,6 +39,8 @@ import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_L
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.AFTER_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.constant.LoggingConstant.MONGO_LOG.BEFORE_LOG_FLG_INFO;
 import static jp.co.nikkiso.ntss.core.utils.NtssUtils.ExcetionStackTraceToString;
+import jp.co.nikkiso.ntss.core.utils.InvestigateLogUtils;
+import tools.jackson.databind.ObjectMapper;
 
 
 @RestController
@@ -89,7 +91,26 @@ public class LinkageDefinitionCreationResource {
    * @return
    */
   @PostMapping("/coopLayout/{ctlNo}")
-  public ResponseEntity<?> selectMstCoopLayoutByCtlNo(@PathVariable Long ctlNo) {
+  public ResponseEntity<?> selectMstCoopLayoutByCtlNo(@PathVariable Long ctlNo,
+                                                      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                      @AuthenticationPrincipal NtssUser ntssUser
+                                                      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        MstCoopLayout response = creationService.selectMstCoopLayoutByCtlNo(ctlNo);
+        if (response != null) {
+          String facilityCd = response.getFacilityCd();
+          if (facilityCd != null && !facilityCd.isEmpty() &&
+            !facilityCd.equals(ntssUser.getFacilityCd())) {
+            String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "ctlNo=" + ctlNo + " ";
+            InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+            return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          }
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.LINKAGE_DEFINITION + "/coopLayout";
@@ -178,7 +199,22 @@ public class LinkageDefinitionCreationResource {
    */
   @GetMapping("/coopLayout/newestCtlNo/{facilityCd}")
   public ResponseEntity<?> getNewestMstCoopLayoutsByFacilityCd(
-      @PathVariable String facilityCd) throws URISyntaxException {
+      @PathVariable String facilityCd,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) throws URISyntaxException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.LINKAGE_DEFINITION + "/coopLayout/newestCtlNo/" + facilityCd;
@@ -233,6 +269,14 @@ public class LinkageDefinitionCreationResource {
   @PostMapping("/coopLayout/submit")
   public ResponseEntity<?> submitMstCoopLayout(@RequestBody MstCoopLayout mstCoopLayout,
   @AuthenticationPrincipal NtssUser ntssUser) throws URISyntaxException {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+    if (!ntssUser.isNkkAdminUser() && mstCoopLayout != null && mstCoopLayout.getFacilityCd() != null
+      && !mstCoopLayout.getFacilityCd().isEmpty() && !mstCoopLayout.getFacilityCd().equals(ntssUser.getFacilityCd())) {
+    // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+      String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + mstCoopLayout.getFacilityCd() + " ";
+      InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+      return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.LINKAGE_DEFINITION + "/coopLayout/submit";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -295,7 +339,22 @@ public class LinkageDefinitionCreationResource {
    */
   @GetMapping("/coopLayoutDetail/newestCtlNo/{facilityCd}")
   public ResponseEntity<?> getNewestMstCoopLayoutDetailsByFacilityCd(
-      @PathVariable String facilityCd) throws URISyntaxException {
+      @PathVariable String facilityCd,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) throws URISyntaxException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.LINKAGE_DEFINITION + "/coopLayoutDetail/newestCtlNo/" + facilityCd;
@@ -324,11 +383,7 @@ public class LinkageDefinitionCreationResource {
     }
   }
 
-  /**
-   * CtlNoで変換レイアウト詳細マスタを取得
-   * @param ctlNo
-   * @return
-   */
+
   @GetMapping("/coopLayoutDetail/current/{facilityCd}")
   public ResponseEntity<?> getCurrentMstCoopLayoutDetailsByFacilityCd(@PathVariable String facilityCd) {
     String mappingUrl = Uri.LINKAGE_DEFINITION + "/coopLayoutDetail/current/" + facilityCd;
@@ -346,8 +401,34 @@ public class LinkageDefinitionCreationResource {
     }
   }
 
+  /**
+   * CtlNoで変換レイアウト詳細マスタを取得
+   * @param ctlNo
+   * @return
+   */
+
   @GetMapping("/coopLayoutDetail/{ctlNo}")
-  public ResponseEntity<?> selectMstCoopLayoutDetailByCtlNo(@PathVariable Long ctlNo) {
+  public ResponseEntity<?> selectMstCoopLayoutDetailByCtlNo(@PathVariable Long ctlNo,
+                                                            // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                            @AuthenticationPrincipal NtssUser ntssUser
+                                                            // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        MstCoopLayout response = creationService.selectMstCoopLayoutByCtlNo(ctlNo);
+        // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+        if (response != null) {
+          String facilityCd = response.getFacilityCd();
+          if (facilityCd != null && !facilityCd.isEmpty() &&
+            !facilityCd.equals(ntssUser.getFacilityCd())) {
+            String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "ctlNo=" + ctlNo + " ";
+            InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+            return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          }
+        }
+        // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.LINKAGE_DEFINITION + "/coopLayoutDetail";
@@ -407,7 +488,22 @@ public class LinkageDefinitionCreationResource {
    */
   @GetMapping("/coopFilename/newestCtlNo/{facilityCd}")
   public ResponseEntity<?> getNewestMstCoopFilenamesByFacilityCd(
-      @PathVariable String facilityCd) throws URISyntaxException {
+      @PathVariable String facilityCd,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) throws URISyntaxException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.LINKAGE_DEFINITION + "/coopFilename/newestCtlNo/" + facilityCd;
@@ -436,11 +532,7 @@ public class LinkageDefinitionCreationResource {
     }
   }
 
-  /**
-   * CtlNoで連携ファイル名マスタを取得
-   * @param ctlNo
-   * @return
-   */
+
   @GetMapping("/coopFilename/current/{facilityCd}")
   public ResponseEntity<?> getCurrentMstCoopFilenamesByFacilityCd(@PathVariable String facilityCd) {
     String mappingUrl = Uri.LINKAGE_DEFINITION + "/coopFilename/current/" + facilityCd;
@@ -457,9 +549,33 @@ public class LinkageDefinitionCreationResource {
       return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
     }
   }
-
+  /**
+   * CtlNoで連携ファイル名マスタを取得
+   * @param ctlNo
+   * @return
+   */
   @GetMapping("/coopFilename/{ctlNo}")
-  public ResponseEntity<?> selectMstCoopFilenameByCtlNo(@PathVariable Long ctlNo) {
+  public ResponseEntity<?> selectMstCoopFilenameByCtlNo(@PathVariable Long ctlNo,
+                                                        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                        @AuthenticationPrincipal NtssUser ntssUser
+                                                        // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        MstCoopFilename response = creationService.selectMstCoopFilenameByCtlNo(ctlNo);
+        // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+        if (response != null) {
+          String facilityCd = response.getFacilityCd();
+          if (facilityCd != null && !facilityCd.isEmpty() &&
+            !facilityCd.equals(ntssUser.getFacilityCd())) {
+            String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "ctlNo=" + ctlNo + " ";
+            InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+            return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          }
+        }
+        // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.LINKAGE_DEFINITION + "/coopFilename";
@@ -544,7 +660,28 @@ public class LinkageDefinitionCreationResource {
    * @return
    */
   @PostMapping("/coopDistribute/{ctlNo}")
-  public ResponseEntity<?> selectMstCoopDistributeByCtlNo(@PathVariable Long ctlNo) {
+  public ResponseEntity<?> selectMstCoopDistributeByCtlNo(@PathVariable Long ctlNo,
+                                                          // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                          @AuthenticationPrincipal NtssUser ntssUser
+                                                          // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        MstCoopDistribute mstCoopDistribute = creationService.selectMstCoopDistributeByCtlNo(ctlNo);
+        // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+        if (mstCoopDistribute != null) {
+          String facilityCd = mstCoopDistribute.getFacilityCd();
+          if (facilityCd != null && !facilityCd.isEmpty() &&
+            !facilityCd.equals(ntssUser.getFacilityCd())) {
+            String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "ctlNo=" + ctlNo + " ";
+            InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+            return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          }
+        }
+        // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.LINKAGE_DEFINITION + "/coopDistribute";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -568,7 +705,23 @@ public class LinkageDefinitionCreationResource {
   public ResponseEntity<?> selectByCtlNoORFacilityCdAndcoopCd(
       @RequestParam(value = "page", required = false) Integer offset,
       @RequestParam(value = "per_page", required = false) Integer limit,
-      @RequestBody MstCoopDistribute mstCoopDistribute) {
+      @RequestBody MstCoopDistribute mstCoopDistribute,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        String facilityCd = mstCoopDistribute.getFacilityCd();
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "coopCd=" + mstCoopDistribute.getCoopCd() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.LINKAGE_DEFINITION + "/coopDistribute";
@@ -599,7 +752,22 @@ public class LinkageDefinitionCreationResource {
    */
   @GetMapping("/coopDistribute/newestCtlNo/{facilityCd}")
   public ResponseEntity<?> getNewestMstCoopDistributeCtlNoByFacilityCd(
-      @PathVariable String facilityCd) throws URISyntaxException {
+      @PathVariable String facilityCd,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) throws URISyntaxException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.LINKAGE_DEFINITION + "/mstCoopDistribute/newestCtlNo/" + facilityCd;
@@ -726,8 +894,24 @@ public class LinkageDefinitionCreationResource {
    */
   @PostMapping("/coopFacility")
   public ResponseEntity<?> selectByCtlNoOrFacilityCd(@RequestParam(value = "page", required = false) Integer offset,
-      @RequestParam(value = "per_page", required = false) Integer limit, @RequestBody MstCoopFacility mstCoopFacility)
+      @RequestParam(value = "per_page", required = false) Integer limit, @RequestBody MstCoopFacility mstCoopFacility,
+                                                     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                     @AuthenticationPrincipal NtssUser ntssUser
+                                                     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+)
       throws URISyntaxException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        String facilityCd = mstCoopFacility.getFacilityCd();
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.LINKAGE_DEFINITION + "/coopFacility";
@@ -826,6 +1010,20 @@ public class LinkageDefinitionCreationResource {
   @PostMapping("/submitItem")
   public ResponseEntity<?> submit(@RequestBody Map<String, String> payload,
       @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        ObjectMapper objectMapper = new ObjectMapper();
+        MstCoopLayout mstCoopLayoutAfter = objectMapper.readValue(payload.get("mst_coop_layout"), MstCoopLayout.class);
+        String facilityCd = mstCoopLayoutAfter.getFacilityCd();
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "coopCd=" + mstCoopLayoutAfter.getCoopCd() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.LINKAGE_DEFINITION + "/submitItem";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -861,6 +1059,57 @@ public class LinkageDefinitionCreationResource {
   @PostMapping("/submitOcc")
   public ResponseEntity<?> submitOcc(@RequestBody Map<String, String> payload,
       @AuthenticationPrincipal NtssUser ntssUser) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        ObjectMapper objectMapper = new ObjectMapper();
+        MstCoopLayoutDetail mstCoopLayoutDetailAfter = objectMapper.readValue(payload.get("mst_coop_layout_detail"),
+          MstCoopLayoutDetail.class);
+        String facilityCd = mstCoopLayoutDetailAfter.getFacilityCd();
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "ctlNo=" + mstCoopLayoutDetailAfter.getCtlNo() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+        MstCoopLayoutDetail mstCoopLayoutDetailBefore = objectMapper.readValue(payload.get("mst_coop_layout_detail_before"),
+          MstCoopLayoutDetail.class);
+        facilityCd = mstCoopLayoutDetailBefore.getFacilityCd();
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "ctlNo=" + mstCoopLayoutDetailBefore.getCtlNo() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+        MstCoopLayout mstCoopLayoutBefore = objectMapper.readValue(payload.get("mst_coop_layout_before"),
+          MstCoopLayout.class);
+        facilityCd = mstCoopLayoutBefore.getFacilityCd();
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "coopCd=" + mstCoopLayoutBefore.getCoopCd() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+        MstCoopFacility mstCoopFacilityAfter = objectMapper.readValue(payload.get("mst_coop_facility"),
+          MstCoopFacility.class);
+         facilityCd = mstCoopFacilityAfter.getFacilityCd();
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "ctlNo=" + mstCoopFacilityAfter.getCtlNo() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+        MstCoopDistribute mstCoopDistributeAfter = objectMapper.readValue(payload.get("mst_coop_distribute"),
+          MstCoopDistribute.class);
+        facilityCd = mstCoopDistributeAfter.getFacilityCd();
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "ctlNo=" + mstCoopDistributeAfter.getCtlNo() + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.LINKAGE_DEFINITION + "/submitOcc";
@@ -894,7 +1143,25 @@ public class LinkageDefinitionCreationResource {
    * @return
    */
   @PostMapping("/mstCoopLayoutDetail/get_by")
-  public ResponseEntity<?> getMstCoopLayoutDetail(@RequestBody Map<String, String> payload) {
+  public ResponseEntity<?> getMstCoopLayoutDetail(@RequestBody Map<String, String> payload,
+                                                  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                  @AuthenticationPrincipal NtssUser ntssUser
+                                                  // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        String facilityCd = payload.get("facilityCd");
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.LINKAGE_DEFINITION + "/mstCoopLayoutDetail/get_by";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -927,7 +1194,22 @@ public class LinkageDefinitionCreationResource {
    * @return
    */
   @GetMapping("/mstCoopApilink/{facilityCd}")
-  public ResponseEntity<?> selectMstCoopApilinksByFacilityCd(@PathVariable String facilityCd) {
+  public ResponseEntity<?> selectMstCoopApilinksByFacilityCd(@PathVariable String facilityCd,
+                                                             // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                                             @AuthenticationPrincipal NtssUser ntssUser
+                                                             // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.LINKAGE_DEFINITION + "/mstCoopApilink/" + facilityCd;
@@ -1052,29 +1334,17 @@ public class LinkageDefinitionCreationResource {
   @PostMapping("/mstCoopApilink/source")
   public ResponseEntity<?> selectSourceMstCoopApilinks(@RequestBody MstCoopApilink mstCoopApilink) {
 
-    // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.LINKAGE_DEFINITION + "/mstCoopApilink/source";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
       mstCoopApilink);
-    // wp アプリケーションログの適正化 Add End
     try {
       List<MstCoopApilink> mstCoopApilinks = creationService.selectSourceMstCoopApilinks(mstCoopApilink);
 
-      // wp アプリケーションログの適正化 Add Start
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", AFTER_LOG_FLG_INFO, mappingUrl, null,
         null);
-      // wp アプリケーションログの適正化 Add End
       return new ResponseEntity<>(mstCoopApilinks, HttpStatus.OK);
     } catch (Exception e) {
-      // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang start
-//      e.printStackTrace();
-      // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 del yangxuewang end
-
-      // wp アプリケーションログの適正化 Add Start
-      // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang start
       logEventUtils.resourceLogOutput(getClassName(), getMethodName(),"", AFTER_LOG_FLG_ERROR, mappingUrl, null, ExcetionStackTraceToString(e));
-      // #9700 イベントログに出るべきではないもの、判読不可能なログがある 20260403 mod yangxuewang end
-      // wp アプリケーションログの適正化 Add End
       return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
     }
   }
@@ -1122,7 +1392,22 @@ public class LinkageDefinitionCreationResource {
    */
   @GetMapping("/coopIni/{facilityCd}")
   public ResponseEntity<?> getMstCoopIniByFacilityCd(
-      @PathVariable String facilityCd) throws URISyntaxException {
+      @PathVariable String facilityCd,
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      @AuthenticationPrincipal NtssUser ntssUser
+      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) throws URISyntaxException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
 
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.LINKAGE_DEFINITION + "/mstCoopIni/" + facilityCd;
@@ -1152,13 +1437,55 @@ public class LinkageDefinitionCreationResource {
   }
 
   /**
+   * コピー元の連携設定マスタを取得
+   * @param key0
+   * @return
+   * @throws URISyntaxException
+   */
+  @GetMapping("/coopIni/source/{key0}")
+  public ResponseEntity<?> getSourceMstCoopIniByKey0(
+      @PathVariable String key0) throws URISyntaxException {
+
+    String mappingUrl = Uri.LINKAGE_DEFINITION + "/mstCoopIni/source/" + key0;
+    logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
+      null);
+    try {
+      List<MstCoopIni> mstCoopInis = creationService.selectSourceMstCoopIniByKey0(key0);
+
+      logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", AFTER_LOG_FLG_INFO, mappingUrl, null,
+        null);
+      return new ResponseEntity<>(mstCoopInis, HttpStatus.OK);
+    } catch (Exception e) {
+      logEventUtils.resourceLogOutput(getClassName(), getMethodName(),"", AFTER_LOG_FLG_ERROR, mappingUrl, null, ExcetionStackTraceToString(e));
+      return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  /**
    * 連携設定マスタを更新する。
    * @param mstCoopIni
    * @return
    * @throws URISyntaxException
    */
-  @PostMapping("/coopIni/submit")
-  public ResponseEntity<?> submitMstCoopIni(@RequestBody MstCoopIni mstCoopIni) throws URISyntaxException {
+ @PostMapping("/coopIni/submit")
+  public ResponseEntity<?> submitMstCoopIni(@RequestBody MstCoopIni mstCoopIni,
+                                            // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                            @AuthenticationPrincipal NtssUser ntssUser
+                                            // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+) throws URISyntaxException {
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        String facilityCd = mstCoopIni.getFacilityCd();
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 start
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+          // #11205 -ペンテスト2－4認可制御の不備  mod 20260420 end
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end    
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.LINKAGE_DEFINITION + "/mstCoopIni/submit";
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
@@ -1186,7 +1513,22 @@ public class LinkageDefinitionCreationResource {
   }
 
   @DeleteMapping("uninstallCoop/{facilityCd}")
-  public ResponseEntity<?> uninstallCoop(@PathVariable String facilityCd){
+  public ResponseEntity<?> uninstallCoop(@PathVariable String facilityCd,
+                                         // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+                                         @AuthenticationPrincipal NtssUser ntssUser
+                                         // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+){
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
+      if(!ntssUser.isNkkAdminUser()) {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " ";
+          InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");
+          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
+        }
+      }
+    // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+
     // wp アプリケーションログの適正化 Add Start
     String mappingUrl = Uri.LINKAGE_DEFINITION + "/uninstallCoop/" + facilityCd;
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,

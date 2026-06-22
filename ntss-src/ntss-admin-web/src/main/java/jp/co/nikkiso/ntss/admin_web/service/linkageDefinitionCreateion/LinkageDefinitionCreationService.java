@@ -138,6 +138,9 @@ public interface LinkageDefinitionCreationService {
 	/* 連携施設マスタEntityを取得する */
 	List<MstCoopIni> selectMstCoopIniByFacilityCd(String facilityCd);
 
+	/* コピー元の連携施設マスタEntityを取得する */
+	List<MstCoopIni> selectSourceMstCoopIniByKey0(String key0);
+
 	/* 連携施設マスタ情報保存 */
 	boolean submitMstCoopIni(MstCoopIni mstCoopIni);
 

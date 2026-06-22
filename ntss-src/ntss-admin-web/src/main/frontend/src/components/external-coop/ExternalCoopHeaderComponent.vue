@@ -618,15 +618,17 @@ export default {
         case "phy_ord":
           return "心電図検査オーダ";
         case "shot_ord":
-          return "透析注射連携";
+          return "透析注射";
         case "pre_ord":
-          return "処方情報連携";
+          return "処方情報";
         case "staff_mst":
-          return "スタッフマスタ連携";
+          return "スタッフマスタ";
         case "vit_cop":
-          return "バイタル連携";
+          return "バイタル";
         case "karte_ord":
-          return "カルテ記載連携";
+          return "カルテ記載";
+        case "iji_dial":
+          return "医事会計";
         default:
           return "";
       }

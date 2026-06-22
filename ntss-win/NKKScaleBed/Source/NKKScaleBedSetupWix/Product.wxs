@@ -2,7 +2,7 @@
 <!--
   NKKScaleBed WiX v4 インストーラー
   製品名   : NKKスケールベッドアプリ
-  バージョン: 2.0.2
+  バージョン: 2.0.0
   メーカー : Nikkiso
   インストール先: C:\FNWSiTools\NKKScaleBed
 
@@ -14,6 +14,7 @@
     - サイレントインストール(/quiet): 既存 config を使用、なければデフォルト値
     - バージョンダウングレード警告
     - Windows サービス自動登録・起動・停止・削除
+    - 自己アップデート時: GUI/サービス強制終了 → ファイル更新 → サービス復元
     - アンインストール時に NKKScaleBed.config を保持
 -->
 <?include GeneratedProductCode.wxi?>
@@ -48,6 +49,7 @@
 
     <Property Id="MSIRESTARTMANAGERCONTROL" Value="Disable" />
     <Property Id="RUNNING_PROCESSES" Secure="yes" />
+    <Property Id="SERVICE_WAS_RUNNING" Value="0" Secure="yes" />
 
     <Property Id="ROOTDRIVE" Value="C:\" />
 
@@ -83,8 +85,8 @@
         <Directory Id="INSTALLFOLDER" Name="NKKScaleBed" />
       </Directory>
     </StandardDirectory>
-    <StandardDirectory Id="WindowsFolder" />
     <StandardDirectory Id="DesktopFolder" />
+    <StandardDirectory Id="WindowsFolder" />
 
     <Component Id="C_NKKScaleBedService"
                Guid="{B1F2E3D4-C5C6-7890-ABCD-EF1234561001}"
@@ -188,7 +190,7 @@
 
     <CustomAction Id="UninstallServiceWithInstaller"
                   Directory="SystemFolder"
-                  ExeCommand="cmd.exe /c sc stop NKKScaleBed &gt; nul 2&gt;&amp;1 &amp; sc delete NKKScaleBed &gt; nul 2&gt;&amp;1 &amp; taskkill /f /im NKKScaleBedService.exe &gt; nul 2&gt;&amp;1"
+                  ExeCommand="cmd.exe /c taskkill /f /im NKKScaleBedTool.exe &gt; nul 2&gt;&amp;1 &amp; sc stop NKKScaleBed &gt; nul 2&gt;&amp;1 &amp; sc delete NKKScaleBed &gt; nul 2&gt;&amp;1 &amp; taskkill /f /im NKKScaleBedService.exe &gt; nul 2&gt;&amp;1"
                   Execute="deferred"
                   Impersonate="no"
                   Return="ignore" />
@@ -206,6 +208,12 @@
                   Script="vbscript"
                   ScriptSourceFile="Scripts\CA_DetectRunningProcesses.vbs" />
 
+    <CustomAction Id="CA_DetectServiceStatus"
+                  Execute="immediate"
+                  Return="ignore"
+                  Script="vbscript"
+                  ScriptSourceFile="Scripts\CA_DetectServiceStatus.vbs" />
+
     <CustomAction Id="CA_KillGUIApps"
                   Execute="immediate"
                   Return="ignore"
@@ -219,19 +227,33 @@
                   Impersonate="no"
                   Return="ignore" />
 
+    <CustomAction Id="SetInstallServicePropertyRestore"
+                  Property="InstallServiceWithInstaller"
+                  Value="&quot;[INSTALLFOLDER]NKKScaleBedService.exe&quot; /servicewasrunning=1" />
+
+    <CustomAction Id="SetInstallServicePropertySilentRestore"
+                  Property="InstallServiceWithInstaller"
+                  Value="/silent=1 /servicewasrunning=1 &quot;[INSTALLFOLDER]NKKScaleBedService.exe&quot;" />
+
     <InstallExecuteSequence>
       <InstallValidate Condition="0" />
 
       <RemoveExistingProducts After="InstallInitialize" />
 
-      <Custom Action="UninstallServiceWithInstaller" Before="RemoveFiles"
-              Condition="1" />
+      <Custom Action="CA_DetectServiceStatus" Before="UninstallServiceWithInstaller"
+              Condition="NOT REMOVE AND UILevel &lt; 5" />
+
+      <Custom Action="UninstallServiceWithInstaller" Before="RemoveFiles" Condition="1" />
 
       <Custom Action="SetInstallServiceProperty" Before="InstallServiceWithInstaller"
               Condition="NOT REMOVE AND UILevel &gt;= 5" />
+      <Custom Action="SetInstallServicePropertyRestore" After="SetInstallServiceProperty"
+              Condition="NOT REMOVE AND UILevel &gt;= 5 AND SERVICE_WAS_RUNNING = &quot;1&quot;" />
 
       <Custom Action="SetInstallServicePropertySilent" Before="InstallServiceWithInstaller"
               Condition="NOT REMOVE AND UILevel &lt; 5" />
+      <Custom Action="SetInstallServicePropertySilentRestore" After="SetInstallServicePropertySilent"
+              Condition="NOT REMOVE AND UILevel &lt; 5 AND (SERVICE_WAS_RUNNING = &quot;1&quot; OR OLDERVERSIONBEINGUPGRADED)" />
       <Custom Action="InstallServiceWithInstaller" After="InstallFiles"
               Condition="NOT REMOVE" />
       <Custom Action="StartServiceAfterInstallSilent" After="InstallServiceWithInstaller"
@@ -291,7 +313,9 @@
       <Publish Dialog="WelcomeDlg" Control="Next"
                Event="NewDialog" Value="RunningProcessesDlg"
                Order="2" Condition="NOT Installed AND RUNNING_PROCESSES" />
-      <Publish Dialog="WelcomeDlg"    Control="Next" Event="NewDialog" Value="InstallDirDlg" Order="3" Condition="NOT Installed" />
+      <Publish Dialog="WelcomeDlg" Control="Next"
+               Event="NewDialog" Value="InstallDirDlg"
+	       Order="3" Condition="NOT Installed" />
 
       <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton"
                Event="DoAction" Value="CA_DetectRunningProcesses"
@@ -302,8 +326,13 @@
       <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton"
                Event="NewDialog" Value="VerifyReadyDlg"
                Order="3" Condition="Installed AND NOT RUNNING_PROCESSES" />
+      <Publish Dialog="InstallDirDlg" Control="Back"
+               Event="NewDialog" Value="WelcomeDlg"
+               Order="2" Condition="1" />
 
-      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg"    Order="2" Condition="1" />
+      <Publish Dialog="FilesInUse" Control="Ignore"
+               Event="DoAction" Value="CA_KillGUIApps"
+               Order="1" Condition="1" />
     </UI>
 
   </Package>

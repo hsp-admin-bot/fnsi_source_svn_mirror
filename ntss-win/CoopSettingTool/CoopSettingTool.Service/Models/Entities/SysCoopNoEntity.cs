@@ -89,8 +89,17 @@ namespace CoopSettingTool.Service.Models
         /// </summary>
         /// <value>The facility cd.</value>
         [JsonProperty("facilityCd")]
-        [Browsable(false)]
+        [ReadOnly(true)]
+        [DisplayName("施設コード")]
         public string FacilityCd { get; set; }
+
+        /// <summary>
+        /// Gets or sets the coop version.
+        /// </summary>
+        [JsonProperty("coopVersion")]
+        [ReadOnly(true)]
+        [DisplayName("連携名")]
+        public string CoopVersion { get; set; }
 
         /// <summary>
         /// Gets or sets the ord CDS.
@@ -211,15 +220,6 @@ namespace CoopSettingTool.Service.Models
         [JsonProperty("coopCdIndex")]
         [DisplayName("付帯情報（電文）")]
         public string CoopCdIndex { get; set; }
-
-        /// <summary>
-        /// Gets or sets the coop version.
-        /// </summary>
-        [JsonProperty("coopVersion")]
-        [Browsable(false)]
-        public string CoopVersion { get; set; }
-
-
 
         /// <summary>
         /// Returns a hash code for this instance.

@@ -173,7 +173,6 @@
       <Component Guid="{AD986BFB-BB5D-40BC-9A7D-5174C86E0015}"><File Source="$(var.SrcBin)Ionic.Zip.dll" /></Component>
       <Component Guid="{AD986BFB-BB5D-40BC-9A7D-5174C86E0012}"><File Source="$(var.SrcBin)LayoutDesignerUtilityLib.dll" /></Component>
       <Component Guid="{AD986BFB-BB5D-40BC-9A7D-5174C86E0013}"><File Source="$(var.SrcBin)SignInLib.dll" /></Component>
-      <Component Guid="{AD986BFB-BB5D-40BC-9A7D-5174C86E0014}"><File Source="$(var.SrcBin)System.ValueTuple.dll" /></Component>
     </ComponentGroup>
 
     <!-- ============================== フィーチャー ============================== -->

@@ -35,11 +35,6 @@ export default {
     return {
       historyKey: HISTORY_KEY_SCALE_BED_LIST
     };
-  },
-  beforeRouteLeave(to, from, next) {
-    // 画面遷移前に、mainComponentのbeforeRouteLeaveを呼び出す
-    this.$refs.mainComponent.saveColumnWidths();
-    next();
   }
 };
 </script>

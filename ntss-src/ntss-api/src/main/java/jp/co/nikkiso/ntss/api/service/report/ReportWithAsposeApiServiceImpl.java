@@ -464,6 +464,13 @@ public class ReportWithAsposeApiServiceImpl implements ReportWithAsposeApiServic
           // バーコード対象セルの場合はマッピングを保持
           funcCellMap.putAll(formulaCalculateForParams(baseWorkbook, destSheet, params, lastRepCount));
           // mod #12725 ##=の計算式で保存時にエラーにならないが出力時にエラー扱いのものがある limingzhe end
+          // add #10446 テンプレート繰返しでの計算式繰返しの制限事項対応②（「=」で始まる計算式） limingzhe start
+          if (tmplRepeat.isPresent()) {
+            // テンプレート繰返しでの計算式繰返し（「=」で始まる計算式）
+            List<String> paramIdInTmpl = params.stream().filter(p -> p.isTmplRepeat()).map(p -> p.getId()).collect(toList());
+            formulaCalculateFromTmpl(destSheet, tmplRepeat.get(), paramIdInTmpl, lastRepCount.size());
+          }
+          // add #10446 テンプレート繰返しでの計算式繰返しの制限事項対応②（「=」で始まる計算式） limingzhe end
           if(mstReport.getReportClass() == ReportConstant.ReportClass.LABEL_REPORT) {
             copyStyleFromTmpl(destSheet, tmplRepeat, ReportConstant.ReportClass.LABEL_REPORT);
             labelRemoveStartCell(destSheet, tmplRepeat, stPos);

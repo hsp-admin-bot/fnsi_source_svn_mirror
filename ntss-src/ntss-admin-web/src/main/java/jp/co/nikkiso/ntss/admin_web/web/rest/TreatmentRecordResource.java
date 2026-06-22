@@ -1828,8 +1828,13 @@ public class TreatmentRecordResource {
   // add #11471 ord_mian操作時の治療モードデータの登録 関 end
 
   private boolean hasFacilityAndOrdAccess(NtssUser ntssUser, String facilityCd, Long ordNo) {
-    return ntssUser != null
-      && facilityCd != null
+    if (ntssUser == null) {
+      return false;
+    }
+    if (ntssUser.isNkkAdminUser()) {
+      return true;
+    }
+    return facilityCd != null
       && facilityCd.equals(ntssUser.getFacilityCd())
       && hasOrdAccess(ntssUser, ordNo);
   }

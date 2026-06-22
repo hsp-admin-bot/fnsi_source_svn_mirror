@@ -31,6 +31,13 @@ namespace CoopSettingTool.Service
         Task<GetSysCoopNoResponse> GetSysCoopNo(string facilityCd);
 
         /// <summary>
+        /// Gets the source system coop no.
+        /// </summary>
+        /// <param name="coopVersion">The coop version.</param>
+        /// <returns>Task&lt;GetSysCoopNoResponse&gt;.</returns>
+        Task<GetSysCoopNoResponse> GetSourceSysCoopNo(string coopVersion);
+
+        /// <summary>
         /// Updates the system coop no.
         /// </summary>
         /// <param name="inputEntity">The input entity.</param>

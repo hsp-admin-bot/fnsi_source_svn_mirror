@@ -3358,6 +3358,11 @@ namespace LayoutDesigner
                             break;
                         // mod #12585 水質管理.水質検査のフィルタ処理仕様修正 高 end
                         // add #10370 装置帳票向けの「水質管理」データ項目を検討する 高 end
+                        // add #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 高 start
+                        case RldConst.FilterType.Group.GOODS:       // 物品情報
+                            wDlg.FilterType = frmSelectGenericFilter.EnumFilterType.Goods;
+                            break;
+                        // add #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 高 end
                         default:
                             break;
                     }
@@ -3400,6 +3405,11 @@ namespace LayoutDesigner
                                 break;
                             // mod #12585 水質管理.水質検査のフィルタ処理仕様修正 高 end
                             // add #10370 装置帳票向けの「水質管理」データ項目を検討する 高 end
+                            // add #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 高 start
+                            case RldConst.FilterType.Group.GOODS:
+                                wData.FilterData = "<SelectSetting><Item tag=\"Goods\" checkState=\"Checked\" /></SelectSetting>";
+                                break;
+                            // add #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 高 end
                             default:
                                 break;
                         }

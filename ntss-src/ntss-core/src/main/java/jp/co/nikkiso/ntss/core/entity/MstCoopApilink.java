@@ -13,8 +13,8 @@ import org.seasar.doma.jdbc.entity.NamingType;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 import jp.co.nikkiso.ntss.core.entity.entityListener.BaseEntityListener;
 import jp.co.nikkiso.ntss.core.exception.NtssException;
@@ -126,7 +126,7 @@ public class MstCoopApilink extends BaseEntity {
       try {
         ContinueApiStatus obj = objectMapper.readValue(value, ContinueApiStatus.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         throw new NtssException("連携API関連付けマスタ処理継続レスポンスステータスが不正です。");
       }
     }
@@ -139,7 +139,7 @@ public class MstCoopApilink extends BaseEntity {
     public String getValue() {
       try {
         return objectMapper.writeValueAsString(this);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         return null;
       }
     }
@@ -175,7 +175,7 @@ public class MstCoopApilink extends BaseEntity {
       try {
         AfterApiStatus obj = objectMapper.readValue(value, AfterApiStatus.class);
         modelMapper.map(obj, this);
-      } catch (IOException e) {
+      } catch (JacksonException e) {
         throw new NtssException("連携API関連付けマスタ処理後ステータスが不正です。");
       }
     }
@@ -188,7 +188,7 @@ public class MstCoopApilink extends BaseEntity {
     public String getValue() {
       try {
         return objectMapper.writeValueAsString(this);
-      } catch (JsonProcessingException e) {
+      } catch (JacksonException e) {
         return null;
       }
     }

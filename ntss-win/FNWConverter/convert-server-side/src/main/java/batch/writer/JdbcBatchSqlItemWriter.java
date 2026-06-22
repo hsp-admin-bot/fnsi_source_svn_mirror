@@ -1951,6 +1951,13 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 	private void processPatCoopDetailDiffKeyRow(T item, Map<String, Long> resultMap, List<String> listKey, Map map) {
 		String keys = item.toString();
 				List<String> keyList = new ArrayList<String>(Arrays.asList(keys.split(",")));
+				//add 11902 セコム連携 COP_COOP_SEND_HST.MEMOのコンバート start
+				int length = keyList.get(0).length();
+				if(length==12){
+					SecomPatCoopDetailDiffKeyRow(keyList,keys, resultMap,listKey, map);
+					return;
+				}
+				//add 11902 セコム連携 COP_COOP_SEND_HST.MEMOのコンバート end
 				int count = 1;
 				for (String key : keyList) {
 					map.put(count, key);
@@ -1988,6 +1995,46 @@ public class JdbcBatchSqlItemWriter<T> implements ItemWriter<T>, InitializingBea
 				if (!listKey.isEmpty()) {
 					globalContext.sqlKeys = String.join(", ", listKey);
 				}
+	}
+
+	private void SecomPatCoopDetailDiffKeyRow(List<String> keyList,String keys, Map<String, Long> resultMap, List<String> listKey, Map map){
+
+		int count = 1;
+		for (String key : keyList) {
+			map.put(count, key);
+			count ++;
+		}
+		String sql = """
+					select 
+						coop_save_no,
+						fn_pat_id
+					 from pat_coop_detail c
+						INNER JOIN pat_personal_main p ON c.pat_id=p.pat_id
+					 where c.facility_cd = :facilityCd and p.fn_pat_id in (:fnPatIds)
+					""";
+		Map<String, Object> params = new HashMap<>();
+		params.put("facilityCd", facilityCd);
+		List<String> fnPatIds = Arrays.stream(keys.split(","))
+				.filter(k -> !k.isEmpty())
+				.map(String::valueOf)
+				.collect(Collectors.toList());
+		params.put("fnPatIds", fnPatIds);
+		List<Map<String, Object>> maMap = namedParameterJdbcTemplateConvert.queryForList(sql,params);
+		if (!maMap.isEmpty()) {
+			resultMap.clear();
+			resultMap.putAll(maMap.stream()
+					.collect(Collectors.toMap(
+							m -> m.get("fn_pat_id").toString(),
+							m -> ((Number) m.get("coop_save_no")).longValue(),
+							(existing, replacement) -> existing
+					)));
+			listKey.clear();
+			listKey.addAll(maMap.stream().map(m-> m.get("coop_save_no").toString()).collect(Collectors.toList()));
+		}
+		if (!listKey.isEmpty()) {
+			globalContext.sqlKeys = String.join(", ", listKey);
+		}
+
 	}
 
 	/**

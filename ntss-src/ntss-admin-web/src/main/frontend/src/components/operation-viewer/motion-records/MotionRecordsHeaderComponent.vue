@@ -560,9 +560,39 @@ export default {
   },
   mounted() {
     EventBus.$emit("addLeftmostHeaderMargin");
+    const ownerDocument = this.$el?.ownerDocument || document;
+    const ownerWindow = ownerDocument.defaultView || window;
+    this._printOwnerWindow = ownerWindow;
+    this._mainEls = ownerDocument.getElementsByClassName("main");
+    this._breadCrumbsEls = ownerDocument.getElementsByClassName("bread-crumbs");
+    this._handleBeforePrint = () => {
+      if (!this.popoverVisible) return;
+      Array.from(this._mainEls).forEach(el => {
+        el.style.display = "none";
+      });
+      Array.from(this._breadCrumbsEls).forEach(el => {
+        el.style.display = "none";
+      });
+    };
+    this._handleAfterPrint = () => {
+      if (!this.popoverVisible) return;
+      Array.from(this._mainEls).forEach(el => {
+        el.style.display = "";
+      });
+      Array.from(this._breadCrumbsEls).forEach(el => {
+        el.style.display = "";
+      });
+    };
+    ownerWindow.addEventListener("beforeprint", this._handleBeforePrint);
+    ownerWindow.addEventListener("afterprint", this._handleAfterPrint);
   },
   beforeUnmount() {
     EventBus.$off("partsRunningLoad", this.loadData);
+    this._printOwnerWindow?.removeEventListener("beforeprint", this._handleBeforePrint);
+    this._printOwnerWindow?.removeEventListener("afterprint", this._handleAfterPrint);
+    this._printOwnerWindow = null;
+    this._handleBeforePrint = null;
+    this._handleAfterPrint = null;
   }
 };
 </script>
@@ -611,5 +641,12 @@ export default {
 }
 :deep(.popover__content) {
   min-height: auto !important;
+}
+
+@media print {
+  .ntss-list {
+    position: absolute !important;
+    top: unset;
+  }
 }
 </style>

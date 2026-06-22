@@ -12,7 +12,7 @@
       ProductCode は UpgradeCodeGuid + ProductVersion から自動生成される（UUID v5）
       UpgradeCodeGuid は vdproj と同じ値を維持する（旧 MSI からのアップグレード互換）
     -->
-    <ProductVersion>2.0.2</ProductVersion>
+    <ProductVersion>2.0.3</ProductVersion>
     <UpgradeCodeGuid>D85F149A-F4FD-4DCA-8D3F-D4472D740C63</UpgradeCodeGuid>
     <DefineConstants>
       SrcSetup=$(MSBuildProjectDirectory)\..\NKKScaleBedService\Properties\;

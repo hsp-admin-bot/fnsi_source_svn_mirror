@@ -367,6 +367,9 @@ namespace LayoutDesigner
                     // add #11625 クラス「指示履歴」の仕様変更② 高 start
                     case RldConst.FilterType.Group.LOGTARGET:     // 指示履歴
                     // add #11625 クラス「指示履歴」の仕様変更② 高 end
+                    // mod #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 高 start
+                    case RldConst.FilterType.Group.GOODS:     // 物品情報
+                    /// mod#12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 高 end
                     // add #12006 感染症がフィルタできない 高 start
                     case RldConst.FilterType.Group.INFECTION:     // 感染症
                     // add #12006 感染症がフィルタできない 高 end

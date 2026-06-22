@@ -1568,7 +1568,6 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
       // この際、クール数は取得できていないので、固定値Def.DEF_KUR_MAXを使用します
       this.initBindVals(DEF_KUR_MAX);
       // 指示者リスト作成(非同期)
-      // FNSI-add スケジュール - 移動の追加 徐 start
       if (this.hasAuthorityByCd(AUTHORITY_CODES.SCHE_MOVE) && !this.hasAuthorityByCd(AUTHORITY_CODES.IND_EDIT) && !this.hasAuthorityByCd(AUTHORITY_CODES.IND_PEDIT)) {
         this.getIndUserListSchedule().then(response => {
           this.userOptions = response.doctorList;
@@ -1586,24 +1585,17 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
           });
         });
       }
-      //add 6444 【デグレ】ベッド未登録枠だった予定を他の日のベッド枠に移動時のメッセージが不正 zhao start
       await this.setExamDeadline(this.getFacilityCd);
       await this.setRadDeadline(this.getFacilityCd);
-      //add 6444 【デグレ】ベッド未登録枠だった予定を他の日のベッド枠に移動時のメッセージが不正 zhao end
-      // FNSI-add スケジュール - 移動の追加 徐 end
-      // add 性能改善メモリ不足 shan start
       EventBus.$off("refresh", this.refreshData);
       EventBus.$off("requestReportParams", this.requestrReportParams);
-      // add 性能改善メモリ不足 shan end
 
       EventBus.$on("refresh", this.refreshData);
 
       // 印刷パラメータ要求
       EventBus.$on("requestReportParams", this.requestrReportParams);
       window.addEventListener("beforeprint", this.beforePrint);
-      // add #11093 スケジュール表動作不正 zhangyue start
       this.setLoadingScreenVisible(false);
-      // add #11093 スケジュール表動作不正 zhangyue end
     },
     mounted() {
 
@@ -2146,9 +2138,7 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
        *  ・日毎のデータ取得
        */
       async dbProcessing() {
-        // add #11093 スケジュール表動作不正 zhangyue start
         this.setLoadingScreenVisible(true);
-        // add #11093 スケジュール表動作不正 zhangyue end
         let baseDate = null;
         if (this.scheduleListDayView !== null) {
           baseDate = dayjs(this.scheduleListDayView).format("YYYYMMDD")
@@ -4339,13 +4329,11 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
               "isDummy" in this.movingBlockInfoFrom.commitAreaData[childLoop] &&
               this.movingBlockInfoFrom.commitAreaData[childLoop].isDummy === "1"
             ) {
-              // mod #11093 スケジュール表動作不正 zhangyue start
               if (bedChildren[childLoop - 1]) {
                 bedChildren[childLoop - 1].innerHTML = `(${
                   bedChildren[childLoop - 1].innerHTML
                 })`;
               }
-              // mod #11093 スケジュール表動作不正 zhangyue end
             }
           }
 
@@ -4513,13 +4501,11 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
                 this.movingBlockInfoFrom[k].commitAreaData[childLoop2].isDummy ===
                 "1"
               ) {
-                // mod #11093 スケジュール表動作不正 zhangyue start
                 if (bedChildren[childLoop2 - 1]) {
                   bedChildren[childLoop2 - 1].innerHTML = `(${
                     bedChildren[childLoop2 - 1].innerHTML
                   })`;
                 }
-                // mod #11093 スケジュール表動作不正 zhangyue end
               }
             }
 
@@ -6454,17 +6440,11 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
        *  ※セル移動の開始、終了イベント
        */
       async clickEvent(e) {
-        // add/ #10239【デグレ】スケジュール表表示時の患者検索、患者リストでの患者切替不可 tianqidong start
         this.setIsScheduleEnabled(false)
-        // add/ #10239【デグレ】スケジュール表表示時の患者検索、患者リストでの患者切替不可 tianqidong end
-        // FNSI-mod 現行改善対応425 孫灝 20201119 start
-        // mod FNSI 1006 No.426 start --Sanjingye Sun 20201216
-        if(!this.facilitySettingDialogOpenFlg){
-          // add/ #10239【デグレ】スケジュール表表示時の患者検索、患者リストでの患者切替不可 tianqidong start
-          this.setIsPatientEnabled(true)
-          // add/ #10239【デグレ】スケジュール表表示時の患者検索、患者リストでの患者切替不可 tianqidong end
 
-          // mod FNSI 1006 No.426 end --Sanjingye Sun 20201216
+        if(!this.facilitySettingDialogOpenFlg){
+          this.setIsPatientEnabled(true)
+
           if (this.movingBlockElem !== null) {
             //ブロック移動中のため、無視
             return;
@@ -6473,27 +6453,20 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
             return;
           }
         }
-        // add/ #10239【デグレ】スケジュール表表示時の患者検索、患者リストでの患者切替不可 tianqidong start
         this.setIsPatientEnabled(true)
-        // add/ #10239【デグレ】スケジュール表表示時の患者検索、患者リストでの患者切替不可 tianqidong end
-        // FNSI-mod 現行改善対応425 孫灝 20201119 end
         this.createJournalParam = {
           facility_cd: this.getFacilityCd,
-          // mod FNSI 1006 No.538 外部連携 start -- Sanjingye Sun 20210104
           hosp_pat_id: this.moveFromData.hospPatId,
           pat_id : this.moveFromData.pat_id,
           ord_no : this.moveFromData.ordNo,
           base_date: this.moveFromData.treatDate,
-          // mod FNSI 1006 No.538 外部連携 end -- Sanjingye Sun 20210104
           user_id: this.getUserId
         };
         this.clickEventNowFlag = true; //クリックイベント中フラグ on ※処理中はセルの移動処理(moveEvent)を抑制するためのフラグです
 
         this.msgPopUpFlag = false;
         if (null === this.movingChipElem) {
-          // add 9069 【デグレ】スケジュール表で対象指定後のダミー表示で共通ローダーが一瞬外れて操作勘違いを起こす 関 start
           this.setLoadingScreenVisible(true);
-          // add 9069 【デグレ】スケジュール表で対象指定後のダミー表示で共通ローダーが一瞬外れて操作勘違いを起こす 関 end
           //-------------------------------------
           //移動チップがいない場合
           //-------------------------------------
@@ -6504,21 +6477,15 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
             this.clickEventNowFlag = false;
           });
         } else {
-          // add/ #10239【デグレ】スケジュール表表示時の患者検索、患者リストでの患者切替不可 tianqidong start
           this.setIsPatientEnabled(false)
-          // add/ #10239【デグレ】スケジュール表表示時の患者検索、患者リストでの患者切替不可 tianqidong end
           //-------------------------------------
           //移動チップがいる場合
           //-------------------------------------
           // 落とす処理
           // 下の要素は何かを確認
-          // FNSI-add 現行改善対応425 孫灝 20201119 start
-          // mod FNSI 1006 No.426 start --Sanjingye Sun 20201216
           if(!this.facilitySettingDialogOpenFlg) {
-            // mod FNSI 1006 No.426 end --Sanjingye Sun 20201216
             this.underElem = this.getScheduleElementFromPoint(e.clientX, e.clientY);
           }
-          // FNSI-add 現行改善対応425 孫灝 20201119 end
           let initBedCd = null;
           if (Object.prototype.hasOwnProperty.call(this.moveFromData, "bed_cd")) {
             initBedCd = this.moveFromData.bed_cd;
@@ -6547,8 +6514,6 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
           //移動先情報の文字列とindex([0]日付 [1]クール [2]ベッド)の取得
           this.moveToInfo = AREA_BED;
           this.moveToIndex = nowId.replace("id_bed", "").split("-");
-          // add 7437 スケジュール移動の権限が仕様通りではない dou start
-          // add #10359 編集権限について、対応する。 zhangyue start
           let initDate;
           let initStr = this.initBad.replace("id_bed", "");
           if (/^[\d]/.test(initStr)) {
@@ -6581,11 +6546,6 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
               return;
             }
           }
-          // add #10359 編集権限について、対応する。 zhangyue end
-          // add 7437 スケジュール移動の権限が仕様通りではない dou end
-          // add 8247 スケジュール表画面で予定を移動すると移動していない検査予定の連携イベントが作成される start zhao
-          // add 8247 スケジュール表画面で予定を移動すると移動していない検査予定の連携イベントが作成される end zhao
-          // mod 7216 【デグレ】患者経過総合ビューア画面で治療開始時刻を変更してもsys_coop_journalにイベントが作成されない zhao start
           let initBad = this.initBad.replace("id_bed", "").split("-")[2];
           let editBad = this.moveToIndex[2];
           let initCur = this.initBad.replace("id_bed", "").split("-")[1];
@@ -6624,9 +6584,7 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
           } else if (bedNotYetFlag) {
             this.moveToInfo = AREA_BEDNOTYET;
             this.moveToIndex = nowId.replace("id_bedBednotYet", "").split("-");
-            //8548 【IES起票】患者経過総合ビューアで、スケジュール編集による【ope_cd】出力間違い；スケジュール表画面で【指定済ベッド→ベッド未登録】による電文出力間違い。start zhao
             this.createJournalParam.crud = "U";
-            //8548 【IES起票】患者経過総合ビューアで、スケジュール編集による【ope_cd】出力間違い；スケジュール表画面で【指定済ベッド→ベッド未登録】による電文出力間違い。end zhao
             this.createJournalParam.ope_cd = "009006";
             this.isCreateJournal = true;
           } else if (0 === this.initBad?.indexOf("id_bedBednotYet")) {
@@ -6652,11 +6610,8 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
             this.createJournalParam.ope_cd = "009001";
             this.isCreateJournal = true;
           }
-          // add #11493 スケジュール表　更新不正 関 start
           const mvTo = this.getPatBedInfo(this.moveToIndex);
-          //add #11654 治療状況マップ＞スケジュール画面のVA方向一致不一致判定が不正 zrx start
           if (!(kurNotYetFlag || bedNotYetFlag)) {
-            //add #11654 治療状況マップ＞スケジュール画面のVA方向一致不一致判定が不正 zrx end
             if (Object.prototype.hasOwnProperty.call(mvTo, "ordNo")) {
               let ret = false;
               await this.checkPatExistance(mvTo)
@@ -6675,7 +6630,6 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
               }
             }
           }
-          // add #11493 スケジュール表　更新不正 関 end
 
           //落とし先の配列Indexの確認
 
@@ -6699,13 +6653,9 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
 
             //終了
             this.clickEventNowFlag = false;
-            //add #11654 治療状況マップ＞スケジュール画面のVA方向一致不一致判定が不正 start
             EventBus.$emit("changeMismatchVa", false);
-            //add #11654 治療状況マップ＞スケジュール画面のVA方向一致不一致判定が不正 end
-            //add #11846 感染症不一致ロジック不正＆スケジュール表で不一致アイコンが点灯しない zrx start
             EventBus.$emit("changeMismatchInfection", false);
             EventBus.$emit("changeMismatchTreatment", false);
-            //add #11846 感染症不一致ロジック不正＆スケジュール表で不一致アイコンが点灯しない zrx end
             return;
           }
 
@@ -6721,7 +6671,6 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
             this.clickEventNowFlag = false;
             return;
           }
-          // add 6444【デグレ】ベッド未登録枠だった予定を他の日のベッド枠に移動時のメッセージが不正 zhao start
             const paramDim = [this.moveToIndex[0], this.moveToIndex[1]];
             const kurBlockInfoTo = this.getPatBedInfo(paramDim);
           //現在の患者情報(不一致チェック用)の取得
@@ -6733,9 +6682,7 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
                 }.bind(retJson)
               )
               .catch(error => {
-                //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add start
                 getErrorMessage('ScheduleListMainItem.vue', 'clickEvent', error);
-                //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add end
                 throw error;
               });
 
@@ -6748,11 +6695,9 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
             checkTargetJson.kur_cd = this.moveFromData.kur_cd;
             checkTargetJson.bed_cd = this.moveFromData.bed_cd;
             checkTargetJson.target_bed_cd = kurBlockInfoTo.commitAreaData[this.moveToIndex[2]].bed_cd;
-            //add #11654 治療状況マップ＞スケジュール画面のVA方向一致不一致判定が不正 zrx start
             if (kurNotYetFlag || bedNotYetFlag) {
               checkTargetJson.target_bed_cd = "";
             }
-            //add #11654 治療状況マップ＞スケジュール画面のVA方向一致不一致判定が不正 zrx end
 
             //最新情報に書き換え
             this.moveFromData.vaDirect = retJson.va_direct;
@@ -6769,50 +6714,40 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
             //ダイアログ設定初期化(メッセージを出す場合に備える)
             this.messageDialogInfo.dialogNo = DEF_DIALOG_NOUSE;
 
-            //mod #11654 治療状況マップ＞スケジュール画面のVA方向一致不一致判定が不正 start
             if (this.unmatchResultJson.unmatchFlag) {
               if (this.getSystemSettingUnmatchShowMsgFlag && !this.facilitySettingDialog1000OpenedFlg) {
-                //mod #11654 治療状況マップ＞スケジュール画面のVA方向一致不一致判定が不正 end
                 this.clickEventNowFlag = false;
                 //不一致があり&&システム設定での不一致確認がtrue
 
                 let outMsg = "";
                 if (!this.unmatchResultJson.infectionFlag) {
                   outMsg += "感染症";
-                  //add #11846 感染症不一致ロジック不正＆スケジュール表で不一致アイコンが点灯しない zrx start
                   EventBus.$emit("changeMismatchInfection", true);
                 } else {
                   EventBus.$emit("changeMismatchInfection", false);
                 }
-                //add #11846 感染症不一致ロジック不正＆スケジュール表で不一致アイコンが点灯しない zrx end
                 if (!this.unmatchResultJson.shuntFlag) {
                   if (outMsg !== "") {
                     outMsg += "・";
                   }
                   outMsg += "VA位置";
-                  //add #11654 治療状況マップ＞スケジュール画面のVA方向一致不一致判定が不正 start
                   EventBus.$emit("changeMismatchVa", true);
                 } else {
                   EventBus.$emit("changeMismatchVa", false);
                 }
-                //add #11654 治療状況マップ＞スケジュール画面のVA方向一致不一致判定が不正 end
                 if (!this.unmatchResultJson.deviceModeFlag) {
                   if (outMsg !== "") {
                     outMsg += "・";
                   }
                   outMsg += "治療方法";
-                  //add #11846 感染症不一致ロジック不正＆スケジュール表で不一致アイコンが点灯しない zrx start
                   EventBus.$emit("changeMismatchTreatment", true);
                 } else {
                   EventBus.$emit("changeMismatchTreatment", false);
                 }
-                //add #11846 感染症不一致ロジック不正＆スケジュール表で不一致アイコンが点灯しない zrx end
 
                 //ダイアログを出力
                 const dispStr = outMsg;
-                // add 6444【デグレ】ベッド未登録枠だった予定を他の日のベッド枠に移動時のメッセージが不正 zhao start
                 this.facilitySettingDialog1000OpenedFlg = true;
-                // add 6444【デグレ】ベッド未登録枠だった予定を他の日のベッド枠に移動時のメッセージが不正 zhao end
                 this.messageDialogInfo.stringParams = [dispStr];
                 this.messageDialogInfo.title = "ベッド条件不一致";
                 this.messageDialogInfo.messageCd = DEF_DIALOG_MSG_2;
@@ -6824,16 +6759,11 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
                 return;
                 //※ダイアログ処理の続きは、this.confirmで行う
               }
-              //add #11654 治療状況マップ＞スケジュール画面のVA方向一致不一致判定が不正 start
             } else {
               EventBus.$emit("changeMismatchVa", false);
-              //add #11846 感染症不一致ロジック不正＆スケジュール表で不一致アイコンが点灯しない zrx start
               EventBus.$emit("changeMismatchInfection", false);
               EventBus.$emit("changeMismatchTreatment", false);
-              //add #11846 感染症不一致ロジック不正＆スケジュール表で不一致アイコンが点灯しない zrx end
             }
-          //add #11654 治療状況マップ＞スケジュール画面のVA方向一致不一致判定が不正 end
-          // add 6444【デグレ】ベッド未登録枠だった予定を他の日のベッド枠に移動時のメッセージが不正 zhao end
 
           //落とし先のエリア確認
           if (kurNotYetFlag || bedNotYetFlag) {
@@ -6848,15 +6778,12 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
             //移動先のベッドコード(基本的には元と同じもの)
             let bedCd = this.moveFromData.bed_cd;
 
-            // modified FNSI bug改修 孫灝 20201015-A start
             //患者ベッドデータの移動元の治療日を移動先の治療日に合わせておく
             // this.moveFromData.treatDate = newTreatDate;
             let destData = Object.assign({}, this.moveFromData);
             destData.treatDate = newTreatDate;
-            // modified FNSI bug改修 孫灝 20201015-A end
 
             if (kurNotYetFlag) {
-              //mod FNSI-7122 劉全航 start
               let retBool = false;
               if (this.getKurCd(this.moveToIndex[1]) + "" !== "0") {
                 retBool = await this.checkSamePatAndNoKur(
@@ -6878,8 +6805,6 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
                 this.clickEventNowFlag = false;
                 return;
               }
-                this.setLoadingScreenVisible(false);
-                //mod FNSI-7122 劉全航 end
               //--------------------------------------------------------
               //クール未登録エリアへのドロップ処理
               //--------------------------------------------------------
@@ -6901,12 +6826,10 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
                 ++this.dispNumNotYetKur;
               }
 
-              // modified FNSI bug改修 孫灝 20201015-A start
               //一番うしろに追加
               this.propsJKurNotYet[this.moveToIndex[0]][this.kurNum][
                 this.dispNumNotYetKur
                 ] = destData;
-              // modified FNSI bug改修 孫灝 20201015-A end
 
               //クールコードをクリア
               this.propsJKurNotYet[this.moveToIndex[0]][this.kurNum][
@@ -6925,9 +6848,7 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
               //移動先に「同一患者、同一治療日、同一クール、同一治療方法」が含まれていないかの確認
               //既存処理だとベッド未登録へ同一患者、同一クールの予定が入ってしまっていたため追加(2019/12/03)
               let retBool = false;
-              // add bug 6034 修正 chen start
               if (this.getKurCd(this.moveToIndex[1]) + "" !== "0") {
-                // add bug 6034 修正 chen end
                 await this.checkSamePatDayKurMode(
                   [this.moveFromData.ordNo],
                   [this.treatDateDim[this.moveToIndex[0] - 1]],
@@ -6939,9 +6860,7 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
                     }.bind(retBool)
                   )
                   .catch(error => {
-                    //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add start
                     getErrorMessage('ScheduleListMainItem.vue', 'clickEvent', error);
-                    //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add end
                     throw error;
                   });
               }
@@ -6976,12 +6895,10 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
                 ++this.dispNumNotYetBed;
               }
 
-              // modified FNSI bug改修 孫灝 20201015-A start
               //最後に追加
               this.propsJBedNotYet[this.moveToIndex[0]][this.moveToIndex[1]][
                 this.dispNumNotYetBed
                 ] = destData;
-              // modified FNSI bug改修 孫灝 20201015-A end
 
               //ベッドコードをクリア
               this.propsJBedNotYet[this.moveToIndex[0]][this.moveToIndex[1]][
@@ -7085,11 +7002,6 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
             if (this.moveFromInfo === AREA_BEDNOTYET) {
               //移動元がベッド未登録エリアの場合 (#949)
 
-              //ベッド未登録エリアの当該情報をクリア
-              this.propsJBedNotYet[this.moveFromIndex[0]][this.moveFromIndex[1]][
-                this.moveFromIndex[2]
-                ] = null;
-
               //当該日付の当該クールのベッド未登録領域の再配置
               this.relocateBedNotYet(
                 this.moveFromIndex[0],
@@ -7100,11 +7012,6 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
               this.resetBedNotYetInfoOnStore(this.moveFromIndex);
             } else if (this.moveFromInfo === AREA_KURNOTYET) {
               //移動元がクール未登録エリアの場合 (#950)
-
-              //クール未登録エリアの当該情報をクリア
-              this.propsJKurNotYet[this.moveFromIndex[0]][this.moveFromIndex[1]][
-                this.moveFromIndex[2]
-                ] = null;
 
               //当該日付のクール未登録領域の再配置
               this.relocateKurNotYet(this.moveFromIndex[0]);
@@ -7143,9 +7050,7 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
           }
 
           //空きベッドかどうかのチェック
-          // add 10601 スケジュール表動作不正 関  start
           this.setLoadingScreenVisible(true);
-          // add 10601 スケジュール表動作不正 関  end
           let retCount = 0;
           await this.selectForSearchReservedBedOnDB(
             this.moveFromData.ordNo,
@@ -7328,15 +7233,11 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
             // チェック
             await this.updateScheduleDBInfo2(this.beforeMoveDataList,this.afterMoveDataList);
 
-            //mod #10601 スケジュール表動作不正 関 start
             if (this.msgCd != null || this.examDeadlineCancelCheck.includes("cancel") || this.radDeadlineCancelCheck.includes("cancel")) {
-              //mod #10601 スケジュール表動作不正 関 end
               this.clickEventNowFlag = false;
               this.beforeMoveDataList = [];
               this.afterMoveDataList = [];
-              // add 10601 スケジュール表動作不正 関  start
               this.setLoadingScreenVisible(false);
-              // add 10601 スケジュール表動作不正 関  end
               return;
             }
             // mod 10601 スケジュール表動作不正 関  end
@@ -7881,17 +7782,13 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
           //  チップの移動終了処理
           this.replaceSchedule();
         }
-        // add #11093 スケジュール表動作不正 zhangyue start
         this.setLoadingScreenVisible(false);
-        // add #11093 スケジュール表動作不正 zhangyue end
       },
       /**
        * スケジュールの入替処理
        */
       async replaceSchedule() {
-        // add #11093 スケジュール表動作不正 zhangyue start
         this.setLoadingScreenVisible(true);
-        // add #11093 スケジュール表動作不正 zhangyue start
         const moveToDataBefore = JSON.parse(JSON.stringify(this.moveToData));
 
         // 左右の入れ替えなどで、入れ替え先がダミースケジュールと重複するかのフラグ
@@ -7962,8 +7859,6 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
 
           }
         }
-          // mod 10601 スケジュール表動作不正 関  start
-          // add 10409 メッセージ表示の変更 関  start
           const mvTo = this.getPatBedInfo(this.moveToIndex);
           this.moveToData = JSON.parse(JSON.stringify(mvTo));
           this.beforeMoveData = [];
@@ -7974,19 +7869,13 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
           // チェック
           await this.updateScheduleDBInfo2(this.beforeMoveDataList,this.afterMoveDataList);
 
-          //mod #10601 スケジュール表動作不正 関 start
           if (this.msgCd != null || this.examDeadlineCancelCheck.includes("cancel") || this.radDeadlineCancelCheck.includes("cancel")) {
-            //mod #10601 スケジュール表動作不正 関 end
-            // add #11093 スケジュール表動作不正 zhangyue start
             this.setLoadingScreenVisible(false);
-            // add #11093 スケジュール表動作不正 zhangyue end
             this.clickEventNowFlag = false;
             this.beforeMoveDataList = [];
             this.afterMoveDataList = [];
             return;
           }
-          // add 10409 メッセージ表示の変更 関  end
-          //  10601 スケジュール表動作不正 関  end
 
         //-----------------------------------------------------------------
         //移動先を消す処理
@@ -8117,11 +8006,6 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
         if (this.moveFromInfo === AREA_BEDNOTYET) {
           //移動元がベッド未登録エリアの場合
 
-          //ベッド未登録エリアの当該情報をクリア
-          this.propsJBedNotYet[this.moveFromIndex[0]][this.moveFromIndex[1]][
-            this.moveFromIndex[2]
-            ] = null;
-
           //当該日付の当該クールのベッド未登録領域の再配置
           this.relocateBedNotYet(this.moveFromIndex[0], this.moveFromIndex[1]);
 
@@ -8129,11 +8013,6 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
           this.resetBedNotYetInfoOnStore(this.moveFromIndex);
         } else if (this.moveFromInfo === AREA_KURNOTYET) {
           //移動元がクール未登録エリアの場合
-
-          //クール未登録エリアの当該情報をクリア
-          this.propsJKurNotYet[this.moveFromIndex[0]][this.moveFromIndex[1]][
-            this.moveFromIndex[2]
-            ] = null;
 
           //当該日付のクール未登録領域の再配置
           this.relocateKurNotYet(this.moveFromIndex[0]);
@@ -8239,14 +8118,9 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
         this.changeInOutNum(this.moveFromData.inOutClass, OPE_INC, this.moveToIndex, isBedNotYet, this.moveToInfo === AREA_KURNOTYET);
 
         // 入れ替え処理以外のときは共通ローダーを終了
-        // mod #11093 スケジュール表動作不正 zhangyue start
-          // 共通ローダー:表示終了
-          this.setLoadingScreenVisible(false);
-        // }
-        // mod #11093 スケジュール表動作不正 zhangyue end
+        // 共通ローダー:表示終了
+        this.setLoadingScreenVisible(false);
         this.clickEventNowFlag = false;
-        // FNSI-画面更新(データの再取得) 徐 start
-        // FNSI-画面更新(データの再取得) 徐 end
 
         this.requestViewForceUpdate();
         this.$nextTick(() => {
@@ -9477,7 +9351,6 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
           //FNSI-修正 VUEのエラー場合のログ対応 呉暁鵬 add end
           console.error(error);
         }
-        // add #11493 スケジュール表　更新不正 関 start
         this.clickEventNowFlag = false;
         this.isMovePats = false;
         this.beforeMoveDataList = [];
@@ -9492,7 +9365,6 @@ import { isProcSuccess } from "@/functions/common/ApiResponseFunctions";
           this.movingChipElem.parentNode.removeChild(this.movingChipElem);
         }
         this.movingChipElem = null;
-        // add #11493 スケジュール表　更新不正 関 end
         // 共通ローダー:表示終了
         this.setLoadingScreenVisible(false);
       },

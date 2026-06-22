@@ -42,15 +42,17 @@
         public const string UNINSTALL_COOP = "linkage_definition/uninstallCoop";
 
         public const string GET_SYS_COOP_NO_BY_FACILITY = "sysCoopNo/getByFacility";
+        public const string GET_SOURCE_SYS_COOP_NO = "sysCoopNo/source";
         public const string SUBMIT_SYS_COOP_NO= "sysCoopNo/submit";
 
         public const string GET_MST_IF_EDGE = "mstInfo/mstIfEdge";
         public const string SUBMIT_MST_IF_EDGE = "mstInfo/mstIfEdge/submit";
 
         public const string GET_MST_COOP_INI = "linkage_definition/coopIni";
+        public const string GET_SOURCE_MST_COOP_INI = "linkage_definition/coopIni/source";
         public const string SUBMIT_MST_COOP_INI = "linkage_definition/coopIni/submit";
 
-        public const string GET_ALL_SYS_RELEASE_INFO = "release_info/getSysReleaseInfoAll/";
+        public const string GET_ALL_SYS_RELEASE_INFO = "release_info/getSysReleaseInfoAll";
 
         public const string BASE_URL = "ntss-admin-web/api";
         public const string API_CONFIG_FILE_PATH = "ApplicationConfig.json";

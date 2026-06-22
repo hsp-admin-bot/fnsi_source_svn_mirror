@@ -28,7 +28,7 @@
     Manufacturer="Nikkiso"
     Version="$(var.ProductVersion)"
     ProductCode="$(var.ProductCode)"
-    UpgradeCode="{E5B21E3C-7E94-4B3A-8A9D-28F3B4C2A1D9}"
+    UpgradeCode="{FB5180BC-DB09-42BE-AFF4-CF9245B906E9}"
     Language="1041"
     Codepage="932"
     InstallerVersion="500"
@@ -54,19 +54,8 @@
     <Property Id="RUNNING_PROCESSES" Secure="yes" />
     <Property Id="ROOTDRIVE" Value="C:\" />
 
-    <!-- ============================== .NET Framework 3.5 チェック ============================== -->
-    <Property Id="NETFRAMEWORK35" Secure="yes">
-      <RegistrySearch Id="NetFx35Search"
-                      Root="HKLM"
-                      Key="SOFTWARE\Microsoft\NET Framework Setup\NDP\v3.5"
-                      Name="Install"
-                      Type="raw" />
-    </Property>
-    <Launch Condition="NETFRAMEWORK35"
-            Message=".NET Framework 3.5 SP1 が必要です。インストールしてから再度実行してください。" />
-
     <!-- ============================== バージョン管理 ============================== -->
-    <Upgrade Id="{E5B21E3C-7E94-4B3A-8A9D-28F3B4C2A1D9}">
+    <Upgrade Id="{FB5180BC-DB09-42BE-AFF4-CF9245B906E9}">
       <UpgradeVersion
         Minimum="0.0.0"
         Maximum="$(var.ProductVersion)"
@@ -148,7 +137,6 @@
       <Component Guid="{E5B21E3C-7E94-4B3A-8A9D-28F3B4C2B021}"><File Source="$(var.SrcBin)Ionic.Zip.dll" /></Component>
       <Component Guid="{E5B21E3C-7E94-4B3A-8A9D-28F3B4C2B022}"><File Source="$(var.SrcLogicBin)Newtonsoft.Json.dll" /></Component>
       <Component Guid="{E5B21E3C-7E94-4B3A-8A9D-28F3B4C2B023}"><File Source="$(var.SrcPackages)\SuperSocket.ClientEngine.Core.0.10.0\lib\net45\SuperSocket.ClientEngine.dll" /></Component>
-      <Component Guid="{E5B21E3C-7E94-4B3A-8A9D-28F3B4C2B024}"><File Source="$(var.SrcBin)System.Threading.dll" /></Component>
       <Component Guid="{E5B21E3C-7E94-4B3A-8A9D-28F3B4C2B025}"><File Source="$(var.SrcPackages)\WebSocket4Net.0.15.2\lib\net45\WebSocket4Net.dll" /></Component>
     </ComponentGroup>
 
@@ -228,7 +216,7 @@
     <!-- InstallUtil /u でサービス解除・COM DLL 解除・レジストリ削除 -->
     <CustomAction Id="RunUninstallUtil"
                   Directory="WindowsFolder"
-                  ExeCommand="Microsoft.NET\Framework\v2.0.50727\InstallUtil.exe /u /LogToConsole=false /LogFile= [RunUninstallUtil]"
+                  ExeCommand="Microsoft.NET\Framework\v4.0.30319\InstallUtil.exe /u /LogToConsole=false /LogFile= [RunUninstallUtil]"
                   Execute="deferred"
                   Impersonate="no"
                   Return="ignore" />
@@ -246,7 +234,7 @@
     <!-- InstallUtil でサービス登録・設定ダイアログ・COM DLL 登録・レジストリ書き込み -->
     <CustomAction Id="RunInstallUtil"
                   Directory="WindowsFolder"
-                  ExeCommand="Microsoft.NET\Framework\v2.0.50727\InstallUtil.exe /LogToConsole=false /LogFile= [RunInstallUtil]"
+                  ExeCommand="Microsoft.NET\Framework\v4.0.30319\InstallUtil.exe /LogToConsole=false /LogFile= [RunInstallUtil]"
                   Execute="deferred"
                   Impersonate="no"
                   Return="check" />

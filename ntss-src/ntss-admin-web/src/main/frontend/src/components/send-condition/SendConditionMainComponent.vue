@@ -961,6 +961,7 @@ export default {
       // add 10553 連携イベント発生部分不正 関 start
       inOutFlag: false,
       // add 10553 連携イベント発生部分不正 関 end
+      tmpSliderVal: 30,
     };
   },
   computed: {
@@ -4948,6 +4949,13 @@ export default {
       this.zoomPopoverTarget = event.target;
       this.zoomPopoverVisible = true;
     },
+    setZoomByBeforePrint() {
+      this.tmpSliderVal = this.sliderVal;
+      this.sliderVal = 30;
+    },
+    setZoomByAfterPrint() {
+      this.sliderVal = this.tmpSliderVal
+    },
   },
   watch: {
     // スケジュール/目標体重/降水量モーダル生成
@@ -5306,6 +5314,8 @@ export default {
     if (storedSliderVal) {
       this.sliderVal = storedSliderVal;
     }
+    EventBus.$on("print-start", this.setZoomByBeforePrint);
+    EventBus.$on("print-end", this.setZoomByAfterPrint);
   },
   update() {
     this.$nextTick(() => {
@@ -5319,6 +5329,8 @@ export default {
     EventBus.$off("onReceiveMeasureValue", this.onReceiveMeasureValue);
     // 印刷パラメータ要求
     EventBus.$off("requestReportParams", this.requestrReportParams);
+    EventBus.$off("print-start", this.setZoomByBeforePrint);
+    EventBus.$off("print-end", this.setZoomByAfterPrint);
 
  
     // タイマーが動いている場合は停止させる
@@ -5593,5 +5605,18 @@ span.zoom-slider-label {
   position: relative;
   margin: auto;
   width: max-content;
+}
+@media print {
+  .send-condition-core-content-parent{
+    height:  auto !important;
+  }
+
+  .send-condition-message-content,.send-condition-message-content,.send-condition-footer-content,.send-condtition-time-content{
+    position: static !important;
+  }
+
+  .detail-main-parent {
+    width: 100% !important;
+  }
 }
 </style>

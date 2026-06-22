@@ -84,22 +84,12 @@ export default {
         ? this.getNtssLayoutRootElement()
         : (this.$el || null);
     },
-    getPatInfoOwnerBody() {
-      return this.getPatInfoLayoutRoot()?.ownerDocument?.body || globalThis?.document?.body || null;
-    },
     getPatInfoElementById(id) {
       return getScopedElementById(id, this.getPatInfoLayoutRoot());
     },
     getPatInfoFirstByClassName(className) {
       return getScopedElementsByClassName(className, this.getPatInfoLayoutRoot())[0]
         || null;
-    },
-    isPatInfoSidebarHidden() {
-      const sidebarEl = this.getPatInfoElementById("patientSearchSidebarArea");
-      if (!sidebarEl) {
-        return true;
-      }
-      return sidebarEl.style.cssText.toString().indexOf("transform:") === -1;
     },
     // 患者情報カード一覧メニューバーの開閉
     menuDisplay() {
@@ -117,23 +107,14 @@ export default {
     },
     // 患者情報カード一覧メニューバーを開く
     openMenuBar() {
-      const SideBarIsHidden = this.isPatInfoSidebarHidden();
-      const width = this.getPatInfoOwnerBody().clientWidth;
-      let nwidth = width - 143;
       this.direction = "left";
-      nwidth = SideBarIsHidden ? nwidth - 300 : nwidth;
-      this.setCardListStyle({ width: nwidth + "px", marginLeft: "143px"});
       this.setMenuBtnMarginLeft("-13px");
       this.setMenuBarClass("block");
       this.setMenuBarLeft();
     },
     // 患者情報カード一覧メニューバーを閉じる
     closeMenuBar() {
-      const SideBarIsHidden = this.isPatInfoSidebarHidden();
-      let width = this.getPatInfoOwnerBody().clientWidth;
       this.direction = "right";
-      width = SideBarIsHidden ? width - 300 : width;
-      this.setCardListStyle({ width: width + "px", marginLeft: "0px"});
       this.setMenuBtnMarginLeft("-143px");
       this.setMenuBarClass("none");
       this.setMenuBarLeft();
@@ -153,18 +134,6 @@ export default {
       if (elMenuBar) {
         elMenuBar.setAttribute("class", `menu-bar-contents button-size ${attrName}`);
       }
-    },
-    /**
-     * 患者情報カード一覧のcss設定
-     * @param {Object} styles 
-     */
-    setCardListStyle(styles) {
-      const elCardList = this.$refs.cardListDiv;
-      if (!elCardList) {
-        return;
-      }
-      elCardList.style.width = styles.width;
-      elCardList.style.marginLeft = styles.marginLeft;
     },
     // 患者情報カード一覧メニューバーのcss設定
     setMenuBarLeft() {

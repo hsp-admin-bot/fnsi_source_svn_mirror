@@ -140,6 +140,18 @@ namespace NKKWeightLib
             set { this.m_strWeightCd = value; }
         }
         //----------------------------------------------------------------------------------------------------
+        // #12738 add 2026.06.08 Ferica処理で処理中状態を返すプロパティを追加 TDC米沢 start
+        //----------------------------------------------------------------------------------------------------
+        /// <summary>
+        /// Fericaスレッドの動作状態参照用プロパティ
+        /// </summary>
+        //----------------------------------------------------------------------------------------------------
+        public bool IsRunning
+        {
+            get { return FelicaLibTdc.IsRunning; }
+        }
+        //----------------------------------------------------------------------------------------------------
+        // #12738 add 2026.06.08 Ferica処理で処理中状態を返すプロパティを追加 TDC米沢 end
 
 #endregion
 
@@ -214,7 +226,10 @@ namespace NKKWeightLib
             this.AddLogInfo(dtnow, NKKLogging.LOGGING_CLASS.INFO, strlog);
 
             // GUIへ通知
-            this.SendMessageToGUI("切断中", dtnow, strlog);
+            // #12738 mod 2026.06.11 状態表示を適正化 TDC米沢 start
+            //this.SendMessageToGUI("切断中", dtnow, strlog);
+            this.SendMessageToGUI("未使用", dtnow, strlog);
+            // #12738 mod 2026.06.11 状態表示を適正化 TDC米沢 end
         }
         //----------------------------------------------------------------------------------------------------
 

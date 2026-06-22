@@ -136,9 +136,9 @@ export const mstPatViewerLayoutToIndicationDefine = [
       },
       {
         subCategoryNo: 13,
-        subCategoryName: "Qb・Qdプログラム",
+        subCategoryName: "QB・QDプログラム",
         component: "qbqd-program",
-        subCategoryItem: [{ itemNo: 1, itemName: "Qb・Qdプログラム", itemColor: "#000000", itemPoint: "triangle" }]
+        subCategoryItem: [{ itemNo: 1, itemName: "QB・QDプログラム", itemColor: "#000000", itemPoint: "triangle" }]
       },
       {
         subCategoryNo: 14,

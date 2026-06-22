@@ -266,6 +266,11 @@ public class JobExecutorServiceImpl implements JobExecutorService {
         MigrationJob job = findJob(jobId);
         List<String> facilityCodes = Arrays.asList(job.getFacilityCodes());
 
+        if (isJobStopped(job)) {
+            log.info("[JOB_EXEC] JOB は既に終了済みのため実行しません: jobId={}, status={}", jobId, job.getStatus());
+            return;
+        }
+
         job.setStatus(JobStatus.RUNNING);
         job.setStartedAt(Instant.now());
         jobRepository.save(job);
@@ -275,7 +280,17 @@ public class JobExecutorServiceImpl implements JobExecutorService {
             List<MigrationTask> pending = taskRepository.findByJobIdOrderByTaskId(jobId).stream().filter(t -> t.getStatus() == TaskStatus.PENDING).toList();
 
             for (MigrationTask task : pending) {
+                if (isJobStopped(jobId)) {
+                    log.info("[JOB_EXEC] JOB 中断済みのため残り Task を実行しません: jobId={}", jobId);
+                    return;
+                }
+
                 TaskResult result = dispatchTask(task, job, request, facilityCodes);
+                if (isJobStopped(jobId)) {
+                    log.info("[JOB_EXEC] JOB 中断済みのため残り Task を実行しません: jobId={}", jobId);
+                    return;
+                }
+
                 if (!result.success()) {
                     markJobFailed(jobId, "Task 失敗: " + task.getTaskName() + " — " + result.errorMessage());
                     facilityLockService.releaseLock(facilityCodes);
@@ -284,6 +299,11 @@ public class JobExecutorServiceImpl implements JobExecutorService {
             }
 
             job = findJob(jobId);
+            if (isJobStopped(job)) {
+                log.info("[JOB_EXEC] JOB 中断済みのため DONE へ更新しません: jobId={}, status={}", jobId, job.getStatus());
+                return;
+            }
+
             job.setStatus(JobStatus.DONE);
             job.setFinishedAt(Instant.now());
             jobRepository.save(job);
@@ -1238,6 +1258,14 @@ public class JobExecutorServiceImpl implements JobExecutorService {
         job.setNote(reason);
         jobRepository.save(job);
         log.warn("[JOB_EXEC] 失敗: jobId={}, reason={}", jobId, reason);
+    }
+
+    private boolean isJobStopped(long jobId) {
+        return isJobStopped(findJob(jobId));
+    }
+
+    private boolean isJobStopped(MigrationJob job) {
+        return job.getStatus() == JobStatus.DONE || job.getStatus() == JobStatus.FAILED;
     }
 
     private MigrationJob findJob(long jobId) {

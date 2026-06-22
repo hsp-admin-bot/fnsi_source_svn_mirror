@@ -39,6 +39,10 @@
 <script>
 import { mapState, mapGetters, mapActions } from "@/compat/vue/vuex";
 import UserAuthorityMixin from "@/components/common/UserAuthorityMixin";
+import {
+  getScopedDocument,
+  getScopedWindow,
+} from "@/functions/common/LayoutMeasureHelper";
 
 export default {
   mixins: [UserAuthorityMixin],
@@ -68,26 +72,48 @@ export default {
     // 利用権限がない場合入力部品を操作不可にする
     this.authorityCds = this.getAuthorityCds();
     this.disableElement(this.$el);
+    this._subModalOwnerDocument = getScopedDocument(this.$el);
+    this._subModalOwnerWindow = getScopedWindow(this.$el);
     // ハンドラをインスタンスに保持（remove用）
     // window.onbeforeprint、window.onafterprintはModalBaseの処理を上書きしてしまうので使用しない
     this._handleBeforePrintSubModal = () => {
       // 印刷不要な要素を非表示にする
-      document.getElementsByClassName("content-container")[0].style.display = "none";
-      const parentModal = document.getElementsByClassName("modal-mask")[0];
+      const contentContainer = this._subModalOwnerDocument
+        ?.getElementsByClassName("content-container")[0];
+      if (contentContainer) contentContainer.style.display = "none";
+      const parentModal = this._subModalOwnerDocument
+        ?.getElementsByClassName("modal-mask")[0];
       if (parentModal) parentModal.style.display = "none";
     };
     this._handleAfterPrintSubModal = () => {
       // 元に戻す
-      document.getElementsByClassName("content-container")[0].style.display = "";
-      const parentModal = document.getElementsByClassName("modal-mask")[0];
+      const contentContainer = this._subModalOwnerDocument
+        ?.getElementsByClassName("content-container")[0];
+      if (contentContainer) contentContainer.style.display = "";
+      const parentModal = this._subModalOwnerDocument
+        ?.getElementsByClassName("modal-mask")[0];
       if (parentModal) parentModal.style.display = "";
     };
-    window.addEventListener("beforeprint", this._handleBeforePrintSubModal);
-    window.addEventListener("afterprint", this._handleAfterPrintSubModal);
+    this._subModalOwnerWindow?.addEventListener(
+      "beforeprint",
+      this._handleBeforePrintSubModal,
+    );
+    this._subModalOwnerWindow?.addEventListener(
+      "afterprint",
+      this._handleAfterPrintSubModal,
+    );
   },
-  beforeDestroy () {
-    window.removeEventListener("beforeprint", this._handleBeforePrintSubModal);
-    window.removeEventListener("afterprint", this._handleAfterPrintSubModal);
+  beforeUnmount() {
+    this._subModalOwnerWindow?.removeEventListener(
+      "beforeprint",
+      this._handleBeforePrintSubModal,
+    );
+    this._subModalOwnerWindow?.removeEventListener(
+      "afterprint",
+      this._handleAfterPrintSubModal,
+    );
+    this._subModalOwnerWindow = null;
+    this._subModalOwnerDocument = null;
   },
   watch: {
     // 親モーダルが変更されたら閉じる

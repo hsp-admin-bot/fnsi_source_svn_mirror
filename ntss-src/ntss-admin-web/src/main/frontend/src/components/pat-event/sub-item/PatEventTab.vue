@@ -1909,7 +1909,7 @@ export default {
       let timeIsValid = true;
       const params = this.getPatPlansParams;
       // console.log(params)
-      if (!this.getUpdateMode) {
+      if (!this.getUpdateMode && !this.getPatEventFlg) {
         if (params.startDate === null) {
           startDateIsInput = false;
         } else {

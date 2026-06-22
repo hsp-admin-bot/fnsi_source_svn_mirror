@@ -212,6 +212,8 @@ export default {
       ,maxFileSize: 5242880
       ,selfScreenName: ""
       ,currentSort: null
+      ,scrollQuerySelector: ".k-grid-content"
+      ,addClassTargetQuerySelector: [".k-grid-header-wrap table, .k-grid-content table"]
       ,examTooltipWidget: null
       ,directGridWidget: null
       ,directGridColumnSignature: ""
@@ -1468,6 +1470,14 @@ export default {
   // add 性能改善メモリ不足 shan end
 };
 </script>
+<style>
+@media print {
+  /** 検査結果 tableレイアウト崩れ回避 */
+  body:has(#examrecordlistgrid) #main-id {
+    display: inline-block;
+  }
+}
+</style>
 <style scoped>
 
 #examrecordlistgrid :deep(.k-cell-inner){
@@ -1651,5 +1661,65 @@ margin-inline:auto!important;
 :deep(.k-grid-lockedcolumns .k-grid-footer-locked) {
   flex: 0 0 auto;
   flex-shrink: 0;
+}
+
+@media print {
+  /** スクロールコンテナ */
+  .exam-record-main-content :deep(.k-grid-header-wrap),
+  .exam-record-main-content :deep(.k-grid-content) {
+    overflow: hidden !important;
+    height: auto !important;
+  }
+
+  /** 固定列調整 */
+  .exam-record-main-content :deep(.k-grid-content-locked) {
+    height: auto !important;
+  }
+
+  /** 固定列枠線 */
+  .exam-record-main-content :deep(.k-grid-header-locked::after) {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 1px;
+    height: 100%;
+    background: var(--master-maintenance-kgrid-header-background-color);
+    pointer-events: none;
+  }
+  .exam-record-main-content :deep(.k-grid-content-locked::after) {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 1px;
+    height: 100%;
+    background: var(--master-maintenance-kgrid-border-color);
+    pointer-events: none;
+  }
+
+  /** ヘッダのズレ原因を除去 */
+  .exam-record-main-content :deep(.k-grid-header) {
+    padding-right: 0 !important;
+  }
+
+  /** gridの幅 */
+  .exam-record-main-content :deep(.k-grid) {
+    width: 100vw;
+    height: auto !important;
+  }
+
+  /** 印刷時に横スクロール右端時に強制的にスクロール位置を調整 */
+  .exam-record-main-content:has(table.scroll-rightmost) :deep(.k-grid-content-locked),
+  .exam-record-main-content:has(table.scroll-rightmost) :deep(.k-grid-header-locked) {
+    z-index: 1;
+  }
+  .main-content-area:has(table.scroll-rightmost) {
+    margin-left: -1px !important;
+  }
+  .exam-record-main-content :deep(.k-grid-header-wrap:has(table.scroll-rightmost)),
+  .exam-record-main-content :deep(.k-grid-content:has(table.scroll-rightmost)) {
+    position: static;
+  }
 }
 </style>

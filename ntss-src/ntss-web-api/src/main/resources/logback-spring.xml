@@ -21,7 +21,7 @@
         <appender-ref ref="FILE"/>
     </appender>
 -->
-    <property name="LOG_PATH" value="/opt/tomcat/webapps/ntss-web-api/" />
+    <property name="LOG_PATH" value="/var/lib/tomcat/webapps/ntss-web-api/" />
     <property name="LOG_NAME" value="ntss-web-api" />
     <property name="LOG_LEVEL" value="INFO" />
 

@@ -652,7 +652,7 @@ namespace NKKWeightLib
 
 #endregion
 
-        #region パブリックメソッド
+#region パブリックメソッド
 
         //----------------------------------------------------------------------------------------------------
         /// <summary>
@@ -1023,84 +1023,97 @@ namespace NKKWeightLib
                                 // NKKFalica使用判定
                                 if (json.ContainsKey("isHasCardReader") == true)
                                 {
-                                    if (json["isHasCardReader"] == "1")
-                                    {
-                                        // カードあり
+                                    // #12738 mod 2026.06.11 Felica使用設定処理を関数化 TDC米沢 start
 
-                                        // NKKFalica：処理開始
-                                        this.m_Felica.Start();
+                                    //if (json["isHasCardReader"] == "1")
+                                    //{
+                                    //    // カードあり
 
-                                        // ログ記録：処理開始成功
-                                        this.AddLogInfo(DateTime.Now, NKKLogging.LOGGING_CLASS.INFO, "NKKFalica処理開始");
-                                    }
-                                    else
-                                    {
-                                        // ログ記録：Felica未使用
-                                        this.AddLogInfo(DateTime.Now, NKKLogging.LOGGING_CLASS.INFO, "Falica未使用");
+                                    //    // NKKFalica：処理開始
+                                    //    this.m_Felica.Start();
 
-                                        // GUI：Felica未使用
-                                        this.SendLogMessageToGUI("FELICA", "未使用", DateTime.Now, String.Empty);
-                                    }
+                                    //    // ログ記録：処理開始成功
+                                    //    this.AddLogInfo(DateTime.Now, NKKLogging.LOGGING_CLASS.INFO, "NKKFalica処理開始");
+                                    //}
+                                    //else
+                                    //{
+                                    //    // ログ記録：Felica未使用
+                                    //    this.AddLogInfo(DateTime.Now, NKKLogging.LOGGING_CLASS.INFO, "Falica未使用");
+
+                                    //    // GUI：Felica未使用
+                                    //    this.SendLogMessageToGUI("FELICA", "未使用", DateTime.Now, String.Empty);
+                                    //}
+
+                                    // Felica使用設定
+                                    this.FelicaUsageSetting(json["isHasCardReader"]);
+
+                                    // #12738 mod 2026.06.11 Felica使用設定処理を関数化 TDC米沢 start
                                 }
 
                                 // プリンタ設定
                                 if (json.ContainsKey("printerClass") == true)
                                 {
-                                    // プリンター名設定
-                                    switch (json["printerClass"])
-                                    {
-                                        case "0":   // TM-88Ⅳ
-                                            NKKWeightInformation.PrinterName = NKKPrinter.PRINTER_NAME;
-                                            break;
+                                    // #12738 mod 2026.06.10 プリンタ名取得/使用可能チェック処理を関数化 TDC米沢 start
 
-                                        case "1":   // TM-L90
-                                            NKKWeightInformation.PrinterName = NKKPrinter.PRINTER_NAME;
-                                            break;
+                                    //// プリンター名設定
+                                    //switch (json["printerClass"])
+                                    //{
+                                    //    case "0":   // TM-88Ⅳ
+                                    //        NKKWeightInformation.PrinterName = NKKPrinter.PRINTER_NAME;
+                                    //        break;
 
-                                        case "2":   // KIOSK
-                                            NKKWeightInformation.PrinterName = NKKPrinter.PRINTER_NAME_KIOSK;
-                                            break;
-                                    }
+                                    //    case "1":   // TM-L90
+                                    //        NKKWeightInformation.PrinterName = NKKPrinter.PRINTER_NAME;
+                                    //        break;
 
+                                    //    case "2":   // KIOSK
+                                    //        NKKWeightInformation.PrinterName = NKKPrinter.PRINTER_NAME_KIOSK;
+                                    //        break;
+                                    //}
 
-                                    // プリンタの登録チェック
-                                    String strlog2 = "使用不可";
-                                    String strPrintStatusHex = String.Empty;
-                                    if (NKKPrinter.IsPrinterExist(NKKWeightInformation.PrinterName) == true)
-                                    {
-                                        // 登録あり
+                                    //// プリンタの登録チェック
+                                    //String strlog2 = "使用不可";
+                                    //String strPrintStatusHex = String.Empty;
+                                    //if (NKKPrinter.IsPrinterExist(NKKWeightInformation.PrinterName) == true)
+                                    //{
+                                    //    // 登録あり
 
+                                    //    // プリンター状態を取得
+                                    //    try
+                                    //    {
+                                    //        NKKPrinter.PRINTER_INFO_2 prtinfo;
+                                    //        prtinfo = NKKPrinter.GetPrinterInfo(NKKWeightInformation.PrinterName );
+                                    //        strPrintStatusHex = prtinfo.Status.ToString("X8");
+                                    //        // プリンターオフライン：128[0x80]、利用不可：4096[0x1000]
+                                    //        if (((prtinfo.Status & (uint)0x80) != (uint)0x80
+                                    //           && (prtinfo.Status & (uint)0x1000) != (uint)0x1000))
+                                    //        {
+                                    //            strlog2 = "使用可";
+                                    //        }
+                                    //    }
+                                    //    catch ( Exception ex )
+                                    //    {
+                                    //        //　プリンター状態取得失敗
+                                    //        this.Error = ex;
+                                    //        strlog2 = "未接続";
+                                    //    }
+                                    //}
 
-                                        // プリンター状態を取得
-                                        try
-                                        {
-                                            NKKPrinter.PRINTER_INFO_2 prtinfo;
-                                            prtinfo = NKKPrinter.GetPrinterInfo(NKKWeightInformation.PrinterName );
-                                            strPrintStatusHex = prtinfo.Status.ToString("X8");
-                                            // プリンターオフライン：128[0x80]、利用不可：4096[0x1000]
-                                            if (((prtinfo.Status & (uint)0x80) != (uint)0x80
-                                               && (prtinfo.Status & (uint)0x1000) != (uint)0x1000))
-                                            {
-                                                strlog2 = "使用可";
-                                            }
-                                        }
-                                        catch ( Exception ex )
-                                        {
-                                            //　プリンター状態取得失敗
-                                            this.Error = ex;
-                                            strlog2 = "未接続";
-                                        }
-                                    }
+                                    //// 
+                                    //strlog = String.Format("プリンタ{0}, ( {1} ),{2}", strlog2, strPrintStatusHex, NKKWeightInformation.PrinterName);
 
-                                    // 
-                                    strlog = String.Format("プリンタ{0}, ( {1} ),{2}", strlog2, strPrintStatusHex, NKKWeightInformation.PrinterName);
+                                    //// ログ記録
+                                    //this.AddLogInfo(DateTime.Now, NKKLogging.LOGGING_CLASS.INFO, strlog);
 
-                                    // ログ記録
-                                    this.AddLogInfo(DateTime.Now, NKKLogging.LOGGING_CLASS.INFO, strlog);
+                                    //// GUI
+                                    //this.SendLogMessageToGUI("PRINTER", strlog2, DateTime.Now, NKKWeightInformation.PrinterName + String.Format(",( {0} )", strPrintStatusHex));
 
-                                    // GUI
-                                    this.SendLogMessageToGUI("PRINTER", strlog2, DateTime.Now, NKKWeightInformation.PrinterName + String.Format(",( {0} )", strPrintStatusHex));
-                                } else
+                                    // プリンター名設定/使用可能チェック
+                                    this.CheckPrinter(json["printerClass"]);
+
+                                    // #12738 mod 2026.06.10 プリンタ名取得/使用可能チェック処理を関数化 TDC米沢 end
+                                }
+                                else
                                 {
                                     // ログ記録：プリンタ未使用
                                     this.AddLogInfo(DateTime.Now, NKKLogging.LOGGING_CLASS.INFO, "プリンタ未使用");
@@ -1842,46 +1855,114 @@ namespace NKKWeightLib
 
             if (strtopic.StartsWith("WEIGHT_SCALE/MST_CHANGED") == true)
             {
-                // 体重測定記録番号を取得
-                String strChangedInfo = strlines[1];
+                // #12738 mod 2026.06.08 体重計マスタの設定変更通知に対応する TDC米沢 start
+                //// 体重測定記録番号を取得
+                //String strChangedInfo = strlines[1];
 
-                ///*@param request { weightCd: 体重計管理コード, facilityCd: 施設コード, weightNo: 体重計番号, isConnect: 接続状態 }
-                String strUri = String.Format("{0}{1}{2}?_={3}"
+                /////*@param request { weightCd: 体重計管理コード, facilityCd: 施設コード, weightNo: 体重計番号, isConnect: 接続状態 }
+                //String strUri = String.Format("{0}{1}{2}?_={3}"
+                //    , NKKWebAccess.BaseUri
+                //    , NKKWeightInformation.WEB_APP_URI
+                //    , getRequestExportUri(strChangedInfo)
+                //    , DateTime.Now.Ticks);
+
+                //String strbody = getRequestExportBody(strChangedInfo);
+
+                //NKKWebAccessResponse res = NKKWebAccess.Post("体重計接続状態取得", strUri, strbody).Result;
+
+                //if (res.response.IsSuccessStatusCode == true)
+                //{
+                //    String strstate = res.strContent;
+
+                //    var serializer = new JavaScriptSerializer();
+
+                //    // JSON分解
+                //    Dictionary<String, String> json = NKKWebAccess.GetJsonData(strbody);
+                //    // カード書き込み内容
+                //    if (json.ContainsKey("table") == true)
+                //    {
+                //        String strtable = json["table"];
+                //        if (strtable.EndsWith("mst_bed"))
+                //        {
+                //            syncMasterDataBed(strstate);
+                //        }
+                //        else if (strtable.EndsWith("mst_wheel_chair"))
+                //        {
+                //            syncMasterDataWheelChair(strstate);
+                //        }
+                //        else if (strtable.EndsWith("mst_device_set_info_default"))
+                //        {
+                //            syncMasterDataDeviceSetInfoDefault(strstate);
+                //        }
+                //    }
+                //}
+
+                // マスタ更新
+
+                // 設定取得
+                String strUri = String.Format("{0}{1}{2}{3}/{4}?_={5}"
                     , NKKWebAccess.BaseUri
                     , NKKWeightInformation.WEB_APP_URI
-                    , getRequestExportUri(strChangedInfo)
+                    , this.GET_CONFIG_URI
+                    , NKKWebAccess.FacilityCd
+                    , NKKWeightInformation.WeightNo
                     , DateTime.Now.Ticks);
-
-                String strbody = getRequestExportBody(strChangedInfo);
-
-                NKKWebAccessResponse res = NKKWebAccess.Post("体重計接続状態取得", strUri, strbody).Result;
-
+                NKKWebAccessResponse res = NKKWebAccess.Get("体重計設定取得", strUri).Result;
+                String strConfig = String.Empty;
                 if (res.response.IsSuccessStatusCode == true)
                 {
-                    String strstate = res.strContent;
+                    strConfig = res.strContent;
+                }
+                if (String.IsNullOrEmpty(strConfig) == false)
+                {
+                    // 設定取得
 
-                    var serializer = new JavaScriptSerializer();
+                    // 体重計設定が有効な場合
+
+                    // ログ記録：設定値
+                    this.AddLogInfo(DateTime.Now, NKKLogging.LOGGING_CLASS.INFO, String.Format("体重計設定値:{0}", strConfig));
 
                     // JSON分解
-                    Dictionary<String, String> json = NKKWebAccess.GetJsonData(strbody);
-                    // カード書き込み内容
-                    if (json.ContainsKey("table") == true)
+                    Dictionary<String, String> json = NKKWebAccess.GetJsonData(strConfig);
+
+                    // NKKFalica使用判定
+                    if (json.ContainsKey("isHasCardReader") == true)
                     {
-                        String strtable = json["table"];
-                        if (strtable.EndsWith("mst_bed"))
-                        {
-                            syncMasterDataBed(strstate);
-        }
-                        else if (strtable.EndsWith("mst_wheel_chair"))
-                        {
-                            syncMasterDataWheelChair(strstate);
-                        }
-                        else if (strtable.EndsWith("mst_device_set_info_default"))
-                        {
-                            syncMasterDataDeviceSetInfoDefault(strstate);
-                        }
+                        // Felica使用設定
+                        this.FelicaUsageSetting(json["isHasCardReader"]);
+                    }
+                    else
+                    {
+                        // ログ記録：プリンタ未使用
+                        this.AddLogInfo(DateTime.Now, NKKLogging.LOGGING_CLASS.INFO, "Felica未使用");
+                    }
+
+                    // プリンタ設定
+                    if (json.ContainsKey("printerClass") == true)
+                    {
+                        // プリンター名設定/使用可能チェック
+                        this.CheckPrinter(json["printerClass"]);
+                    }
+                    else
+                    {
+                        // ログ記録：プリンタ未使用
+                        this.AddLogInfo(DateTime.Now, NKKLogging.LOGGING_CLASS.INFO, "プリンタ未使用");
                     }
                 }
+                else
+                {
+                    // 設定取得失敗
+
+                    // ログ記録：体重計設定取得失敗
+                    strlog = "体重計設定取得失敗";
+                    this.AddLogInfo(DateTime.Now, NKKLogging.LOGGING_CLASS.ERROR, strlog);
+
+                    // GUI：体重計設定取得失敗
+                    this.SendLogMessageToGUI("INFO", String.Empty, DateTime.Now, "体重計設定未取得");
+                    // GUI：体重計設定取得失敗
+                    this.SendLogMessageToGUI("SERVER", String.Empty, DateTime.Now, strlog);
+                }
+                // #12738 mod 2026.06.08 体重計マスタの設定変更通知に対応する TDC米沢 start
             }
         }
         //----------------------------------------------------------------------------------------------------
@@ -2167,9 +2248,128 @@ namespace NKKWeightLib
         //}
         //// add #7189 【デグレ】条件送信時、サーマルプリンターで印字されない 王永吉 end
         // #10833 2024.08.08 del 不要な処理削除 TDC米沢 end
+
+        // #12738 mod 2026.06.08 体重計マスタの設定変更通知に対応する TDC米沢 start
+        //----------------------------------------------------------------------------------------------------
+        /// <summary>
+        /// Felica使用設定
+        /// </summary>
+        /// <param name="strUse">使用有無["1"：使用/else：未使用]</param>
+        //----------------------------------------------------------------------------------------------------
+        private void FelicaUsageSetting(String strUse)
+       {
+            // 使用状態判定
+            if (strUse == "1")
+            {
+                // カード使用
+
+                // 動作中判定
+                if (!this.m_Felica.IsRunning)
+                {
+                    // 未動作
+
+                    // NKKFalica：処理開始
+                    this.m_Felica.Start();
+
+                    // ログ記録：処理開始成功
+                    this.AddLogInfo(DateTime.Now, NKKLogging.LOGGING_CLASS.INFO, "NKKFalica処理開始");
+                }
+
+                // ログ記録
+                this.AddLogInfo(DateTime.Now, NKKLogging.LOGGING_CLASS.INFO, "NKKFalica動作中");
+            }
+            else
+            {
+                // カード未使用
+
+                // 動作中判定
+                if (this.m_Felica.IsRunning)
+                {
+                    // 動作中
+
+                    // NKKFalica：処理終了
+                    this.m_Felica.Stop();
+
+                    // 処理終了成功
+                    this.AddLogInfo(DateTime.Now, NKKLogging.LOGGING_CLASS.INFO, "NKKFalica処理終了");
+                }
+
+                // ログ記録：Felica未使用
+                this.AddLogInfo(DateTime.Now, NKKLogging.LOGGING_CLASS.INFO, "NKKFalica未使用");
+            }
+        }
+        //----------------------------------------------------------------------------------------------------
+        /// <summary>
+        /// プリンター使用可能チェック
+        /// </summary>
+        /// <param name="strPrintername">プリンターコード["0"～"2"]</param>
+        //----------------------------------------------------------------------------------------------------
+        private void CheckPrinter(String strCd)
+        {
+            // プリンター名設定
+            switch (strCd)
+            {
+                case "0":   // TM-88Ⅳ
+                case "1":   // TM-L90
+                    NKKWeightInformation.PrinterName = NKKPrinter.PRINTER_NAME;
+                    break;
+
+                case "2":   // KIOSK
+                    NKKWeightInformation.PrinterName = NKKPrinter.PRINTER_NAME_KIOSK;
+                    break;
+
+                default:    // 不明
+                    NKKWeightInformation.PrinterName = "プリンタ未設定";
+                    break;
+            }
+
+            // プリンタの登録チェック
+            String strlog = String.Empty;
+            String strlog2 = "未接続";
+            String strPrintStatusHex = String.Empty;
+            NKKLogging.LOGGING_CLASS logKind = NKKLogging.LOGGING_CLASS.ERROR;
+            if (NKKPrinter.IsPrinterExist(NKKWeightInformation.PrinterName) == true)
+            {
+                // 登録あり
+
+                strlog2 = "使用不可";
+
+                // プリンター状態を取得
+                try
+                {
+                    NKKPrinter.PRINTER_INFO_2 prtinfo;
+                    prtinfo = NKKPrinter.GetPrinterInfo(NKKWeightInformation.PrinterName);
+                    strPrintStatusHex = prtinfo.Status.ToString("X8");
+                    // プリンターオフライン：128[0x80]、利用不可：4096[0x1000]
+                    if (((prtinfo.Status & (uint)0x80) != (uint)0x80
+                       && (prtinfo.Status & (uint)0x1000) != (uint)0x1000))
+                    {
+                        strlog2 = "使用可";
+                        logKind = NKKLogging.LOGGING_CLASS.INFO;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    //　プリンター状態取得失敗
+                    this.Error = ex;
+                }
+            }
+
+            // 
+            strlog = String.Format("プリンタ{0}, ( {1} ),{2}", strlog2, strPrintStatusHex, NKKWeightInformation.PrinterName);
+
+            // ログ記録
+            this.AddLogInfo(DateTime.Now, logKind, strlog);
+
+            // GUI
+            this.SendLogMessageToGUI("PRINTER", strlog2, DateTime.Now, NKKWeightInformation.PrinterName + String.Format(",( {0} )", strPrintStatusHex));
+        }
+        //----------------------------------------------------------------------------------------------------
+        // #12738 mod 2026.06.08 体重計マスタの設定変更通知に対応する TDC米沢 end
+
     }
     //----------------------------------------------------------------------------------------------------
 
-    #endregion
+#endregion
 }
 //----------------------------------------------------------------------------------------------------

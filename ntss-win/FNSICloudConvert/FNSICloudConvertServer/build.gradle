@@ -2,7 +2,7 @@ import java.nio.charset.StandardCharsets
 
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '4.0.6'
+    id 'org.springframework.boot' version '4.0.7'
     id 'io.spring.dependency-management' version '1.1.7'
 }
 
@@ -19,8 +19,6 @@ java {
 repositories {
     mavenCentral()
 }
-
-ext['tomcat.version'] = '11.0.22'
 
 dependencies {
     // Web
@@ -40,8 +38,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
 
     // DB
-    runtimeOnly 'org.postgresql:postgresql:42.7.11'
-    testImplementation 'org.postgresql:postgresql:42.7.11'
+    runtimeOnly 'org.postgresql:postgresql'
+    testImplementation 'org.postgresql:postgresql'
 
     // JSON
     implementation 'com.fasterxml.jackson.core:jackson-annotations:2.21'

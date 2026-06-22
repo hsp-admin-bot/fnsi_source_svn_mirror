@@ -1,4 +1,4 @@
-﻿// ***********************************************************************
+// ***********************************************************************
 // Assembly         : CoopSettingTool.Service
 // Author           : Phan Hai Thach
 // Created          : 05-25-2021
@@ -28,6 +28,7 @@ namespace CoopSettingTool.Service.Models
         public MstIfEdgeEntity(string facilityCd)
         {
             FacilityCd = facilityCd;
+            IfEdgeNo = "1";
             IsDel = "0";
             IsDisp = "1";
 
@@ -55,6 +56,7 @@ namespace CoopSettingTool.Service.Models
         /// </summary>
         /// <value>If edge no.</value>
         [JsonProperty("ifEdgeNo")]
+        [Browsable(false)]
         [DisplayName("IFエッジ番号")]
         public string IfEdgeNo { get; set; }
 

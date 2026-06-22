@@ -1,12 +1,10 @@
 {
   "API": {
     "aBASE_DOMAIN": "https://fnwsi.nksfn.com",
-    "eBASE_DOMAIN": "http://57.181.47.238:8080",
-    "BASE_DOMAIN": "http://localhost:8080",
+    "BASE_DOMAIN": "https://rems.iesfn.com",
+    "lBASE_DOMAIN": "http://localhost:8080",
     "sBASE_DOMAIN": "https://dev.nksfn.com",
-    "AWSADMIN": "%242a%2410%24ZNBjrHx1NVLktwVKx5oP9uIRfbNnlO3NwfmlEtyFV77jG6mABx3We",
-    "AWSHSP019": "%242a%2410%24AqzDvt5RAiTegKp1ZzEseejcBB.DVrhWfEPfHGP2zjQMhcnRAcs82",
-    "FACILITY_CD": "%242a%2410%248mpKYa3zUiEtEflJXw8Fqe9uNcgHEjW/2QG02ujRbMbb16JbJjeNq",
+    "FACILITY_CD": "%242a%2410%24ZNBjrHx1NVLktwVKx5oP9uIRfbNnlO3NwfmlEtyFV77jG6mABx3We",
     "CLIENT_CERTIFIATE_SEARCH_VALUE_1": "",
     "CLIENT_CERTIFIATE_SEARCH_VALUE_2": ""
   }

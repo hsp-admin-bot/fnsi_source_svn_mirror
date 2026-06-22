@@ -3500,37 +3500,6 @@ export default {
     },
     messageMachine() {
       // mod #7663 C重複情報のメッセージ画面を表示する。 xiaosonglei start
-      // // 他の画面に遷移したときもmessageMachine()が発生する為、自分の画面のみ処理する
-      // if (
-      //   this.selfScreenName === this.$route.name &&
-      //   document.getElementsByTagName("ons-alert-dialog").length === 0
-      // ) {
-      //   // メッセージの確認
-      //   if (this.getMessageList.length > 0) {
-      //     let messages = "";
-      //     for (const item of this.getMessageList) {
-      //       // 型式、通信フォーマット、製造番号、通信種別、IPアドレス
-      //       messages =
-      //         messages +
-      //         "・【型式】" +
-      //         item.machineTypeName +
-      //         " 【通信フォーマット】" +
-      //         item.comFormatName +
-      //         " 【製造番号】" +
-      //         item.machineSerial +
-      //         " 【通信種別】" +
-      //         item.comType +
-      //         " 【ＩＰアドレス】" +
-      //         item.ipAddress +
-      //         "<br>";
-      //     }
-
-      //     this.$ons.notification.alert({
-      //       title: "重複した装置の情報",
-      //       message: messages
-      //     });
-      //   }
-      // }
       this.intervalID = setInterval(() => {
         // 他の画面に遷移したときもmessageMachine()が発生する為、自分の画面のみ処理する
         if (

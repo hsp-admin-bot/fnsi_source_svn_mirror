@@ -1,4 +1,4 @@
-﻿// ***********************************************************************
+// ***********************************************************************
 // Assembly         : CoopSettingTool.App
 // Author           : Phan Hai Thach
 // Created          : 05-25-2021
@@ -78,6 +78,12 @@ namespace CoopSettingTool.App.Models
         /// </summary>
         public void AddNewIfEdge()
         {
+            ifEdgeList = ifEdgeList ?? new List<MstIfEdgeEntity>();
+            if (ifEdgeList.Any(ifEdge => ifEdge != null && ifEdge.IsDel != "1" && ifEdge.IsDisp != "0"))
+            {
+                return;
+            }
+
             ifEdgeList.Add(new MstIfEdgeEntity(this.facility.FacilityCd));
             NotifyPropertyChanged("IfEdgeList");
         }

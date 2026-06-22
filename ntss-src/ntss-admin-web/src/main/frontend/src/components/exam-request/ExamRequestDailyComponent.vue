@@ -1125,10 +1125,9 @@ export default {
                 r.examMainCd === record.examMainCd &&
                 r.patId === record.patId &&
                 r.regExamDate === record.regExamDate &&
+                r.regOrderClass === record.regOrderClass &&
                 r.examOrderInfo === record.examOrderInfo);
-              // NOTE:「検査区分：その他」は１レコード. 「検査区分：その他」以外は、同一レコード
-              const isSameRegOrderClass = record.regOrderClass === "0" ? r.regOrderClass === "0" : r.regOrderClass === "1" || r.regOrderClass === "2";
-              return isSameBase && isSameRegOrderClass;
+              return isSameBase;
             });
             if (!isDuplicate) {
               result.request.push(record);

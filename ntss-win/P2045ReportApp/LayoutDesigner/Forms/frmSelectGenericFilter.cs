@@ -82,6 +82,12 @@ namespace LayoutDesigner
             /// </summary>
             Infection,
             // add #12006 感染症がフィルタできない 高 end
+            // add #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 高 start
+            /// <summary>
+            /// 物品情報
+            /// </summary>
+            Goods,
+            // add #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 高 end
             // add #10370 装置帳票向けの「水質管理」データ項目を検討する 高 start
             // mod #12585 水質管理.水質検査のフィルタ処理仕様修正 高 start
             /// <summary>
@@ -713,6 +719,89 @@ namespace LayoutDesigner
             return wRet;
         }
 
+        // add #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 高 start
+        /// <summary>
+        /// 薬剤フィルタ用 TreeNode を作成して取得します。
+        /// 通常薬剤/調製薬剤が不要
+        /// </summary>
+        /// <returns></returns>
+        private async Task<TreeNode> CreateMedicineNoTreeNode()
+        {
+            var wList = new List<FilterMedicineData>();
+
+            // 薬剤フィルタ一覧を取得
+            if ((await RldLib.FilterDataSet.GetFilterMedicineData() is RldRestResultData<List<FilterMedicineData>> wResult) && wResult.IsSuccess)
+                wList = wResult.Data;
+
+            // ルートノード生成
+            var wRet = new RldTriStateTreeNode()
+            {
+                CheckboxVisible = true,
+                IsContainer = true,
+                Text = "薬剤",
+                Tag = EnumFilterType.Medicine
+            };
+
+            Int64 wClassCode = Int64.MinValue;
+            Int32 wMediType = Int32.MinValue;
+
+            RldTriStateTreeNode wNodeMediType = null;
+
+            foreach (var wData in wList)
+            {
+
+                // 薬剤分類が変わったらルートノードへ追加
+                if (wMediType != wData.MedicineType)
+                {
+                    // 薬剤種別を薬剤分類ノードへ追加
+                    if (wNodeMediType != null) wRet.Nodes.Add(wNodeMediType);
+
+                    // 薬剤種別を記憶
+                    wMediType = wData.MedicineType;
+
+                    // 薬剤種別をクリア
+                    wClassCode = Int64.MinValue;
+                    wNodeMediType = null;
+                }
+
+                // 薬剤種別が変わったら薬剤分類ノードへ追加
+                if (wClassCode != wData.ClassCode)
+                {
+                    // 薬剤種別ノードへ追加
+                    if (wNodeMediType != null) wRet.Nodes.Add(wNodeMediType);
+
+                    // 薬剤種別ノードを生成
+                    wNodeMediType = new RldTriStateTreeNode()
+                    {
+                        CheckboxVisible = true,
+                        IsContainer = true,
+                        Tag = wData.ClassCode,
+                        Text = wData.ClassName
+                    };
+
+                    // 薬剤分類を記憶
+                    wClassCode = wData.ClassCode;
+                }
+
+                // 薬剤は薬剤種別ノードへ追加
+                if (wData.MedicineCode != 0)
+                {
+                    wNodeMediType.Nodes.Add(new RldTriStateTreeNode()
+                    {
+                        CheckboxVisible = true,
+                        Tag = wData.MedicineCode,
+                        Text = wData.MedicineName
+                    });
+                }
+            }
+
+            // 最後の薬剤分類をルートノードへ追加
+            if (wNodeMediType != null) wRet.Nodes.Add(wNodeMediType);
+
+            return wRet;
+        }
+        // add #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 高 end
+
         /// <summary>
         /// 医材フィルタ用 TreeNode を作成して取得します。
         /// </summary>
@@ -1113,6 +1202,41 @@ namespace LayoutDesigner
         }
         // add #12006 感染症がフィルタできない 高 end
 
+        // add #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 高 start
+        /// <summary>
+        /// 物品情報フィルタ用 TreeNode を作成して取得します。
+        /// </summary>
+        /// <returns></returns>
+        private async Task<TreeNode> CreateGoodsTreeNode()
+        {
+            // ルートノードを生成
+            var wRet = new RldTriStateTreeNode()
+            {
+                CheckboxVisible = true,
+                IsContainer = true,
+                Text = "物品",
+                Tag = EnumFilterType.Goods,
+            };
+
+            TreeNode wNode = await this.CreateEquipDiaTreeNode();
+            TreeNode wNode2 = await this.CreateMedicineNoTreeNode();
+
+            if (wNode != null && wNode.Nodes.Count != 0)
+            {
+                wNode.Tag = 1;
+                wRet.Nodes.Add(wNode);
+            }
+
+            if (wNode2 != null && wNode2.Nodes.Count != 0)
+            {
+                wNode2.Tag = 2;
+                wRet.Nodes.Add(wNode2);
+            }
+
+            return wRet;
+        }
+        // add #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 高 end
+
         // add #10370 装置帳票向けの「水質管理」データ項目を検討する 高 start
         /// <summary>
         /// 水質検査種別フィルタ用 TreeNode を作成して取得します。
@@ -1259,6 +1383,12 @@ namespace LayoutDesigner
                     context.wNode = await this.CreateInfectionTreeNode();
                     break;
                 // add #12006 感染症がフィルタできない 高 end
+                // add #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 高 start
+                case EnumFilterType.Goods:      // 物品情報フィルタ
+                    context.wTitle = @"物品情報フィルタ設定";
+                    context.wNode = await this.CreateGoodsTreeNode();
+                    break;
+                // add #12756 クラス「##準備リスト.物品情報」のフィルタ設定が不十分 高 end
                 // add #10370 装置帳票向けの「水質管理」データ項目を検討する 高 start
                 // mod #12585 水質管理.水質検査のフィルタ処理仕様修正 高 start
                 case EnumFilterType.WQTestType:   // 水質検査フィルタ

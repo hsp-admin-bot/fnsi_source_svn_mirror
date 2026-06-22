@@ -2613,6 +2613,17 @@ namespace ConvertCommon
                     // キーと値のセットのみ
                     // 例：{"A":1,"B":2,"C":3}
 
+                    //add #11902 セコム連携 COP_COOP_SEND_HST.MEMOのコンバート start
+                    if ("save_2".Equals(ntssColumnName) && convertTableName.Equals("pat_coop_detail"))
+                    {
+                        if (string.Equals(CacheInformation.Instance.CooperationType, "Secom"))
+                        {
+                            return JsonSqlBuilder.BuildJsonNoArraySave2(ntssRecord);
+                        }
+
+                    }
+                    //add #11902 セコム連携 COP_COOP_SEND_HST.MEMOのコンバート end
+
                     return JsonSqlBuilder.BuildJsonNoArray(ntssColumnName,
                                                     jsonElementListList,
                                                        simpleConvertValueInfo,
@@ -7063,6 +7074,17 @@ namespace ConvertCommon
         }
         private string ResolveOrdMainKey(string keyColNm, NtssRecord ntssRecord)
         {
+            //add #11902 セコム連携 pat_coop_detail特殊処理 start
+            if ("pat_coop_detail".Equals(this.convertTableName) && string.Equals(CacheInformation.Instance.CooperationType, "Secom"))
+            {
+                string pat_id = ntssRecord.columns
+                    .FirstOrDefault(c => c.name.Equals("pat_id"))
+                    .value
+                    .ToString();
+                return "{pat_id}";
+            }
+            //add #11902 セコム連携 pat_coop_detail特殊処理 end
+
             if (!"ord_main".Equals(this.convertTableName))
                 return keyColNm;
 

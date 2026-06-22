@@ -78,4 +78,17 @@ public interface SysSigninManagerDao {
   @Select
   List<SysSigninManager> selectByUserId(String userId);
   //add 11587 by kangjie 20250226 end
+
+
+  // #12849 複数端末同時サインイン無効の乗っ取りサインインが動かない add 20260619 yangxuewang start
+  /**
+   * 指定利用者・サーバIPのサインイン管理を削除する.
+   *
+   * @param userId 利用者ID
+   * @param serverIp サーバIP
+   * @return 削除件数
+   */
+  @Delete(sqlFile = true)
+  int deleteByUserIdAndServerIp(Long userId, String serverIp, String facilityCd);
+  // #12849 複数端末同時サインイン無効の乗っ取りサインインが動かない add 20260619 yangxuewang end
 }

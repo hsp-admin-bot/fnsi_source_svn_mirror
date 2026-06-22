@@ -28,7 +28,7 @@
               <v-ons-col style="flex: 0 0 100px">
                 <div class="device-info-cell-title">
                   血流量<br />
-                  mL/min
+                  [mL/min]
                 </div>
               </v-ons-col>
               <v-ons-row style="flex: 1;">
@@ -80,7 +80,7 @@
               <v-ons-col style="flex: 0 0 100px">
                 <div class="device-info-cell-title">
                 透析液流量<br />
-                mL/min
+                [mL/min]
                 </div>
               </v-ons-col>
               <v-ons-row style="flex: 1;">
@@ -341,15 +341,11 @@
                   <!-- #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療方法セットマスタ 20240118 linjunfeng end -->
                   <!-- #5590 2023/04/19 ×を常に表示するように修正 林峻峰 end -->
                 </div>
-                <div v-if="isDialysisDay" class="calculation-disclaimer-day">
-                  <span class="calculation-disclaimer">
-                    {{ dialysisDay }}
-                  </span>
-                </div>
                 <div class="calculation-disclaimer">
-                  計算用の透析時間であり、<br />
-                  本入力では透析時間指示の<br />
-                  変更は実施されません
+                  <span v-if="isDialysisDay">
+                    {{ dialysisDay }}<br />
+                  </span>
+                  計算用の透析時間であり、この値を変更しても治療時間の変更はしません。
                 </div>
               </v-ons-col>
               <!-- ステップ数 -->
@@ -565,8 +561,8 @@ export default {
       if (this.dialysisDate === null) {
         return `透析時間参照なし`;
       }
-      const day = dayjs(this.dialysisDate, "YYYYMMDD").format("MM/DD");
-      return `(${day}の透析時間参照)`;
+      const day = dayjs(this.dialysisDate, "YYYYMMDD").format("M/D");
+      return `【${day}の治療時間参照】`;
     },
 
     /**

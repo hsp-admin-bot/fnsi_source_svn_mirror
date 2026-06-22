@@ -171,7 +171,6 @@
       <div class="denial-btn-area close-button" style="background: none;">
         <v-ons-button
           class="btn3-normal"
-          :disabled="isResultMasterVoid"
           @click="openHistoryModal"
         >点検履歴</v-ons-button>
       </div>
@@ -261,9 +260,6 @@ export default {
       "getMachine",
       "getIsOpenBySubView",
     ]),
-    isResultMasterVoid() {
-      return !this.getResultMaster?.length;
-    },
     visibleResultMaster() {
       return (this.getResultMaster || []).slice(0, this.visibleLayoutCount);
     },

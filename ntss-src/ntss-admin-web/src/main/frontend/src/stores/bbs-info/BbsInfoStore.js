@@ -88,10 +88,6 @@ export default {
      * @description 検索結果を保持する掲示板一覧※掲示板一覧画面のみで使用(未読等の絞り込みしない)
      */
     searchedKeepBbsList: [],
-// add マスタ削除 対応 chen start
-    mstBbsKindAll: [],
-// add マスタ削除 対応 chen end
-
     /**
      * @description 掲示板読み込み中フラグ
      * @summary 掲示板詳細ヘッダでの読み込み状態を管理
@@ -170,12 +166,6 @@ export default {
       return state.searchedKeepBbsList;
     },
 
-// add マスタ削除 対応 chen start
-    mstBbsKindAll(state) {
-      return state.mstBbsKindAll;
-    },
-// add マスタ削除 対応 chen end
-
     isLoadingBbs: state => state.isLoadingBbs,
 
     userId(state) {
@@ -230,12 +220,6 @@ export default {
     setSearchedKeepBbsList(state, recordList) {
       state.searchedKeepBbsList = recordList;
     },
-
-// add マスタ削除 対応 chen start
-    setMstBbsKindAll(state, mstBbsKindAll) {
-      state.mstBbsKindAll = mstBbsKindAll;
-    },
-// add マスタ削除 対応 chen end
 
     setIsLoadingBbs: (state, b) => {
       state.isLoadingBbs = b;
@@ -417,12 +401,6 @@ export default {
         commit("setSearchedKeepBbsList", keepBbsList);
       }
 
-// add マスタ削除 対応 chen start
-      const mstBbsKindAll = await ApiHelper.get(`/mstInfo/mstBbsKindAll`, {
-        facilityCd: condition.facilityCd
-      });
-      commit("setMstBbsKindAll", mstBbsKindAll.data);
-// add マスタ削除 対応 chen end
       // add FNSI-No.554 掲示期間を広げると、検索件数が多い場合にフリーズする 追加読み込み型にする。 陳 end
     },
 
@@ -453,12 +431,6 @@ export default {
     setSearchedKeepBbsList({ commit }, bbsInfoList) {
       commit("setSearchedKeepBbsList", bbsInfoList);
     },
-// add マスタ削除 対応 chen start
-    setMstBbsKindAll({ commit }, mstBbsKindAll) {
-      commit("setMstBbsKindAll", mstBbsKindAll);
-    },
-// add マスタ削除 対応 chen end
-
     // add FNSI-No.554 掲示期間を広げると、検索件数が多い場合にフリーズする 追加読み込み型にする。 陳 start
     setSortColumn({ commit }, sortColumn) {
       commit("setSortColumn", sortColumn);

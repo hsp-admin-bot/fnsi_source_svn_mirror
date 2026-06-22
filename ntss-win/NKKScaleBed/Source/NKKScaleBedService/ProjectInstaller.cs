@@ -45,36 +45,57 @@ namespace NKKScaleBedService
 
         public override void Commit(IDictionary savedState)
         {
-            Thread trdInstaller = new Thread(DoWork)
+            // ダイアログ表示条件:
+            //   1) Environment.UserInteractive が true（セッション0でない）
+            //   2) かつ WiX から /silent=1 が渡されていない（UILevel < 5 のサイレント/ベーシックUI時に付与）
+            bool silentInstall = !Environment.UserInteractive ||
+                                 "1" == Context.Parameters["silent"];
+            if (!silentInstall)
             {
-                Name = "InstallParameterSetting.",
-                IsBackground = true
-            };
-            trdInstaller.Start();
-
-            // 設定を変更する
-            string path = this.Context.Parameters["assemblypath"];
-            path = path.Replace("NKKScaleBedService.exe", "");
-            ModifyInstallParameter updateConfig = new ModifyInstallParameter(path);
-            updateConfig.ShowDialog();
-            try
-            {
-                foreach (Process process in Process.GetProcessesByName("msiexec"))
+                Thread trdInstaller = new Thread(DoWork)
                 {
-                    if (installerTitle.Equals(process.MainWindowTitle))
+                    Name = "InstallParameterSetting.",
+                    IsBackground = true
+                };
+                trdInstaller.Start();
+
+                // 設定を変更する
+                string path = this.Context.Parameters["assemblypath"];
+                path = path.Replace("NKKScaleBedService.exe", "");
+                ModifyInstallParameter updateConfig = new ModifyInstallParameter(path);
+                updateConfig.ShowDialog();
+                try
+                {
+                    foreach (Process process in Process.GetProcessesByName("msiexec"))
                     {
-                        SwitchToThisWindow(process.MainWindowHandle, true);
-                        break;
+                        if (installerTitle.Equals(process.MainWindowTitle))
+                        {
+                            SwitchToThisWindow(process.MainWindowHandle, true);
+                            break;
+                        }
                     }
                 }
+                catch (Exception)
+                {
+                    MessageBox.Show("パラメータ設定画面に問題が発生しました。再インストールしてください。");
+                }
             }
-            catch (Exception)
-            {
-                MessageBox.Show("パラメータ設定画面に問題が発生しました。再インストールしてください。");
-            }
+
             base.Commit(savedState);
 
-            // サービスを再起動する
+            // サービス起動判定:
+            //   - 対話型インストール（silentInstall=false）: 常に起動（従来動作）
+            //   - サイレントインストール（silentInstall=true） : インストール前にサービスが
+            //     起動していた場合（/servicewasrunning=1）のみ起動。停止中だった場合は起動しない。
+            bool serviceWasRunning = "1" == Context.Parameters["servicewasrunning"];
+            bool shouldStartService = !silentInstall || serviceWasRunning;
+
+            if (!shouldStartService)
+            {
+                return;
+            }
+
+            // サービスを起動する
             ServiceController sc = new ServiceController("NKKScaleBed");
             if (sc.Status.Equals(ServiceControllerStatus.Running) || sc.Status.Equals(ServiceControllerStatus.StartPending))
             {
@@ -92,7 +113,8 @@ namespace NKKScaleBedService
 
                     if (count > 5)
                     {
-                        MessageBox.Show("サービスの停止に失敗しました。");
+                        if (Environment.UserInteractive)
+                            MessageBox.Show("サービスの停止に失敗しました。");
                         break;
                     }
                 }
@@ -100,6 +122,7 @@ namespace NKKScaleBedService
             if (sc.Status.Equals(ServiceControllerStatus.Stopped) || sc.Status.Equals(ServiceControllerStatus.StopPending))
             {
                 sc.Start();
+                const int maxStartWaitSeconds = 90;
                 int count = 0;
                 while (true)
                 {
@@ -111,9 +134,10 @@ namespace NKKScaleBedService
                         break;
                     }
 
-                    if (count > 5)
+                    if (count > maxStartWaitSeconds)
                     {
-                        MessageBox.Show("サービスの起動に失敗しました。");
+                        if (Environment.UserInteractive)
+                            MessageBox.Show("サービスの起動に失敗しました。");
                         break;
                     }
                 }
@@ -122,8 +146,6 @@ namespace NKKScaleBedService
 
         private void DoWork()
         {
-            //System.Diagnostics.Debugger.Launch();
-            // 設定画面の最上位の対応
             try
             {
                 Process installProcessInfo = null;
@@ -135,12 +157,10 @@ namespace NKKScaleBedService
                     {
                         if (paramenterProcessInfo == null && paramenterTitle.Equals(process.MainWindowTitle))
                         {
-                            // 設定画面のTitleより、ハンドルを取得する
                             paramenterProcessInfo = process;
                         }
                         else if (installProcessInfo == null && installerTitle.Equals(process.MainWindowTitle))
                         {
-                            // インストーラ画面のTitleより、ハンドルを取得する
                             installProcessInfo = process;
                         }
                     }
@@ -154,10 +174,8 @@ namespace NKKScaleBedService
 
                 while (true)
                 {
-                    // 最上位画面を取得する
                     IntPtr hCurrHandle = GetForegroundWindow();
 
-                    // 最上位画面がインストール画面の場合、設定画面に最上位画面を設定する
                     if (hCurrHandle.Equals(installProcessInfo.MainWindowHandle))
                     {
                         if (paramenterProcessInfo != null)

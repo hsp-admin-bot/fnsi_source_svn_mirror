@@ -1154,6 +1154,7 @@ export default {
             this._indicationDialogOwner().messageDialogInfo.type = "1";
             this._indicationDialogOwner().messageDialogInfo.isDialogVisible = true;
             this._indicationDialogOwner().messageDialogInfo.title = DIALOG_MESSAGES[13000169].title
+            return;
           }else{
             this._indicationDialogOwner().messageDialogInfo.messageCd = 70000028;
             /* mod FNSI-4212 更新対象変更時のウインドウが不正 liumx start */
@@ -3107,7 +3108,18 @@ export default {
         else if(ele.fields.value == -1 && ele.fields.velue == null){
           ele.fields.value = null
         }
+        let velue = ele.fields.velue
+        if(velue == null && ele.fields.value == -1 && (this.oldcomponentData[index].fields.velue == -1)){
+          velue = "-1"
+        }
+        else if(velue == -1 && ele.fields.value == null){
+          velue = null
+        }
         if(normalizeValue(ele.fields.value) !== normalizeValue(this.oldcomponentData[index].fields.value)){
+          isChange = true;
+        }
+        // 編集維持後は value が新しい表示値、velue が編集中の値となるため差分も判定する
+        if(normalizeValue(ele.fields.value) !== normalizeValue(velue)){
           isChange = true;
         }
       })

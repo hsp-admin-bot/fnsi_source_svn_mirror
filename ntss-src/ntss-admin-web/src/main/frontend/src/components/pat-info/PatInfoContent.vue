@@ -141,71 +141,10 @@ export default {
     ...mapMutations("pat-info", ["setIsPatInfoPageShowing", "setCardListScrollPos"]),
     /* modify by shiyinwang 2022-08-26 [6119] Here, set true is more readable than toggle--end */
     handleSwitchSidebar() {
-      const sidebarEl = this.getPatInfoElementById("patientSearchSidebarArea");
-      const menuBarEl = this.getPatInfoElementById("menu-bar-id");
-      const cardElem = this.$refs.cardListDiv || this.getPatInfoElementById("card");
-      if (!sidebarEl || !cardElem) {
-        return;
-      }
-      const SideBarIsOpen = sidebarEl.style.cssText.toString().indexOf("transform:") === -1;
-      // 6512 何も編集していないが、保存ボタンが押せてしまう。 周
-      const BarIsOpen = menuBarEl ? menuBarEl.classList.contains("block") : null;
-      const ownerDocument = this.getPatInfoLayoutRoot()?.ownerDocument || document;
-      const ClientWidth = ownerDocument.documentElement?.clientWidth || 0;
-      if (!SideBarIsOpen) {
-        if (BarIsOpen) {
-          cardElem.style.width = ClientWidth - 143 + "px";
-        } else {
-          cardElem.style.width = ClientWidth + "px";
-        }
-      } else {
-        if (BarIsOpen) {
-          cardElem.style.width = ClientWidth - 443 + "px";
-        } else {
-          cardElem.style.width = ClientWidth - 300 + "px";
-        }
-      }
       this.$nextTick(() => {
         this.$refs.cardList?.updateMasonry?.();
       });
     },
-    // 11729 患者情報・新規患者登録画面のカード展開/折畳状態の保持不正 start
-    // menuDisplay() {
-    //   let SideBarIsHidden = document.getElementById("patientSearchSidebarArea").style.cssText.toString().indexOf("transform:") === -1;
-    //   let name = document.getElementById("menu-bar-id");
-    //   let width = document.body.clientWidth;
-    //   let nwidth = width - 143;
-    //   if (name.classList.contains("block")) {
-    //     this.direction = "right";
-    //     if (SideBarIsHidden) {
-    //       cardElem.style.width = width - 300 + "px";
-    //     } else {
-    //       cardElem.style.width = width + "px";
-    //     }
-    //     document.getElementById("menu-btn").style.marginLeft = "-143px";
-    //     document.getElementById("menu-bar-id").setAttribute("class", "menu-bar-contents button-size none");
-    //     document.getElementById("card").style.marginLeft = "0px";
-    //   } else {
-    //     this.direction = "left";
-    //     document.getElementById("menu-btn").style.marginLeft = "-13px";
-    //     document.getElementById("menu-bar-id").setAttribute("class", "menu-bar-contents button-size block");
-    //     if (SideBarIsHidden) {
-    //       cardElem.style.width = nwidth - 300 + "px";
-    //     } else {
-    //       cardElem.style.width = nwidth + "px";
-    //     }
-    //     document.getElementById("card").style.marginLeft = "143px";
-    //   }
-    //   let css = document.getElementsByClassName("menu-bar")[0].style.cssText;
-    //   let ReWidth = css.toString().replaceAll(" ", "");
-    //   ReWidth = Number(ReWidth.substring(ReWidth.indexOf(":") + 1, ReWidth.indexOf("p")));
-    //   if (!css) {
-    //     document.getElementsByClassName("menu-bar")[0].style.cssText = "left: 143px;";
-    //   } else if (ReWidth >= 295 && ReWidth <= 305) {
-    //     document.getElementsByClassName("menu-bar")[0].style.cssText = "left: 443px;";
-    //   }
-    // },
-    // 11729 患者情報・新規患者登録画面のカード展開/折畳状態の保持不正 end
     calculateContentHeight() {
       // mod #10260 文字サイズ特大にしたときに保存、キャンセルボタンの高さに白背景があっていない。不要な余白の排除 宮崎 start
       const btn = this.getPatInfoFirstByClassName("right-exe-btn");

@@ -313,6 +313,7 @@ export default {
       this.enableWsConnect = false;
       this.close();
       this.removeWatchTopics(this.notifyTopic);
+      this.removeWatchTopics(NOTIFY_TOPIC_FORCE_SIGNOUT);
     },
     /**
      * URL取得からTOPICの登録まで含むWebSocket接続
@@ -333,6 +334,10 @@ export default {
         this.addWatchTopics({
           topic: this.notifyTopic,
           obj: this.notifyValue
+        });
+        this.addWatchTopics({
+          topic: NOTIFY_TOPIC_FORCE_SIGNOUT,
+          obj: this.forceSignoutValue
         });
       }).catch(() => {
         this.connectingFlg = false;

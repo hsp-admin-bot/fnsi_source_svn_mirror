@@ -2889,7 +2889,7 @@ export default {
           key1: "dev",
           key2: "A",
           key3: "290",
-          clauseName: "ＵＦＲプログラム電源ＳＷ",
+          clauseName: "除水プログラム電源ＳＷ",
           unitName: "",
           min: "",
           max: "",
@@ -2901,7 +2901,7 @@ export default {
           key1: "dev",
           key2: "A",
           key3: "311",
-          clauseName: "ＵＦＲプログラム最終位置",
+          clauseName: "除水プログラム最終位置",
           unitName: "",
           min: 1,
           max: 10,
@@ -2913,7 +2913,7 @@ export default {
           key1: "dev",
           key2: "A",
           key3: "312",
-          clauseName: "ＵＦＲプログラムコース",
+          clauseName: "除水プログラムコース",
           unitName: "",
           min: 0.0,
           max: 2.0,
@@ -3045,10 +3045,7 @@ export default {
           key1: "dev",
           key2: "B",
           key3: "0",
-          // mod FNSI-UFRプログラムの修正 楊 start
-          // clauseName: "UFRプログラム工程1の指数",
           clauseName: "除水プログラム工程1の指数",
-          // mod FNSI-UFRプログラムの修正 楊 end
           unitName: "",
           min: "",
           max: "",
@@ -3060,10 +3057,7 @@ export default {
           key1: "dev",
           key2: "B",
           key3: "1",
-          // mod FNSI-UFRプログラムの修正 楊 start
-          // clauseName: "UFRプログラム工程2の指数",
           clauseName: "除水プログラム工程2の指数",
-          // mod FNSI-UFRプログラムの修正 楊 end
           unitName: "",
           min: "",
           max: "",
@@ -3075,10 +3069,7 @@ export default {
           key1: "dev",
           key2: "B",
           key3: "2",
-          // mod FNSI-UFRプログラムの修正 楊 start
-          // clauseName: "UFRプログラム工程3の指数",
           clauseName: "除水プログラム工程3の指数",
-          // mod FNSI-UFRプログラムの修正 楊 end
           unitName: "",
           min: "",
           max: "",
@@ -3090,10 +3081,7 @@ export default {
           key1: "dev",
           key2: "B",
           key3: "3",
-          // mod FNSI-UFRプログラムの修正 楊 start
-          // clauseName: "UFRプログラム工程4の指数",
           clauseName: "除水プログラム工程4の指数",
-          // mod FNSI-UFRプログラムの修正 楊 end
           unitName: "",
           min: "",
           max: "",
@@ -3105,10 +3093,7 @@ export default {
           key1: "dev",
           key2: "B",
           key3: "4",
-          // mod FNSI-UFRプログラムの修正 楊 start
-          // clauseName: "UFRプログラム工程5の指数",
           clauseName: "除水プログラム工程5の指数",
-          // mod FNSI-UFRプログラムの修正 楊 end
           unitName: "",
           min: "",
           max: "",
@@ -3120,10 +3105,7 @@ export default {
           key1: "dev",
           key2: "B",
           key3: "5",
-          // mod FNSI-UFRプログラムの修正 楊 start
-          // clauseName: "UFRプログラム工程6の指数",
           clauseName: "除水プログラム工程6の指数",
-          // mod FNSI-UFRプログラムの修正 楊 end
           unitName: "",
           min: "",
           max: "",
@@ -3135,10 +3117,7 @@ export default {
           key1: "dev",
           key2: "B",
           key3: "6",
-          // mod FNSI-UFRプログラムの修正 楊 start
-          // clauseName: "UFRプログラム工程7の指数",
           clauseName: "除水プログラム工程7の指数",
-          // mod FNSI-UFRプログラムの修正 楊 end
           unitName: "",
           min: "",
           max: "",
@@ -3150,10 +3129,7 @@ export default {
           key1: "dev",
           key2: "B",
           key3: "7",
-          // mod FNSI-UFRプログラムの修正 楊 start
-          // clauseName: "UFRプログラム工程8の指数",
           clauseName: "除水プログラム工程8の指数",
-          // mod FNSI-UFRプログラムの修正 楊 end
           unitName: "",
           min: "",
           max: "",
@@ -3165,10 +3141,7 @@ export default {
           key1: "dev",
           key2: "B",
           key3: "8",
-          // mod FNSI-UFRプログラムの修正 楊 start
-          // clauseName: "UFRプログラム工程9の指数",
           clauseName: "除水プログラム工程9の指数",
-          // mod FNSI-UFRプログラムの修正 楊 end
           unitName: "",
           min: "",
           max: "",
@@ -3180,10 +3153,7 @@ export default {
           key1: "dev",
           key2: "B",
           key3: "9",
-          // mod FNSI-UFRプログラムの修正 楊 start
-          // clauseName: "UFRプログラム工程10の指数",
           clauseName: "除水プログラム工程10の指数",
-          // mod FNSI-UFRプログラムの修正 楊 end
           unitName: "",
           min: "",
           max: "",
@@ -3195,10 +3165,7 @@ export default {
           key1: "dev",
           key2: "A",
           key3: "301",
-          // mod FNSI-UFRプログラムの修正 楊 start
-          // clauseName: "ＵＦＲプログラム指数１",
           clauseName: "除水プログラム指数１",
-          // mod FNSI-UFRプログラムの修正 楊 end
           unitName: "",
           min: 0,
           max: 200,
@@ -3210,10 +3177,7 @@ export default {
           key1: "dev",
           key2: "A",
           key3: "302",
-          // mod FNSI-UFRプログラムの修正 楊 start
-          // clauseName: "ＵＦＲプログラム指数２",
           clauseName: "除水プログラム指数２",
-          // mod FNSI-UFRプログラムの修正 楊 end
           unitName: "",
           min: 0,
           max: 200,
@@ -3225,10 +3189,7 @@ export default {
           key1: "dev",
           key2: "A",
           key3: "303",
-          // mod FNSI-UFRプログラムの修正 楊 start
-          // clauseName: "ＵＦＲプログラム指数３",
           clauseName: "除水プログラム指数３",
-          // mod FNSI-UFRプログラムの修正 楊 end
           unitName: "",
           min: 0,
           max: 200,
@@ -3240,10 +3201,7 @@ export default {
           key1: "dev",
           key2: "A",
           key3: "304",
-          // mod FNSI-UFRプログラムの修正 楊 start
-          // clauseName: "ＵＦＲプログラム指数４",
           clauseName: "除水プログラム指数４",
-          // mod FNSI-UFRプログラムの修正 楊 end
           unitName: "",
           min: 0,
           max: 200,
@@ -3255,10 +3213,7 @@ export default {
           key1: "dev",
           key2: "A",
           key3: "305",
-          // mod FNSI-UFRプログラムの修正 楊 start
-          // clauseName: "ＵＦＲプログラム指数５",
           clauseName: "除水プログラム指数５",
-          // mod FNSI-UFRプログラムの修正 楊 end
           unitName: "",
           min: 0,
           max: 200,
@@ -3270,10 +3225,7 @@ export default {
           key1: "dev",
           key2: "A",
           key3: "306",
-          // mod FNSI-UFRプログラムの修正 楊 start
-          // clauseName: "ＵＦＲプログラム指数６",
           clauseName: "除水プログラム指数６",
-          // mod FNSI-UFRプログラムの修正 楊 end
           unitName: "",
           min: 0,
           max: 200,
@@ -3285,10 +3237,7 @@ export default {
           key1: "dev",
           key2: "A",
           key3: "307",
-          // mod FNSI-UFRプログラムの修正 楊 start
-          // clauseName: "ＵＦＲプログラム指数７",
           clauseName: "除水プログラム指数７",
-          // mod FNSI-UFRプログラムの修正 楊 end
           unitName: "",
           min: 0,
           max: 200,
@@ -3300,10 +3249,7 @@ export default {
           key1: "dev",
           key2: "A",
           key3: "308",
-          // mod FNSI-UFRプログラムの修正 楊 start
-          // clauseName: "ＵＦＲプログラム指数８",
           clauseName: "除水プログラム指数８",
-          // mod FNSI-UFRプログラムの修正 楊 end
           unitName: "",
           min: 0,
           max: 200,
@@ -3315,10 +3261,7 @@ export default {
           key1: "dev",
           key2: "A",
           key3: "309",
-          // mod FNSI-UFRプログラムの修正 楊 start
-          // clauseName: "ＵＦＲプログラム指数９",
           clauseName: "除水プログラム指数９",
-          // mod FNSI-UFRプログラムの修正 楊 end
           unitName: "",
           min: 0,
           max: 200,
@@ -3330,10 +3273,7 @@ export default {
           key1: "dev",
           key2: "A",
           key3: "310",
-          // mod FNSI-UFRプログラムの修正 楊 start
-          // clauseName: "ＵＦＲプログラム指数１０",
           clauseName: "除水プログラム指数１０",
-          // mod FNSI-UFRプログラムの修正 楊 end
           unitName: "",
           min: 0,
           max: 200,
@@ -3345,10 +3285,7 @@ export default {
           key1: "dev",
           key2: "A",
           key3: "313",
-          // mod FNSI-UFRプログラムの修正 楊 start
-          // clauseName: "ＵＦＲプログラム開始数値",
           clauseName: "除水プログラム開始数値",
-          // mod FNSI-UFRプログラムの修正 楊 end
           unitName: "",
           min: 0,
           max: 200,
@@ -3360,10 +3297,7 @@ export default {
           key1: "dev",
           key2: "A",
           key3: "314",
-          // mod FNSI-UFRプログラムの修正 楊 start
-          // clauseName: "ＵＦＲプログラム終了数値",
           clauseName: "除水プログラム終了数値",
-          // mod FNSI-UFRプログラムの修正 楊 end
           unitName: "",
           min: 0,
           max: 200,
@@ -3411,7 +3345,7 @@ export default {
           key1: "dev",
           key2: "A",
           key3: "327",
-          clauseName: "Ｎａ注入プログラム　ＵＦＲプロとの連動選択",
+          clauseName: "Ｎａ注入プログラム　除水プロとの連動選択",
           unitName: "",
           min: "",
           max: "",
@@ -3591,7 +3525,7 @@ export default {
           key1: "dev",
           key2: "A",
           key3: "368",
-          clauseName: "濃度プログラム　ＵＦＲプロとの連動選択",
+          clauseName: "濃度プログラム　除水プロとの連動選択",
           unitName: "",
           min: "",
           max: "",

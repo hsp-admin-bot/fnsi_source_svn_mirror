@@ -85,6 +85,15 @@ public interface MstMedicineMixDao extends MasterDao<Map<String,Object>>, Unifie
   List<MstMedicineMix> selectByMedicineMixCdList2(List<Integer> medicineMixCdList);
 
   /**
+   * selectByMedicineMixCdの一括版（施設指定、is_del='0'のみ）
+   * @param facilityCd 施設コード
+   * @param medicineMixCdList 調製薬剤コードリスト
+   * @return 調製薬剤リスト
+   */
+  @Select
+  List<MstMedicineMix> selectAllByMedicineMixCdList(String facilityCd, List<Integer> medicineMixCdList);
+
+  /**
    * 削除済みを含むすべての調整薬剤リストを取得する
    * @param options 検索オプション
    * @param params 施設コードを指定するパラメータ

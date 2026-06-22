@@ -117,7 +117,7 @@
           </v-ons-row>
           <v-ons-row class="device-info-cell">
             <v-ons-col class="device-info-cell-value device-info-cell-rigth">
-              ＵＦＲプロ連動
+              除水プロ連動
               <!-- #10053 破棄確認・保存活性(複数変更含む)・削除対応_治療方法セットマスタ 20240118 linjunfeng start -->
               <!-- <device-radio
                 ref="radio1"

@@ -143,60 +143,6 @@ public class ReportForOnePatientServiceImpl implements ReportForOnePatientServic
     dataKey.put("medsort", orderListMed.toString().replace("[", "").replace("]", ""));
     // add #11494 データセットにカテゴリ「レセプト」を追加 limingzhe end
     // mod #11679 複数患者帳票で「透析条件.補液量」が出ない limingzhe start
-//    // ・テンプレートあり ＞テンプレート内
-//    mongoYesTmplIn(paramsMongoYesTmplIN, dataKey, params);
-//    reportInfo = sysDataSetService.getSqlDataForOnePatient(sqlCodes, dataKey);
-//    // ・テンプレート無し
-//    reportServiceImpl.mongoNoTmpl(paramsMongoNoTmpl,dataKey,reportInfo);
-//    // ・テンプレートあり ＞テンプレート外
-//    reportServiceImpl.mongoYesTmplOUT(paramsMongoYesTmplOUT,dataKey,reportInfo);
-//    // ・テンプレートあり ＞テンプレート内
-//    reportServiceImpl.mongoYesTmplIN(paramsMongoYesTmplIN,dataKey,reportInfo);
-//    onePatientDateEdit(params, reportInfo, dataKey);
-//    for (int index = 0; index < paramsMongoYesTmplIN.size();index++) {
-//      params = reportServiceImpl.paramsReplaceTmpMongo(params,"11111",paramsMongoYesTmplIN.get(index));
-//    }
-//    for (int index = 0; index < paramsMongoYesTmplOUT.size();index++) {
-//      params = reportServiceImpl.paramsReplaceTmpMongo(params,"22222",paramsMongoYesTmplOUT.get(index));
-//    }
-//
-//    List<Map<String, Object>> rec = reportServiceImpl.getPrintedInfo(params, dataKey, reportInfo);
-//    reportInfo.put(PRINT_INFO_CODE, rec);
-//    params = reportServiceImpl.paramsReplaceTmpValue(params, reportInfo);
-//    reportInfo = reportServiceImpl.getChangeList(reportInfo, params);
-//
-//    List<Map<String, Object>> reportIndicateResult = reportInfo.get(Long.valueOf("4"));
-//    List<Map<String, Object>> reportRealityResult = reportInfo.get(Long.valueOf("74"));
-//    List<Map<String, Object>> reportIndicate = reportInfo.get(Long.valueOf("8"));
-//    List<Map<String, Object>> reportReality = reportInfo.get(Long.valueOf("97"));
-//    if (reportIndicateResult != null && reportIndicateResult.size() > 0){
-//      List<Map<String, Object>> midList = reportInfo.get(Long.valueOf("4"));
-//      // 施設設定マスタNo.107 投与薬剤表示順 設定値
-//      List<String> displayOrderList = reportServiceImpl.getFacilitySettingOrderListToMedicine2(mstReport.getFacilityCd(), "3007");
-//      midList = reportServiceImpl.sortReportInfo(midList, displayOrderList, 9999999);
-//      reportInfo.put(Long.valueOf("4"), midList);
-//    }
-//    if (reportIndicate != null && reportIndicate.size() > 0){
-//      List<Map<String, Object>> midList = reportInfo.get(Long.valueOf("8"));
-//      List<String> displayOrderList = reportServiceImpl.getFacilitySettingOrderListToMedicine2(mstReport.getFacilityCd(), "3007");
-//      midList = reportServiceImpl.sortReportInfo(midList, displayOrderList, 9999999);
-//      reportInfo.put(Long.valueOf("8"), midList);
-//    }
-//    if (reportRealityResult != null && reportRealityResult.size() > 0) {
-//      List<Map<String, Object>> midList = reportInfo.get(Long.valueOf("74"));
-//      // 施設設定マスタNo.106 医材表示順 設定値
-//      List<String> displayOrderList = reportServiceImpl.getFacilitySettingOrderListToEquipment2(mstReport.getFacilityCd(), "3006");
-//      midList = reportServiceImpl.sortReportInfo(midList, displayOrderList, 9999999);
-//      reportInfo.put(Long.valueOf("74"), midList);
-//    }
-//    if (reportReality != null && reportReality.size() > 0) {
-//      List<Map<String, Object>> midList = reportInfo.get(Long.valueOf("97"));
-//      // 施設設定マスタNo.106 医材表示順 設定値
-//      List<String> displayOrderList = reportServiceImpl.getFacilitySettingOrderListToEquipment2(mstReport.getFacilityCd(), "3006");
-//      midList = reportServiceImpl.sortReportInfo(midList, displayOrderList, 9999999);
-//      reportInfo.put(Long.valueOf("97"), midList);
-//    }
-//    String sortKey = (String)searchInfo.get("tmpSortKeyStr");
     // mod #12655 機能帳票出力時に「条件保存」の内容が反映しない limingzhe start
     //String sortDirection = (String)searchInfo.get("tmpSortDirectionStr");
     String sortDirection = "";
@@ -475,57 +421,6 @@ public class ReportForOnePatientServiceImpl implements ReportForOnePatientServic
     List<Map<String, Object>> rec = reportServiceImpl.getPrintedInfo(params, dataKey, reportInfoIndex);
     reportInfoIndex.put(PRINT_INFO_CODE, rec);
 
-    List<Map<String, Object>> reportIndicateResult = reportInfoIndex.get(Long.valueOf("4"));
-    if (reportIndicateResult != null && reportIndicateResult.size() > 0){
-      List<Map<String, Object>> midList = reportInfoIndex.get(Long.valueOf("4"));
-      // 施設設定マスタNo.107 投与薬剤表示順 設定値
-      List<String> displayOrderList = reportServiceImpl.getFacilitySettingOrderListToMedicine2(facilityCd, "3007");
-      midList = reportServiceImpl.sortReportInfo(midList, displayOrderList, 9999999);
-      reportInfoIndex.put(Long.valueOf("4"), midList);
-    }
-    List<Map<String, Object>> reportIndicate = reportInfoIndex.get(Long.valueOf("8"));
-    if (reportIndicate != null && reportIndicate.size() > 0){
-      List<Map<String, Object>> midList = reportInfoIndex.get(Long.valueOf("8"));
-      List<String> displayOrderList = reportServiceImpl.getFacilitySettingOrderListToMedicine2(facilityCd, "3007");
-      midList = reportServiceImpl.sortReportInfo(midList, displayOrderList, 9999999);
-      reportInfoIndex.put(Long.valueOf("8"), midList);
-    }
-
-    List<Map<String, Object>> reportRealityResult = reportInfoIndex.get(Long.valueOf("74"));
-    if (reportRealityResult != null && reportRealityResult.size() > 0) {
-      List<Map<String, Object>> midList = reportInfoIndex.get(Long.valueOf("74"));
-      // 施設設定マスタNo.106 医材表示順 設定値
-      List<String> displayOrderList = reportServiceImpl.getFacilitySettingOrderListToEquipment2(facilityCd, "3006");
-      midList = reportServiceImpl.sortReportInfo(midList, displayOrderList, 9999999);
-      reportInfoIndex.put(Long.valueOf("74"), midList);
-    }
-    List<Map<String, Object>> reportReality = reportInfoIndex.get(Long.valueOf("97"));
-    if (reportReality != null && reportReality.size() > 0) {
-      List<Map<String, Object>> midList = reportInfoIndex.get(Long.valueOf("97"));
-      // 施設設定マスタNo.106 医材表示順 設定値
-      List<String> displayOrderList = reportServiceImpl.getFacilitySettingOrderListToEquipment2(facilityCd, "3006");
-      midList = reportServiceImpl.sortReportInfo(midList, displayOrderList, 9999999);
-      reportInfoIndex.put(Long.valueOf("97"), midList);
-    }
-    // add #10042 カテゴリ「指示」の出力不正 03 sunsy start
-    List<Map<String, Object>> reportFutureActive = reportInfoIndex.get(Long.valueOf("141"));
-    if (reportFutureActive != null && reportFutureActive.size() > 0){
-      List<Map<String, Object>> midList = reportInfoIndex.get(Long.valueOf("141"));
-      // 施設設定マスタNo.107 投与薬剤表示順 設定値
-      List<String> displayOrderList = reportServiceImpl.getFacilitySettingOrderListToMedicine2(facilityCd, "3007");
-      midList = reportServiceImpl.sortReportInfo(midList, displayOrderList, 9999999);
-      reportInfoIndex.put(Long.valueOf("141"), midList);
-    }
-    List<Map<String, Object>> reportRealityMedDeg = reportInfoIndex.get(Long.valueOf("190"));
-    if (reportRealityMedDeg != null && reportRealityMedDeg.size() > 0){
-      List<Map<String, Object>> midList = reportInfoIndex.get(Long.valueOf("190"));
-      // 施設設定マスタNo.107 投与薬剤表示順 設定値
-      List<String> displayOrderList = reportServiceImpl.getFacilitySettingOrderListToMedicine2(facilityCd, "3007");
-      midList = reportServiceImpl.sortReportInfo(midList, displayOrderList, 9999999);
-      reportInfoIndex.put(Long.valueOf("190"), midList);
-    }
-    // add #10042 カテゴリ「指示」の出力不正 03 sunsy end
-
     // add #10531 検査日と検査区分がフィルタを超えて繰り返される limingzhe start
     reportServiceImpl.filterReportInfobyParam(paramsGroup.get("Other"), reportInfoIndex);
     // add #10531 検査日と検査区分がフィルタを超えて繰り返される limingzhe end
@@ -703,55 +598,6 @@ public class ReportForOnePatientServiceImpl implements ReportForOnePatientServic
     // 印字用情報の生成
     List<Map<String, Object>> rec = reportServiceImpl.getPrintedInfo(params, dataKey, reportInfoIndex);
     reportInfoIndex.put(PRINT_INFO_CODE, rec);
-    // add #10042 カテゴリ「指示」の出力不正 03 sunsy start
-    List<Map<String, Object>> reportIndicateResult = reportInfoIndex.get(Long.valueOf("4"));
-    if (reportIndicateResult != null && reportIndicateResult.size() > 0){
-      List<Map<String, Object>> midList = reportInfoIndex.get(Long.valueOf("4"));
-      // 施設設定マスタNo.107 投与薬剤表示順 設定値
-      List<String> displayOrderList = reportServiceImpl.getFacilitySettingOrderListToMedicine2(facilityCd, "3007");
-      midList = reportServiceImpl.sortReportInfo(midList, displayOrderList, 9999999);
-      reportInfoIndex.put(Long.valueOf("4"), midList);
-    }
-    List<Map<String, Object>> reportIndicate = reportInfoIndex.get(Long.valueOf("8"));
-    if (reportIndicate != null && reportIndicate.size() > 0){
-      List<Map<String, Object>> midList = reportInfoIndex.get(Long.valueOf("8"));
-      List<String> displayOrderList = reportServiceImpl.getFacilitySettingOrderListToMedicine2(facilityCd, "3007");
-      midList = reportServiceImpl.sortReportInfo(midList, displayOrderList, 9999999);
-      reportInfoIndex.put(Long.valueOf("8"), midList);
-    }
-    List<Map<String, Object>> reportRealityResult = reportInfoIndex.get(Long.valueOf("74"));
-    if (reportRealityResult != null && reportRealityResult.size() > 0) {
-      List<Map<String, Object>> midList = reportInfoIndex.get(Long.valueOf("74"));
-      // 施設設定マスタNo.106 医材表示順 設定値
-      List<String> displayOrderList = reportServiceImpl.getFacilitySettingOrderListToEquipment2(facilityCd, "3006");
-      midList = reportServiceImpl.sortReportInfo(midList, displayOrderList, 9999999);
-      reportInfoIndex.put(Long.valueOf("74"), midList);
-    }
-    List<Map<String, Object>> reportReality = reportInfoIndex.get(Long.valueOf("97"));
-    if (reportReality != null && reportReality.size() > 0) {
-      List<Map<String, Object>> midList = reportInfoIndex.get(Long.valueOf("97"));
-      // 施設設定マスタNo.106 医材表示順 設定値
-      List<String> displayOrderList = reportServiceImpl.getFacilitySettingOrderListToEquipment2(facilityCd, "3006");
-      midList = reportServiceImpl.sortReportInfo(midList, displayOrderList, 9999999);
-      reportInfoIndex.put(Long.valueOf("97"), midList);
-    }
-    List<Map<String, Object>> reportFutureActive = reportInfoIndex.get(Long.valueOf("141"));
-    if (reportFutureActive != null && reportFutureActive.size() > 0){
-      List<Map<String, Object>> midList = reportInfoIndex.get(Long.valueOf("141"));
-      // 施設設定マスタNo.107 投与薬剤表示順 設定値
-      List<String> displayOrderList = reportServiceImpl.getFacilitySettingOrderListToMedicine2(facilityCd, "3007");
-      midList = reportServiceImpl.sortReportInfo(midList, displayOrderList, 9999999);
-      reportInfoIndex.put(Long.valueOf("141"), midList);
-    }
-    List<Map<String, Object>> reportRealityMedDeg = reportInfoIndex.get(Long.valueOf("190"));
-    if (reportRealityMedDeg != null && reportRealityMedDeg.size() > 0){
-      List<Map<String, Object>> midList = reportInfoIndex.get(Long.valueOf("190"));
-      // 施設設定マスタNo.107 投与薬剤表示順 設定値
-      List<String> displayOrderList = reportServiceImpl.getFacilitySettingOrderListToMedicine2(facilityCd, "3007");
-      midList = reportServiceImpl.sortReportInfo(midList, displayOrderList, 9999999);
-      reportInfoIndex.put(Long.valueOf("190"), midList);
-    }
-    // add #10042 カテゴリ「指示」の出力不正 03 sunsy end
     // テンプレート値の置換
     params = reportServiceImpl.paramsReplaceTmpValue(params, reportInfoIndex);
     // 帳票出力用にリスト構造を変換

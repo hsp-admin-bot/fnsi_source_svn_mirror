@@ -61,6 +61,12 @@ namespace ConvertCommon
 
             rootNodeTableInfo tableConfig = ConfigInfoDtoUtil.getTableInfoByXmlConfigName(xmlConfigName);
 
+            //add #11902 セコム連携 COP_COOP_SEND_HST.MEMOのコンバート start
+            if (string.Equals(CacheInformation.Instance.CooperationType, "Secom") && "pat_coop_detail".Equals(this.convertTableName))
+            {
+                tableConfig.sqlForTool = ExclusiveSqlDispatcher.BuildSecomSql();
+            }
+            //add #11902 セコム連携 COP_COOP_SEND_HST.MEMOのコンバート start
 
             // add FNSI-差分コンバート対応 楊 start
             MakeSqlDto condDto;

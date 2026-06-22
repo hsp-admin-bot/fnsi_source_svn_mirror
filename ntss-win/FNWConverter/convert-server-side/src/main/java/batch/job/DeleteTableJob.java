@@ -11,7 +11,6 @@ import com.zaxxer.hikari.HikariDataSource;
 import org.apache.tomcat.util.http.fileupload.FileUtils;
 import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.step.Step;
-import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
@@ -45,7 +44,6 @@ import java.util.stream.Collectors;
  * 開発時のテスト用、コンバートDB、本番DBの処理対象テーブルデータを削除するジョブ
  */
 @Configuration
-@EnableBatchProcessing
 public class DeleteTableJob {
 
     private final String JOB_NAME = "DeleteTableJob";

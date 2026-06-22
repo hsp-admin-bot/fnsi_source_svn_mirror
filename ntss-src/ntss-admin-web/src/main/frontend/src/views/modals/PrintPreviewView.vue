@@ -8,7 +8,13 @@
     <!--mod 8466 帳票機能が使用できない  吉 start-->
     <!--<div slot="body" class="print-preview" :class="themeBlack" v-show="previewHtml !== null" v-html="previewHtml"></div>-->
     <template #body>
-      <div class="print-preview" :class="themeBlack" v-show="previewHtml !== ''" v-html="previewHtml"></div>
+      <div
+        class="print-preview"
+        :style="isMobileBrowser() ? 'width: 100%; box-sizing: border-box;' : 'width: fit-content'"
+        :class="themeBlack"
+        v-show="previewHtml !== ''"
+        v-html="previewHtml"
+      ></div>
     </template>
     <!--mod 8466 帳票機能が使用できない  吉 end-->
     <!--mod 6928 暗背景時のプレビューの背景が正しくない 吉 end-->

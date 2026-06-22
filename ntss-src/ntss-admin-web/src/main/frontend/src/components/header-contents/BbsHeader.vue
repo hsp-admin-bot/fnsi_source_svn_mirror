@@ -840,13 +840,13 @@
 
       // 検索条件カテゴリ初期値設定
       if (this.getDefaultCondition === null) {
-        this.$nextTick(() => {
-          this.setUserDefaultSettings();
-        });
+        await this.setUserDefaultSettings();
       } else {
         this.searchCondition = this.selectedCondition;
         this.setConditionList();
       }
+
+      await this.search();
 
       // 掲示板詳細内容の編集有無を取得
       EventBus.$off("isNotEdited", this.onIsNotEdited);

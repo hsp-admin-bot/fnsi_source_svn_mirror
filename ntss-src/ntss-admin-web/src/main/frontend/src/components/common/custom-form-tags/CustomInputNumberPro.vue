@@ -259,7 +259,7 @@ export default {
     // 入力値を監視する
     inputValue: {
       handler(val) {
-        this.isEdited = this.isSameAsInitValue(val) ? false : true;
+        this.isEdited = this.isSameValueAs(val, this.initValue) ? false : true;
         // 必須入力ボックスが空、または入力値が不正配列に含まれる場合は不正表示にする。
         this.isValid =
           (this.required && val === "") ||

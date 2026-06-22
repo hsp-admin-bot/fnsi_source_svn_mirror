@@ -52,6 +52,15 @@ import jp.co.nikkiso.ntss.core.entity.IndicationResult;
   List<ForecastInforResult> selectCheckNum(String examSetCdValue);
 
   /**
+   * チェック項目数一括取得
+   *
+   * @param examSetCdList 検査セットIDリスト
+   * @return チェック項目のJSON情報
+   */
+  @Select
+  List<ForecastInforResult> selectCheckNumByExamSetCdList(String facilityCd, List<String> examSetCdList);
+
+  /**
    * 予実リスト取得(検査結果).
    *
    * @param patId 患者ID

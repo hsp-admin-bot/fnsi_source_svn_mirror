@@ -1,4 +1,4 @@
-﻿// ***********************************************************************
+// ***********************************************************************
 // Assembly         : CoopSettingTool.App
 // Author           : Phan Hai Thach
 // Created          : 05-25-2021
@@ -77,7 +77,7 @@ namespace CoopSettingTool.App.Controllers
                 var res = mstIfEdgeService.GetMstIfEdge(this.Model.Facility.FacilityCd).Result;
                 if (res != null && res.StatusCode == HttpStatusCode.OK)
                 {
-                    lsIfEge = res.Data;
+                    lsIfEge = res.Data ?? new List<MstIfEdgeEntity>();
                 }
                 else
                 {
@@ -85,11 +85,6 @@ namespace CoopSettingTool.App.Controllers
                     {
                         return false;
                     }
-                }
-
-                if (lsIfEge.Count == 0)
-                {
-                    lsIfEge.Add(new MstIfEdgeEntity(this.Model.Facility.FacilityCd));
                 }
 
                 this.Model.IfEdgeList = lsIfEge;

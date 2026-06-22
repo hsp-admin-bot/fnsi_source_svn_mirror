@@ -72,23 +72,27 @@ export const COOP_LIST = [
   },
   {
     value: "shot_ord",
-    text: "透析注射連携"
+    text: "透析注射"
   },
   {
     value: "pre_ord",
-    text: "処方情報連携 "
+    text: "処方情報 "
   },
   {
     value: "staff_mst",
-    text: "スタッフマスタ連携"
+    text: "スタッフマスタ"
   },
   {
     value: "vit_cop",
-    text: "バイタル連携"
+    text: "バイタル"
   },
   {
     value: "karte_ord",
-    text: "カルテ記載連携"
+    text: "カルテ記載"
+  },
+  {
+    value: "iji_dial",
+    text: "医事会計"
   }
 ]
 export const GRID_COLUMNS = [
@@ -219,23 +223,27 @@ export const GRID_COLUMNS = [
       },
       {
         value: "shot_ord",
-        text: "透析注射連携"
+        text: "透析注射"
       },
       {
         value: "pre_ord",
-        text: "処方情報連携 "
+        text: "処方情報"
       },
       {
         value: "staff_mst",
-        text: "スタッフマスタ連携"
+        text: "スタッフマスタ"
       },
       {
         value: "vit_cop",
-        text: "バイタル連携"
+        text: "バイタル"
       },
       {
         value: "karte_ord",
-        text: "カルテ記載連携"
+        text: "カルテ記載"
+      },
+      {
+        value: "iji_dial",
+        text: "医事会計"
       }
     ]
   },
@@ -469,11 +477,12 @@ export const COOP_CDS_LIST = [
  { value: "exam_ord", text: "検査オーダ" },
  { value: "rad_ord", text: "放射線検査オーダ" },
  { value: "phy_ord", text: "心電図検査オーダ" },
- { value: "shot_ord", text: "透析注射連携" },
- { value: "pre_ord", text: "処方情報連携" },
- { value: "staff_mst", text: "スタッフマスタ連携" },
- { value: "vit_cop", text: "バイタル連携" },
- { value: "karte_ord", text: "カルテ記載連携" }
+ { value: "shot_ord", text: "透析注射" },
+ { value: "pre_ord", text: "処方情報" },
+ { value: "staff_mst", text: "スタッフマスタ" },
+ { value: "vit_cop", text: "バイタル" },
+ { value: "karte_ord", text: "カルテ記載" },
+ { value: "iji_dial", text: "医事会計" }
 ];
 /* add FNSI COOP_CDS_LISTを追加 end */
 

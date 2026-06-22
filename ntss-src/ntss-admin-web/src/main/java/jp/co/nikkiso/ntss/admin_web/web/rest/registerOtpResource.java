@@ -114,7 +114,7 @@ public class registerOtpResource {
                                              // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 ) {
       // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
-      if(!ntssUser.isNkkAdminUser()) {
+      if(ntssUser != null && !ntssUser.isNkkAdminUser()) {
         MstUser mstUser = mstUserService.getByUserId(Long.parseLong(userId));
         if (mstUser != null && mstUser.getFacilityCd() != null && !mstUser.getFacilityCd().equals(ntssUser.getFacilityCd())) {
           String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
@@ -155,7 +155,7 @@ public class registerOtpResource {
                                                // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 ) {
       // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
-      if(!ntssUser.isNkkAdminUser()) {
+      if(ntssUser != null && !ntssUser.isNkkAdminUser()) {
         MstUser mstUser = mstUserService.getByUserId(Long.parseLong(userId));
         if (mstUser != null && mstUser.getFacilityCd() != null && !mstUser.getFacilityCd().equals(ntssUser.getFacilityCd())) {
           String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
@@ -187,22 +187,8 @@ public class registerOtpResource {
     *
     */
     @PutMapping("/get_user_id/{dispUserId}/{facilityCd}")
-    public ResponseEntity<?> getUserId(@PathVariable String dispUserId, @PathVariable String facilityCd,
-                                       // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
-                                       @AuthenticationPrincipal NtssUser ntssUser
-                                       // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
+    public ResponseEntity<?> getUserId(@PathVariable String dispUserId, @PathVariable String facilityCd
 ) {
-      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
-      if(!ntssUser.isNkkAdminUser()) {
-        if (facilityCd != null && !facilityCd.equals(ntssUser.getFacilityCd())) {
-          String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " +
-                  "facilityCd=" + facilityCd + " ";
-          InvestigateLogUtils.info("11205",msg_11205_FORBIDDEN,"11205-FORBIDDEN");
-          return new ResponseEntity<>("セキュリティチェックの例外!", HttpStatus.FORBIDDEN);
-        }
-      }
-      // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
-
       try {
         String response = mstUserAuthenticationDao.selectUserId(dispUserId, facilityCd);
         return new ResponseEntity<>(response, HttpStatus.OK);

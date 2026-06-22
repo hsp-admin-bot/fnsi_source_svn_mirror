@@ -153,7 +153,7 @@ public class IndicationResultResource {
       examSetCd);
     // wp アプリケーションログの適正化 Add End
 
-    Map<String, String> examSetCdMap = indicationResultService.getCheckNum(examSetCd);
+    Map<String, String> examSetCdMap = indicationResultService.getCheckNum(ntssUser.getFacilityCd(), examSetCd);
 
     // wp アプリケーションログの適正化 Add Start
     logEventUtils.resourceLogOutput(getClassName(), getMethodName(), FUNCTION_CODE.FUNC_INDICATION, AFTER_LOG_FLG_INFO, mappingUrl, null,

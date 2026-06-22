@@ -15,7 +15,7 @@
           v-if="showButton"
           class="common-style-header device-info-main-title"
         >
-          Ｉ‐ＨＤＦ
+          I-HDF
         </v-ons-row>
         <!-- コンポーネント切替 -->
         <!-- タイトル -->
@@ -25,7 +25,7 @@
         <!-- 項目 -->
         <v-ons-row class="device-info-cell device-info-left">
           <v-ons-col class="device-info-cell-name" width="18em">
-            Ｉ‐ＨＤＦプログラム使用選択
+            I-HDFプログラム使用選択
           </v-ons-col>
           <v-ons-col class="device-info-cell-value">
             <!-- mod #10359 編集権限の動作不正 dengshen start -->
@@ -45,7 +45,7 @@
           </v-ons-col>
         </v-ons-row>
         <div>
-          <!-- Ｉ‐ＨＤＦ -->
+          <!-- I-HDF -->
           <!-- mod #10359 編集権限の動作不正 dengshen start -->
           <!-- <i-hdf -->
           <!--   v-if="isIhdfMain" -->
@@ -96,7 +96,7 @@
           />
           <!-- #11120 I-HDF設定内の破棄確認メッセージ不正 linjunfeng end -->
           <!-- mod #10359 編集権限の動作不正 dengshen end -->
-          <!-- Ｉ‐ＨＤＦプログラム -->
+          <!-- I-HDFプログラム -->
           <!-- mod #10359 編集権限の動作不正 dengshen start -->
           <!-- <i-hdf-program -->
           <!--   v-else -->
@@ -349,7 +349,7 @@ export default {
     checkEdit(num) {
       if (num === 1) {
         // キャンセルボタンクリック時チェック
-        this.$refs.ihdfEditor === undefined
+        !this.isIhdfMain
           ? this.$refs.ihdfProgramEditor.cancelConfirm()
           : this.$refs.ihdfEditor.cancelConfirm();
         // cancelConfirm関数(子)でモーダルの表示非表示を行うため、ベース(親)では何も処理しない
@@ -367,11 +367,11 @@ export default {
       // 治療情報更新
       if (this.getSettingIndChildData.isAllSave) {
         // 一括更新
-        this.$refs.ihdfEditor === undefined
+        !this.isIhdfMain
           ? this.$refs.ihdfProgramEditor.save(structData)
           : this.$refs.ihdfEditor.save(structData);
       } else {
-        this.$refs.ihdfEditor === undefined
+        !this.isIhdfMain
           ? this.$refs.ihdfProgramEditor.ordMainAllSave(structData)
           : this.$refs.ihdfEditor.ordMainAllSave(structData);
       }

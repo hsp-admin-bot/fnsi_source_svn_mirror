@@ -3,7 +3,7 @@
     <!-- 項目 isEditedプロパティ参照用に削除せず非表示とする-->
     <v-ons-row class="device-info-cell device-info-left" v-show="false">
       <v-ons-col class="device-info-cell-name">
-        Ｉ‐ＨＤＦプログラム使用選択
+        I-HDFプログラム使用選択
       </v-ons-col>
       <v-ons-col class="device-info-cell-value">
         <!-- mod #10359 編集権限の動作不正 dengshen start -->

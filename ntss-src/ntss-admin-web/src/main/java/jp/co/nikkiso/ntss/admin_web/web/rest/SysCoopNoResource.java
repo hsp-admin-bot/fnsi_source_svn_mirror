@@ -86,6 +86,29 @@ public class SysCoopNoResource {
   }
 
   /**
+   * 連携バージョンに一致する連携オーダ採番テンプレートを取得
+   * @param coopVersion
+   * @return
+   */
+  @GetMapping("/source/{coopVersion}")
+  public ResponseEntity<?> selectSourceSysCoopNoByCoopVersion(@PathVariable String coopVersion) {
+
+    String mappingUrl = Uri.SYS_COOP_NO + "/source";
+    logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", BEFORE_LOG_FLG_INFO, mappingUrl, null,
+      null);
+    try {
+      List<SysCoopNo> sysCoopNos = creationService.selectSourceSysCoopNoByCoopVersion(coopVersion);
+
+      logEventUtils.resourceLogOutput(getClassName(), getMethodName(), "", AFTER_LOG_FLG_INFO, mappingUrl, null,
+        null);
+      return new ResponseEntity<>(sysCoopNos, HttpStatus.OK);
+    } catch (Exception e) {
+      logEventUtils.resourceLogOutput(getClassName(), getMethodName(),"", AFTER_LOG_FLG_ERROR, mappingUrl, null, ExcetionStackTraceToString(e));
+      return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  /**
    * 項目を登録する。
    * @param sysCoopNo
    * @param ntssUser

@@ -4,6 +4,7 @@ using Fnw.IOControl.DB;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using static ConvertCommon.ConvertBase;
 
 namespace ConvertCommon.Common
@@ -191,6 +192,109 @@ namespace ConvertCommon.Common
         }
 
 
+
+        //add #11902 セコム連携 COP_COOP_SEND_HST.MEMOのコンバート start
+
+        public static string BuildJsonNoArraySave2(NtssRecord ntssRecord)
+        {
+
+            string memo = ntssRecord.columns.FirstOrDefault(c => c.name == "memo").value.ToString();
+            string coopId = ntssRecord.columns.FirstOrDefault(c => c.name == "coop_id").value.ToString();
+            string ord_no = ntssRecord.columns.FirstOrDefault(c => c.name == "ord_no").value.ToString();
+            string patId = ntssRecord.columns.FirstOrDefault(c => c.name == "pat_id").value.ToString();
+            CoopDto dto = CoopMemoUtil.Parse(coopId, memo,CommonConfig.FacilityCd,ord_no, patId);
+            string sqlJson = BuildJsonSql(dto, coopId);
+            return sqlJson;
+        }
+
+        public static string BuildJsonSql(CoopDto dto,string coopId)
+        {
+            var sb = new StringBuilder();
+
+            sb.Append("json_build_object(");
+
+            Append(sb, "coop_cd", dto.coop_cd);
+            AppendRaw(sb, "ord_no", dto.ord_no);
+            Append(sb, "memo", dto.memo);
+
+            if ("SCM02".Equals(coopId) || "SCM04".Equals(coopId)) {
+                Append(sb, "sequence_no", dto.sequence_no);
+
+            }
+                
+            if ("SCM02".Equals(coopId)) {
+
+                AppendRaw(sb, "treatment_user_id", dto.treatment_user_id);
+                Append(sb, "treatment_send_day", dto.treatment_send_day);
+                Append(sb, "treatment_seq_no", dto.treatment_seq_no);
+
+                AppendRaw(sb, "injection_user_id", dto.injection_user_id);
+                Append(sb, "injection_send_day", dto.injection_send_day);
+                Append(sb, "injection_seq_no", dto.injection_seq_no);
+
+                Append(sb, "medical_send_day", dto.medical_send_day);
+                Append(sb, "medical_seq_no", dto.medical_seq_no);
+
+                sb.Append("'item_list', ");
+                sb.Append(dto.item_list == null ? "null" : BuildItemList(dto.item_list));
+                sb.Append(",");
+
+                
+            }
+            if (sb[sb.Length - 1] == ',')
+                sb.Length--;
+
+            sb.Append(")");
+
+            return sb.ToString();
+        }
+        private static void Append(StringBuilder sb, string key, string value)
+        {
+            if (value == null || value == "")
+            {
+                sb.AppendFormat("'{0}', '',", key);
+            }
+            else
+            {
+                sb.AppendFormat("'{0}', '{1}',", key,  MakeColumnSpecialFormat(null, null, value, SpecialColumnType.SQL_STRING, true));
+            }
+        }
+
+        private static void AppendRaw(StringBuilder sb, string key, string rawSql)
+        {
+            if (string.IsNullOrEmpty(rawSql))
+            {
+                sb.AppendFormat("'{0}', '',", key);
+            }
+            else
+            {
+                sb.AppendFormat("'{0}', {1},", key, rawSql);
+            }
+        }
+        private static string BuildItemList(List<ItemDto> list)
+        {
+            if (list == null || list.Count == 0)
+                return "json_build_array()";
+
+            var sb = new StringBuilder();
+            sb.Append("json_build_array(");
+
+            foreach (var item in list)
+            {
+                sb.Append("json_build_object(");
+                sb.AppendFormat("'medicine_no','{0}',", item.medicine_no);
+                sb.AppendFormat("'rp_no','{0}'", item.rp_no);
+                sb.Append("),");
+            }
+
+            if (sb[sb.Length - 1] == ',')
+                sb.Length--;
+
+            sb.Append(")");
+
+            return sb.ToString();
+        }
+        //add #11902 セコム連携 COP_COOP_SEND_HST.MEMOのコンバート end
 
         public static string BuildJsonNoArray(string ntssColumnName,
                                            List<List<JsonElement>> jsonElementListList,

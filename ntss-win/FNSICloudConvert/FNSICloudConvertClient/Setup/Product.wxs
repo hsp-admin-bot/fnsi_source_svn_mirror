@@ -56,6 +56,16 @@
           <Permission User="Users" GenericAll="yes" />
         </CreateFolder>
       </Component>
+
+      <!-- アプリ設定ファイル（アンインストール時にユーザー設定を保持） -->
+      <Component Id="C_CloudConvertClientConfig"
+                 Guid="{C1A2B3C4-D5E6-4F78-9012-3456789ABCDE}"
+                 NeverOverwrite="yes"
+                 Permanent="yes">
+        <File Id="F_CloudConvertClientConfig"
+              Source="$(var.AppBinDir)\FNSICloudConvertClient.config"
+              KeyPath="yes" />
+      </Component>
     </DirectoryRef>
 
     <DirectoryRef Id="INSTALLFOLDER">
@@ -68,8 +78,11 @@
     <Feature Id="ProductFeature" Title="FNSICloudConvertClient" Level="1">
       <ComponentGroupRef Id="HarvestedComponents" />
       <ComponentRef Id="InstallFolderPermissions" />
+      <ComponentRef Id="C_CloudConvertClientConfig" />
       <ComponentRef Id="DesktopShortcutComp" />
     </Feature>
+
+    <CustomAction Id="ReadConfig" Script="vbscript" Execute="immediate" Return="ignore" ScriptSourceFile="ReadConfig.vbs" />
 
     <CustomAction Id="WriteConfig_SetParam" Property="WriteConfig" Value="[INSTALLFOLDER]~|~[PROP_BASE_URI]~|~[PROP_USE_CERT]~|~[PROP_CONVERTER_URI]" />
 

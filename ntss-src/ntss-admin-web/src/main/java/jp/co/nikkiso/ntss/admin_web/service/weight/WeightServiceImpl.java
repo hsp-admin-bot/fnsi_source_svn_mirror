@@ -9,9 +9,14 @@ import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.OrdMainConst;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.OrdMainConst.DialysisState;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.Treatment;
 import jp.co.nikkiso.ntss.admin_web.request.weight.SendConditionRequest;
-import jp.co.nikkiso.ntss.admin_web.response.weight.*;
+import jp.co.nikkiso.ntss.admin_web.response.weight.SendConditionCheckResponse;
+import jp.co.nikkiso.ntss.admin_web.response.weight.SendConditionResponse;
+import jp.co.nikkiso.ntss.admin_web.response.weight.WeightKurBedResponse;
+import jp.co.nikkiso.ntss.admin_web.response.weight.WeightOrderResponse;
 import jp.co.nikkiso.ntss.admin_web.response.weight.WeightOrderResponse.MachineState;
 import jp.co.nikkiso.ntss.admin_web.response.weight.WeightOrderResponse.WheelChairScaleMode;
+import jp.co.nikkiso.ntss.admin_web.response.weight.WeightScheduleResponse;
+import jp.co.nikkiso.ntss.admin_web.response.weight.WeighthistoryResponse;
 import jp.co.nikkiso.ntss.admin_web.security.NtssUser;
 import jp.co.nikkiso.ntss.admin_web.service.SelectHistoryUtils;
 import jp.co.nikkiso.ntss.admin_web.service.WebAPICheckConditionSendService;
@@ -29,9 +34,57 @@ import jp.co.nikkiso.ntss.core.constant.CoreConstant.FacilitySettingNo;
 import jp.co.nikkiso.ntss.core.constant.CoreConstant.rstDialysisState;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant;
 import jp.co.nikkiso.ntss.core.constant.LoggingConstant.SERVICE_NAME;
-import jp.co.nikkiso.ntss.core.dao.*;
-import jp.co.nikkiso.ntss.core.entity.*;
-import jp.co.nikkiso.ntss.core.entity.custom.*;
+import jp.co.nikkiso.ntss.core.dao.MntMachineStateDao;
+import jp.co.nikkiso.ntss.core.dao.MstBedDao;
+import jp.co.nikkiso.ntss.core.dao.MstDialyzerDao;
+import jp.co.nikkiso.ntss.core.dao.MstFacilityDao;
+import jp.co.nikkiso.ntss.core.dao.MstFacilitySettingDao;
+import jp.co.nikkiso.ntss.core.dao.MstKurDao;
+import jp.co.nikkiso.ntss.core.dao.MstMachineDao;
+import jp.co.nikkiso.ntss.core.dao.MstRoomBedGroupDao;
+import jp.co.nikkiso.ntss.core.dao.MstSelectorDao;
+import jp.co.nikkiso.ntss.core.dao.MstVaDao;
+import jp.co.nikkiso.ntss.core.dao.MstWeightScaleDao;
+import jp.co.nikkiso.ntss.core.dao.MstWheelChairDao;
+import jp.co.nikkiso.ntss.core.dao.OrdMainDao;
+import jp.co.nikkiso.ntss.core.dao.OrdMaterialSaveDao;
+import jp.co.nikkiso.ntss.core.dao.OrdWeightScaleDao;
+import jp.co.nikkiso.ntss.core.dao.PatExamMainDao;
+import jp.co.nikkiso.ntss.core.dao.PatMainDao;
+import jp.co.nikkiso.ntss.core.dao.PatPersonalMainDao;
+import jp.co.nikkiso.ntss.core.dao.PatUniqueDao;
+import jp.co.nikkiso.ntss.core.entity.MntMachineState;
+import jp.co.nikkiso.ntss.core.entity.MstBed;
+import jp.co.nikkiso.ntss.core.entity.MstDialyzer;
+import jp.co.nikkiso.ntss.core.entity.MstKur;
+import jp.co.nikkiso.ntss.core.entity.MstMachine;
+import jp.co.nikkiso.ntss.core.entity.MstRoomBedGroup;
+import jp.co.nikkiso.ntss.core.entity.MstSelector;
+import jp.co.nikkiso.ntss.core.entity.MstVa;
+import jp.co.nikkiso.ntss.core.entity.MstWeightScale;
+import jp.co.nikkiso.ntss.core.entity.MstWheelChair;
+import jp.co.nikkiso.ntss.core.entity.OrdMain;
+import jp.co.nikkiso.ntss.core.entity.OrdWeightScale;
+import jp.co.nikkiso.ntss.core.entity.PatMain;
+import jp.co.nikkiso.ntss.core.entity.PatPersonalMain;
+import jp.co.nikkiso.ntss.core.entity.PatUnique;
+import jp.co.nikkiso.ntss.core.entity.custom.ComsvMntMachineState;
+import jp.co.nikkiso.ntss.core.entity.custom.FacilitySettingInfo;
+import jp.co.nikkiso.ntss.core.entity.custom.MachineTreatingState;
+import jp.co.nikkiso.ntss.core.entity.custom.MstEquipmentMstMedicine;
+import jp.co.nikkiso.ntss.core.entity.custom.OrdMainForWeightInd;
+import jp.co.nikkiso.ntss.core.entity.custom.OrdMainForWeightModal;
+import jp.co.nikkiso.ntss.core.entity.custom.OrdMainForWeightNextSchedule;
+import jp.co.nikkiso.ntss.core.entity.custom.OrdMainForWeightSchedule;
+import jp.co.nikkiso.ntss.core.entity.custom.OrdMainLatelyWeightInfo;
+import jp.co.nikkiso.ntss.core.entity.custom.OrdMainRstTareChild;
+import jp.co.nikkiso.ntss.core.entity.custom.OrdMainRstWeightInfo;
+import jp.co.nikkiso.ntss.core.entity.custom.OrdWeightScaleBuildInfo;
+import jp.co.nikkiso.ntss.core.entity.custom.PatExamMainWeightPrint;
+import jp.co.nikkiso.ntss.core.entity.custom.PatExamPrint;
+import jp.co.nikkiso.ntss.core.entity.custom.PatUniquePhysicalInfo;
+import jp.co.nikkiso.ntss.core.entity.custom.TareAndOffWater;
+import jp.co.nikkiso.ntss.core.entity.custom.TareOrOffWaterJson;
 import jp.co.nikkiso.ntss.core.logevent.DataUpdateLogCommonNew;
 import jp.co.nikkiso.ntss.core.logevent.LogServiceCore;
 import jp.co.nikkiso.ntss.core.logger.EventLogMessage;
@@ -39,6 +92,7 @@ import jp.co.nikkiso.ntss.core.logger.EventLoggerFactory;
 import jp.co.nikkiso.ntss.core.logger.LogLevel;
 import jp.co.nikkiso.ntss.core.utils.TriggerUtil;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.ObjectUtils;
 import org.json.JSONObject;
 import org.postgresql.util.PGobject;
 import org.seasar.doma.jdbc.Config;
@@ -60,7 +114,17 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.ResolverStyle;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
@@ -799,11 +863,25 @@ public class WeightServiceImpl implements WeightService {
       }
     }
     // 前体重と前体重測定日時を体重実績に構築
-    dto.setWeightBefore(request.getWeightValue()); // 前体重
-    dto.setWeightBeforeDate(request.getMeasureDate()); // 前体重測定日時
-    dto.setWeightMeasureBefore(request.getScaleValue()); // 前体重測定値
+    //mod #9695 特殊血液浄化の入室での風袋減算について zrx start
+    // 特殊浄化フラグ
+    boolean isPurification = Objects.equals(request.getDeviceMode(), Treatment.DeviceMode.PURIFICATION);
+    BigDecimal scaleValueParam = request.getScaleValue();
+    BigDecimal weightValueParam = request.getWeightValue();
+    if(isPurification) {
+      if(scaleValueParam == null || scaleValueParam.compareTo(BigDecimal.ZERO) == 0) {// 前体重測定値 : 0
+        scaleValueParam = new BigDecimal("0.00");
+        weightValueParam = new BigDecimal("0.00");
+      }
+    }
+    // 前体重と前体重測定日時を体重実績に構築
+    //    dto.setWeightBefore(request.getWeightValue()); // 前体重
+//    dto.setWeightMeasureBefore(request.getScaleValue()); // 前体重測定値
+    dto.setWeightBefore(weightValueParam); // 前体重
+    dto.setWeightMeasureBefore(scaleValueParam); // 前体重測定値
     dto.setWeightBeforeDate(request.getMeasureDate()); // 前体重測定日時
     dto.setWaterRemovalTarget(request.getTargetOffWater()); // 目標除水量
+    //mod #9695 特殊血液浄化の入室での風袋減算について zrx end
 
     Timestamp acceptDate = null;
     try {
@@ -1289,11 +1367,25 @@ public class WeightServiceImpl implements WeightService {
     cond.setWeightName(request.getWeightName());
     cond.setScaleClass(request.getScaleClass());
     cond.setScaleMode(request.getScaleMode());
-    cond.setScaleValue(request.getScaleValue());
+//    cond.setScaleValue(request.getScaleValue());
     cond.setWeightScaleStatus(weightScaleStatus); // 状態
     cond.setTargetWeightValue(request.getTargetWeight());
     cond.setUserId(request.getUserId());
-    cond.setWeightValue(request.getWeightValue());
+    //mod #9695 特殊血液浄化の入室での風袋減算について zrx start
+//    cond.setWeightValue(request.getWeightValue());
+    // 特殊浄化フラグ
+    boolean isPurification = Objects.equals(request.getDeviceMode(), Treatment.DeviceMode.PURIFICATION);
+    BigDecimal scaleValueParam = request.getScaleValue();
+    BigDecimal weightValueParam = request.getWeightValue();
+    if(isPurification) {
+      if(scaleValueParam == null || scaleValueParam.compareTo(BigDecimal.ZERO) == 0) {// 前体重測定値 : 0
+        scaleValueParam = new BigDecimal("0.00");
+        weightValueParam = new BigDecimal("0.00");
+      }
+    }
+    cond.setScaleValue(scaleValueParam);
+    cond.setWeightValue(weightValueParam);
+    //mod #9695 特殊血液浄化の入室での風袋減算について zrx end
     cond.setWheelChairCd(request.getWheelChairCd());
     cond.setWheelChairName(request.getWheelChairName());
     cond.setWheelChairWeight(request.getWheelChairWeight());
@@ -2040,6 +2132,16 @@ public class WeightServiceImpl implements WeightService {
       }
       if (ord.getPatId() != null) {
         chair = mstWheelChairDao.selectByPatId(ord.getPatId(), FlagType.FLAG_ON, FlagType.FLAG_OFF);
+        // 個人所有車いすなしで、共用所有車いすが割り当てられていた場合はそれを使用
+        if(ObjectUtils.isEmpty(chair)) {
+          PatMain patMain = patMainDao.selectById(ord.getPatId());
+          if (patMain != null && patMain.getWheel_chair_cd() != null) {
+            MstWheelChair chair2 = mstWheelChairDao.selectByWheelChairCd(patMain.getWheel_chair_cd(), FlagType.FLAG_ON, FlagType.FLAG_OFF);
+            if(chair2 != null) {
+              chair = Arrays.asList(chair2);
+            }
+          }
+        }
         /* upd by chamaojia 2026-03-16 [12462] 患者情報共有->患者経過総合ビューア --start */
         // physicalInfo = patUniqueDao.selectPhysicalInfoOfOrderNewest(ord.getPatId());
         physicalInfo = patUniqueDao.selectPhysicalInfoOfOrderNewest(ord.getPatId(), 1);
@@ -2112,6 +2214,13 @@ public class WeightServiceImpl implements WeightService {
     String isWheelChair = FlagType.FLAG_OFF;
     if (patMain != null) {
       isWheelChair = patMain.getIs_wheel_chair();
+      // 個人所有車いすなしで、共用所有車いすが割り当てられていた場合はそれを使用
+      if(ObjectUtils.isEmpty(chair) && patMain.getWheel_chair_cd() != null) {
+        MstWheelChair chair2 = mstWheelChairDao.selectByWheelChairCd(patMain.getWheel_chair_cd(), FlagType.FLAG_ON, FlagType.FLAG_OFF);
+        if(chair2 != null) {
+          chair = Arrays.asList(chair2);
+        }
+      }
     }
 
     // 指示がないぶん、体重測定に必要な項目を患者情報から取得する
@@ -3957,10 +4066,10 @@ public class WeightServiceImpl implements WeightService {
               indCondInfoNoLoginMsg = "IP速度最大値";
               indCondInfoNoLoginMsgList.add(indCondInfoNoLoginMsg);
             }
-            // 自動ワンショット
+            // IPワンショットスタート
             tmp = this.getDataFromIndCond(indCondInfo, "34");
             if (tmp == null) {
-              indCondInfoNoLoginMsg = "自動ワンショット";
+              indCondInfoNoLoginMsg = "IPワンショットスタート";
               indCondInfoNoLoginMsgList.add(indCondInfoNoLoginMsg);
             }
             // IP電源自動切り

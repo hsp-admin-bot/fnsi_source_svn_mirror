@@ -13,6 +13,9 @@ public interface SysCoopNoService {
   /* FacilityCdによってSysCoopNoを選択します */
   List<SysCoopNo> selectSysCoopNoByFacilityCd(String facilityCd) throws Exception;
 
+  /* コピー元のSysCoopNoを選択します */
+  List<SysCoopNo> selectSourceSysCoopNoByCoopVersion(String coopVersion) throws Exception;
+
   /* 保存 */
 	Boolean submit(SysCoopNo sysCoopNo, final Long userId) throws Exception;
 

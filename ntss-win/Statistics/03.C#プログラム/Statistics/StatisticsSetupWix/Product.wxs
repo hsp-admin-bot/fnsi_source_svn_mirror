@@ -26,7 +26,7 @@
     Manufacturer="Nikkiso"
     Version="$(var.ProductVersion)"
     ProductCode="$(var.ProductCode)"
-    UpgradeCode="{F3E8D4B2-9C85-4F6A-8E7B-D5A2C4B9E3F1}"
+    UpgradeCode="{1CD56004-E4F2-4745-A785-95D6ACE5A54F}"
     Language="1041"
     Codepage="932"
     InstallerVersion="500"
@@ -55,7 +55,7 @@
     <Property Id="ROOTDRIVE" Value="C:\" />
 
     <!-- ============================== バージョン管理 ============================== -->
-    <Upgrade Id="{F3E8D4B2-9C85-4F6A-8E7B-D5A2C4B9E3F1}">
+    <Upgrade Id="{1CD56004-E4F2-4745-A785-95D6ACE5A54F}">
       <UpgradeVersion
         Minimum="0.0.0"
         Maximum="$(var.ProductVersion)"

@@ -2846,18 +2846,41 @@ public class OrdMainServiceImpl implements OrdMainService {
       return;
     }
     List<String> sortKeys = getEquipmentDisplayOrderSetting(facilityCd);
+    List<String> equipOrderSettingTableNames = new ArrayList<>();
+    if (sortKeys.contains(EQUIP_SORT_CLASS_ORDER)) {
+      equipOrderSettingTableNames.add("mst_equipment_class");
+    }
+    if (sortKeys.contains(EQUIP_SORT_CODE_ORDER)) {
+      equipOrderSettingTableNames.add("mst_equipment");
+      equipOrderSettingTableNames.add("mst_dialyzer");
+    }
+    Map<String, List<Integer>> equipOrderSettingsMap = equipOrderSettingTableNames.isEmpty()
+      ? Collections.emptyMap()
+      : getOrderSettingItemsMap(facilityCd, equipOrderSettingTableNames);
+    Map<Integer, Integer> classOrderRankMap = sortKeys.contains(EQUIP_SORT_CLASS_ORDER)
+      ? buildSimpleOrderRankMap(equipOrderSettingsMap.getOrDefault("mst_equipment_class", emptyList()))
+      : Collections.emptyMap();
+    Map<String, Integer> codeOrderRankMap = sortKeys.contains(EQUIP_SORT_CODE_ORDER)
+      ? buildEquipCodeOrderRankMap(
+        equipOrderSettingsMap.getOrDefault("mst_equipment", emptyList()),
+        equipOrderSettingsMap.getOrDefault("mst_dialyzer", emptyList()))
+      : Collections.emptyMap();
+    Map<Integer, Integer> equipClassCdMapByEquipCd = sortKeys.contains(EQUIP_SORT_CLASS_ORDER)
+      ? buildEquipClassCdMapForSharingInfoList(sharingInfoList, facilityCd)
+      : Collections.emptyMap();
+    ObjectMapper mapper = new ObjectMapper();
     for (OrdMainSharingInfo sharingInfo : sharingInfoList) {
       String indEquipInfo = sharingInfo.getIndEquipInfo();
       if (StringUtils.isEmpty(indEquipInfo)) {
         continue;
       }
       try {
-        ObjectMapper mapper = new ObjectMapper();
         JsonNode root = mapper.readTree(indEquipInfo);
         if (!(root instanceof ArrayNode)) {
           continue;
         }
-        ArrayNode sortedNode = sortIndEquipInfoArray((ArrayNode) root, sortKeys, facilityCd);
+        ArrayNode sortedNode = sortIndEquipInfoArray((ArrayNode) root, sortKeys, classOrderRankMap, codeOrderRankMap,
+          equipClassCdMapByEquipCd, mapper);
         sharingInfo.setIndEquipInfo(sortedNode.toString());
       } catch (JacksonException e) {
         EventLogMessage eventLogMessage = new EventLogMessage();
@@ -2873,18 +2896,53 @@ public class OrdMainServiceImpl implements OrdMainService {
       return;
     }
     List<String> sortKeys = getMedicineDisplayOrderSetting(facilityCd);
+    List<String> mediOrderSettingTableNames = new ArrayList<>();
+    if (sortKeys.contains(MEDI_SORT_CLASS_ORDER)) {
+      mediOrderSettingTableNames.add("mst_medicine_class");
+    }
+    if (sortKeys.contains(MEDI_SORT_CODE_ORDER)) {
+      mediOrderSettingTableNames.add("mst_medicine");
+      mediOrderSettingTableNames.add("mst_medicine_mix");
+    }
+    if (sortKeys.contains(MEDI_SORT_TIMING_ORDER)) {
+      mediOrderSettingTableNames.add("mst_medicate_timing");
+    }
+    if (sortKeys.contains(MEDI_SORT_PROCEDURE_ORDER)) {
+      mediOrderSettingTableNames.add("mst_procedure");
+    }
+    Map<String, List<Integer>> mediOrderSettingsMap = mediOrderSettingTableNames.isEmpty()
+      ? Collections.emptyMap()
+      : getOrderSettingItemsMap(facilityCd, mediOrderSettingTableNames);
+    Map<Integer, Integer> classOrderRankMap = sortKeys.contains(MEDI_SORT_CLASS_ORDER)
+      ? buildSimpleOrderRankMap(mediOrderSettingsMap.getOrDefault("mst_medicine_class", emptyList()))
+      : Collections.emptyMap();
+    Map<String, Integer> codeOrderRankMap = sortKeys.contains(MEDI_SORT_CODE_ORDER)
+      ? buildMediCodeOrderRankMap(
+        mediOrderSettingsMap.getOrDefault("mst_medicine", emptyList()),
+        mediOrderSettingsMap.getOrDefault("mst_medicine_mix", emptyList()))
+      : Collections.emptyMap();
+    Map<Integer, Integer> timingOrderRankMap = sortKeys.contains(MEDI_SORT_TIMING_ORDER)
+      ? buildSimpleOrderRankMap(mediOrderSettingsMap.getOrDefault("mst_medicate_timing", emptyList()))
+      : Collections.emptyMap();
+    Map<Integer, Integer> procedureOrderRankMap = sortKeys.contains(MEDI_SORT_PROCEDURE_ORDER)
+      ? buildSimpleOrderRankMap(mediOrderSettingsMap.getOrDefault("mst_procedure", emptyList()))
+      : Collections.emptyMap();
+    Map<String, Integer> mediClassCdMap = sortKeys.contains(MEDI_SORT_CLASS_ORDER)
+      ? buildMediClassCdMapForSharingInfoList(sharingInfoList, facilityCd)
+      : Collections.emptyMap();
+    ObjectMapper mapper = new ObjectMapper();
     for (OrdMainSharingInfo sharingInfo : sharingInfoList) {
       String indMediInfo = sharingInfo.getIndMediInfo();
       if (StringUtils.isEmpty(indMediInfo)) {
         continue;
       }
       try {
-        ObjectMapper mapper = new ObjectMapper();
         JsonNode root = mapper.readTree(indMediInfo);
         if (!(root instanceof ArrayNode)) {
           continue;
         }
-        ArrayNode sortedNode = sortIndMediInfoArray((ArrayNode) root, sortKeys, facilityCd);
+        ArrayNode sortedNode = sortIndMediInfoArray((ArrayNode) root, sortKeys, classOrderRankMap, codeOrderRankMap,
+          timingOrderRankMap, procedureOrderRankMap, mediClassCdMap, mapper);
         sharingInfo.setIndMediInfo(sortedNode.toString());
       } catch (JacksonException e) {
         EventLogMessage eventLogMessage = new EventLogMessage();
@@ -2893,6 +2951,99 @@ public class OrdMainServiceImpl implements OrdMainService {
         logService.log(LogLevel.ERROR, eventLogMessage, "", LoggingConstant.SERVICE_NAME.FNSI, null);
       }
     }
+  }
+
+  private Map<Integer, Integer> buildEquipClassCdMapForSharingInfoList(List<OrdMainSharingInfo> sharingInfoList, String facilityCd) {
+    Set<Integer> equipCdSet = new HashSet<>();
+    ObjectMapper mapper = new ObjectMapper();
+    for (OrdMainSharingInfo sharingInfo : sharingInfoList) {
+      String indEquipInfo = sharingInfo.getIndEquipInfo();
+      if (StringUtils.isEmpty(indEquipInfo)) {
+        continue;
+      }
+      try {
+        JsonNode root = mapper.readTree(indEquipInfo);
+        if (!(root instanceof ArrayNode)) {
+          continue;
+        }
+        for (JsonNode node : root) {
+          int cd = (int) getLongValue(node, "cd", -1);
+          if (cd > 0) {
+            equipCdSet.add(cd);
+          }
+        }
+      } catch (JacksonException e) {
+        // 個別レコードのJSON解析エラーはメインループ側でログ出力する
+      }
+    }
+    if (equipCdSet.isEmpty()) {
+      return Collections.emptyMap();
+    }
+    List<MstEquipment> mstEquipmentList = mstEquipmentDao.selectByCdListCheckList(
+      SelectOptions.get(), new ArrayList<>(equipCdSet), facilityCd);
+    Map<Integer, Integer> classCdMapByEquipCd = new HashMap<>();
+    for (MstEquipment mstEquipment : mstEquipmentList) {
+      if (mstEquipment != null && mstEquipment.getEquipmentCd() != null && mstEquipment.getClassCd() != null) {
+        classCdMapByEquipCd.put(mstEquipment.getEquipmentCd(), mstEquipment.getClassCd());
+      }
+    }
+    return classCdMapByEquipCd;
+  }
+
+  private Map<String, Integer> buildMediClassCdMapForSharingInfoList(List<OrdMainSharingInfo> sharingInfoList, String facilityCd) {
+    Set<Integer> medicineCdSet = new HashSet<>();
+    Set<Integer> medicineMixCdSet = new HashSet<>();
+    ObjectMapper mapper = new ObjectMapper();
+    for (OrdMainSharingInfo sharingInfo : sharingInfoList) {
+      String indMediInfo = sharingInfo.getIndMediInfo();
+      if (StringUtils.isEmpty(indMediInfo)) {
+        continue;
+      }
+      try {
+        JsonNode root = mapper.readTree(indMediInfo);
+        if (!(root instanceof ArrayNode)) {
+          continue;
+        }
+        for (JsonNode node : root) {
+          long classCd = getLongValue(node, "class_cd", -1);
+          if (classCd > 0) {
+            continue;
+          }
+          long medicineType = getLongValue(node, "medicine_type", -1);
+          int cd = (int) getLongValue(node, "cd", -1);
+          if (cd <= 0) {
+            continue;
+          }
+          if (medicineType == 1) {
+            medicineCdSet.add(cd);
+          } else if (medicineType == 2) {
+            medicineMixCdSet.add(cd);
+          }
+        }
+      } catch (JacksonException e) {
+        // 個別レコードのJSON解析エラーはメインループ側でログ出力する
+      }
+    }
+    Map<String, Integer> mediClassCdMap = new HashMap<>();
+    if (!medicineCdSet.isEmpty()) {
+      List<MstMedicine> mstMedicineList = mstMedicineDao.selectAllByCdListWithFacilityCd(
+        SelectOptions.get(), facilityCd, new ArrayList<>(medicineCdSet));
+      for (MstMedicine mstMedicine : mstMedicineList) {
+        if (mstMedicine != null && mstMedicine.getMedicineCd() != null && mstMedicine.getClassCd() != null) {
+          mediClassCdMap.put("1:" + mstMedicine.getMedicineCd(), mstMedicine.getClassCd());
+        }
+      }
+    }
+    if (!medicineMixCdSet.isEmpty()) {
+      List<MstMedicineMix> mstMedicineMixList = mstMedicineMixDao.selectAllByMedicineMixCdList(
+        facilityCd, new ArrayList<>(medicineMixCdSet));
+      for (MstMedicineMix mstMedicineMix : mstMedicineMixList) {
+        if (mstMedicineMix != null && mstMedicineMix.getMedicineMixCd() != null && mstMedicineMix.getClassCd() != null) {
+          mediClassCdMap.put("2:" + mstMedicineMix.getMedicineMixCd(), mstMedicineMix.getClassCd());
+        }
+      }
+    }
+    return mediClassCdMap;
   }
 
   private List<String> getEquipmentDisplayOrderSetting(String facilityCd) {
@@ -2970,14 +3121,15 @@ public class OrdMainServiceImpl implements OrdMainService {
     return sortKeys;
   }
 
-  private ArrayNode sortIndEquipInfoArray(ArrayNode equipArrayNode, List<String> sortKeys, String facilityCd) {
+  private ArrayNode sortIndEquipInfoArray(ArrayNode equipArrayNode, List<String> sortKeys,
+                                          Map<Integer, Integer> classOrderRankMap,
+                                          Map<String, Integer> codeOrderRankMap,
+                                          Map<Integer, Integer> classCdMapByEquipCd,
+                                          ObjectMapper mapper) {
     List<JsonNode> equipNodeList = new ArrayList<>();
     for (JsonNode node : equipArrayNode) {
       equipNodeList.add(node);
     }
-    Map<Integer, Integer> classCdMapByEquipCd = buildEquipClassCdMap(equipNodeList, sortKeys, facilityCd);
-    Map<Integer, Integer> classOrderRankMap = buildSimpleOrderRankMap(getOrderSettingItems(facilityCd, "mst_equipment_class"));
-    Map<String, Integer> codeOrderRankMap = buildEquipCodeOrderRankMap(facilityCd);
     Map<JsonNode, Integer> originIndexMap = new HashMap<>();
     for (int i = 0; i < equipNodeList.size(); i++) {
       originIndexMap.put(equipNodeList.get(i), i);
@@ -2991,7 +3143,7 @@ public class OrdMainServiceImpl implements OrdMainService {
       }
       return Integer.compare(originIndexMap.getOrDefault(o1, Integer.MAX_VALUE), originIndexMap.getOrDefault(o2, Integer.MAX_VALUE));
     });
-    ArrayNode sortedArrayNode = new ObjectMapper().createArrayNode();
+    ArrayNode sortedArrayNode = mapper.createArrayNode();
     for (JsonNode node : equipNodeList) {
       sortedArrayNode.add(node);
     }
@@ -3045,28 +3197,6 @@ public class OrdMainServiceImpl implements OrdMainService {
     return Long.compare(equipType1, equipType2);
   }
 
-  private Map<Integer, Integer> buildEquipClassCdMap(List<JsonNode> equipNodeList, List<String> sortKeys, String facilityCd) {
-    if (CollectionUtils.isEmpty(equipNodeList) || CollectionUtils.isEmpty(sortKeys) || !sortKeys.contains(EQUIP_SORT_CLASS_ORDER)) {
-      return Collections.emptyMap();
-    }
-    List<Integer> equipCdList = equipNodeList.stream()
-      .map(node -> (int) getLongValue(node, "cd", -1))
-      .filter(cd -> cd > 0)
-      .distinct()
-      .collect(Collectors.toList());
-    if (CollectionUtils.isEmpty(equipCdList)) {
-      return Collections.emptyMap();
-    }
-    List<MstEquipment> mstEquipmentList = mstEquipmentDao.selectByCdListCheckList(SelectOptions.get(), equipCdList, facilityCd);
-    Map<Integer, Integer> classCdMapByEquipCd = new HashMap<>();
-    for (MstEquipment mstEquipment : mstEquipmentList) {
-      if (mstEquipment != null && mstEquipment.getEquipmentCd() != null && mstEquipment.getClassCd() != null) {
-        classCdMapByEquipCd.put(mstEquipment.getEquipmentCd(), mstEquipment.getClassCd());
-      }
-    }
-    return classCdMapByEquipCd;
-  }
-
   private long getClassCdValue(JsonNode node, Map<Integer, Integer> classCdMapByEquipCd) {
     long classCdValue = getLongValue(node, "class_cd", Long.MAX_VALUE);
     // class_cd が null / -1 / 0 の場合は未設定扱いとして後ろに回す
@@ -3098,9 +3228,7 @@ public class OrdMainServiceImpl implements OrdMainService {
     return classOrderRankMap.size() + originIndexMap.getOrDefault(node, Integer.MAX_VALUE);
   }
 
-  private Map<String, Integer> buildEquipCodeOrderRankMap(String facilityCd) {
-    List<Integer> equipmentCodeOrder = getOrderSettingItems(facilityCd, "mst_equipment");
-    List<Integer> dialyzerCodeOrder = getOrderSettingItems(facilityCd, "mst_dialyzer");
+  private Map<String, Integer> buildEquipCodeOrderRankMap(List<Integer> equipmentCodeOrder, List<Integer> dialyzerCodeOrder) {
     Map<String, Integer> rankMap = new HashMap<>();
     int rank = 0;
     for (Integer cd : dialyzerCodeOrder) {
@@ -3124,7 +3252,13 @@ public class OrdMainServiceImpl implements OrdMainService {
     return codeOrderRankMap.size() + originIndexMap.getOrDefault(node, Integer.MAX_VALUE);
   }
 
-  private ArrayNode sortIndMediInfoArray(ArrayNode mediArrayNode, List<String> sortKeys, String facilityCd) {
+  private ArrayNode sortIndMediInfoArray(ArrayNode mediArrayNode, List<String> sortKeys,
+                                         Map<Integer, Integer> classOrderRankMap,
+                                         Map<String, Integer> codeOrderRankMap,
+                                         Map<Integer, Integer> timingOrderRankMap,
+                                         Map<Integer, Integer> procedureOrderRankMap,
+                                         Map<String, Integer> mediClassCdMap,
+                                         ObjectMapper mapper) {
     List<JsonNode> mediNodeList = new ArrayList<>();
     for (JsonNode node : mediArrayNode) {
       mediNodeList.add(node);
@@ -3133,15 +3267,11 @@ public class OrdMainServiceImpl implements OrdMainService {
     for (int i = 0; i < mediNodeList.size(); i++) {
       originIndexMap.put(mediNodeList.get(i), i);
     }
-    Map<Integer, Integer> classOrderRankMap = buildSimpleOrderRankMap(getOrderSettingItems(facilityCd, "mst_medicine_class"));
-    Map<String, Integer> codeOrderRankMap = buildMediCodeOrderRankMap(facilityCd);
-    Map<Integer, Integer> timingOrderRankMap = buildSimpleOrderRankMap(getOrderSettingItems(facilityCd, "mst_medicate_timing"));
-    Map<Integer, Integer> procedureOrderRankMap = buildSimpleOrderRankMap(getOrderSettingItems(facilityCd, "mst_procedure"));
 
     mediNodeList.sort((o1, o2) -> {
       for (String key : sortKeys) {
         int compareResult = compareMediByKey(o1, o2, key, classOrderRankMap, codeOrderRankMap, timingOrderRankMap,
-          procedureOrderRankMap, originIndexMap);
+          procedureOrderRankMap, mediClassCdMap, originIndexMap);
         if (compareResult != 0) {
           return compareResult;
         }
@@ -3149,7 +3279,7 @@ public class OrdMainServiceImpl implements OrdMainService {
       return Integer.compare(originIndexMap.getOrDefault(o1, Integer.MAX_VALUE), originIndexMap.getOrDefault(o2, Integer.MAX_VALUE));
     });
 
-    ArrayNode sortedArrayNode = new ObjectMapper().createArrayNode();
+    ArrayNode sortedArrayNode = mapper.createArrayNode();
     for (JsonNode node : mediNodeList) {
       sortedArrayNode.add(node);
     }
@@ -3161,14 +3291,15 @@ public class OrdMainServiceImpl implements OrdMainService {
                                Map<String, Integer> codeOrderRankMap,
                                Map<Integer, Integer> timingOrderRankMap,
                                Map<Integer, Integer> procedureOrderRankMap,
+                               Map<String, Integer> mediClassCdMap,
                                Map<JsonNode, Integer> originIndexMap) {
     switch (key) {
       case MEDI_SORT_REG_ORDER:
         return Long.compare(getLongValue(o1, "no", Long.MAX_VALUE), getLongValue(o2, "no", Long.MAX_VALUE));
       case MEDI_SORT_CLASS_ORDER:
         return Integer.compare(
-          getMediClassOrderRank(o1, classOrderRankMap, originIndexMap),
-          getMediClassOrderRank(o2, classOrderRankMap, originIndexMap));
+          getMediClassOrderRank(o1, classOrderRankMap, mediClassCdMap, originIndexMap),
+          getMediClassOrderRank(o2, classOrderRankMap, mediClassCdMap, originIndexMap));
       case MEDI_SORT_TYPE_ORDER:
         return Long.compare(getLongValue(o1, "medicine_type", Long.MAX_VALUE), getLongValue(o2, "medicine_type", Long.MAX_VALUE));
       case MEDI_SORT_CODE_ORDER:
@@ -3214,7 +3345,7 @@ public class OrdMainServiceImpl implements OrdMainService {
     return rankMap.size() + originIndexMap.getOrDefault(node, Integer.MAX_VALUE);
   }
 
-  private int resolveMediClassCd(JsonNode node) {
+  private int resolveMediClassCd(JsonNode node, Map<String, Integer> mediClassCdMap) {
     long classCd = getLongValue(node, "class_cd", -1);
     if (classCd > 0) {
       return (int) classCd;
@@ -3224,22 +3355,13 @@ public class OrdMainServiceImpl implements OrdMainService {
     if (cd <= 0) {
       return -1;
     }
-    if (medicineType == 1) {
-      MstMedicine mstMedicine = mstMedicineDao.selectByMediCd(cd);
-      if (mstMedicine != null && mstMedicine.getClassCd() != null) {
-        return mstMedicine.getClassCd();
-      }
-    } else if (medicineType == 2) {
-      MstMedicineMix mstMedicineMix = mstMedicineMixDao.selectByMedicineMixCd(cd);
-      if (mstMedicineMix != null && mstMedicineMix.getClassCd() != null) {
-        return mstMedicineMix.getClassCd();
-      }
-    }
-    return -1;
+    Integer mapClassCd = mediClassCdMap.get(medicineType + ":" + cd);
+    return mapClassCd == null ? -1 : mapClassCd;
   }
 
-  private int getMediClassOrderRank(JsonNode node, Map<Integer, Integer> classOrderRankMap, Map<JsonNode, Integer> originIndexMap) {
-    int classCd = resolveMediClassCd(node);
+  private int getMediClassOrderRank(JsonNode node, Map<Integer, Integer> classOrderRankMap,
+                                    Map<String, Integer> mediClassCdMap, Map<JsonNode, Integer> originIndexMap) {
+    int classCd = resolveMediClassCd(node, mediClassCdMap);
     if (classCd <= 0) {
       return Integer.MAX_VALUE;
     }
@@ -3251,9 +3373,7 @@ public class OrdMainServiceImpl implements OrdMainService {
     return classOrderRankMap.size() + originIndexMap.getOrDefault(node, Integer.MAX_VALUE);
   }
 
-  private Map<String, Integer> buildMediCodeOrderRankMap(String facilityCd) {
-    List<Integer> medicineCodeOrder = getOrderSettingItems(facilityCd, "mst_medicine");
-    List<Integer> medicineMixCodeOrder = getOrderSettingItems(facilityCd, "mst_medicine_mix");
+  private Map<String, Integer> buildMediCodeOrderRankMap(List<Integer> medicineCodeOrder, List<Integer> medicineMixCodeOrder) {
     Map<String, Integer> rankMap = new HashMap<>();
     int rank = 0;
     for (Integer cd : medicineCodeOrder) {
@@ -9799,9 +9919,29 @@ public class OrdMainServiceImpl implements OrdMainService {
    * @return 並び順
    */
   private List<Integer> getOrderSettingItems(String facilityCd, String tableName) {
-    List<Integer> seq = new ArrayList<>();
     MstSelector mstSelector = mstSelectorDao.selectByName(facilityCd, tableName);
-    if(Objects.isNull(mstSelector)) {
+    return extractOrderSettingItems(mstSelector);
+  }
+
+  private Map<String, List<Integer>> getOrderSettingItemsMap(String facilityCd, List<String> tableNames) {
+    if (CollectionUtils.isEmpty(tableNames)) {
+      return Collections.emptyMap();
+    }
+    List<MstSelector> mstSelectors = mstSelectorDao.selectByNameList(facilityCd, tableNames);
+    if (CollectionUtils.isEmpty(mstSelectors)) {
+      return Collections.emptyMap();
+    }
+    Map<String, List<Integer>> orderSettingsMap = new HashMap<>();
+    for (MstSelector mstSelector : mstSelectors) {
+      if (mstSelector != null && mstSelector.getMasterPhysicalName() != null) {
+        orderSettingsMap.put(mstSelector.getMasterPhysicalName(), extractOrderSettingItems(mstSelector));
+      }
+    }
+    return orderSettingsMap;
+  }
+
+  private List<Integer> extractOrderSettingItems(MstSelector mstSelector) {
+    if (Objects.isNull(mstSelector)) {
       return emptyList();
     }
     return mstSelector.getOrderSettings()

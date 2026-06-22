@@ -4,9 +4,6 @@
       <Component Id="Cmp_6E1F789514FA35AC8F3F5497" Guid="{A2D4FA2C-3D6D-FB5F-73E7-950A9D86D7EB}">
         <File Id="File_6E1F789514FA35AC8F3F5497" KeyPath="yes" Source="$(var.AppBinDir)\DnsClient.dll" />
       </Component>
-      <Component Id="Cmp_AC605CEC5D9C85DF4A0D546B" Guid="{01EA4B4C-4E05-FADC-55FB-A52B1C1FAB2D}">
-        <File Id="File_AC605CEC5D9C85DF4A0D546B" KeyPath="yes" Source="$(var.AppBinDir)\FNSICloudConvertClient.config" />
-      </Component>
       <Component Id="Cmp_90D6EC130E2D289F10E1DF54" Guid="{B17EDD9E-CD4F-A373-6555-DB390B2CDCC3}">
         <File Id="File_90D6EC130E2D289F10E1DF54" KeyPath="yes" Source="$(var.AppBinDir)\FNSICloudConvertClient.exe" />
       </Component>
@@ -143,7 +140,6 @@
       <ComponentRef Id="Cmp_930E2BD04A638E5932C7ACE6" />
       <ComponentRef Id="Cmp_9356E427D5EE832D19223873" />
       <ComponentRef Id="Cmp_A8CBD829E54E496D02EE155A" />
-      <ComponentRef Id="Cmp_AC605CEC5D9C85DF4A0D546B" />
       <ComponentRef Id="Cmp_B57923D8357852D120329C10" />
       <ComponentRef Id="Cmp_B8BF39C19E60042A281115B4" />
       <ComponentRef Id="Cmp_B96C95168CD53F29788C9B96" />

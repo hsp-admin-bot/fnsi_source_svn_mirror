@@ -62,7 +62,8 @@ public class UploadApiResource {
         EventLogMessage eventLogMessage = new EventLogMessage();
         eventLogMessage.setLogMessage("[fileUpload2S3]ファイルアップロード: 受信データ facilityCd のBase64デコード結果[" + facilityCd + "]");
         logService.log(LogLevel.INFO, eventLogMessage,"",SERVICE_NAME.FNSI, null);
-        if (ntssUser == null || ntssUser.getFacilityCd() == null || !ntssUser.getFacilityCd().equals(facilityCd)) {
+        if (ntssUser == null || ntssUser.getFacilityCd() == null
+                || (!ntssUser.isNkkAdminUser() && !ntssUser.getFacilityCd().equals(facilityCd))) {
           // #11205 mod 20260421 start
           String msg_11205_FORBIDDEN = "ntssUser.getFacilityCd()=" + ntssUser.getFacilityCd() + " " + "facilityCd=" + facilityCd + " " + "fileCount=" + multipartFile.length + " ";
           InvestigateLogUtils.info("11205", msg_11205_FORBIDDEN, "11205-FORBIDDEN");

@@ -22,7 +22,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TcpSocket", "TcpSocket\TcpS
 EndProject
 Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "NKKScaleBedSetup", "NKKScaleBedSetup\NKKScaleBedSetup.vdproj", "{473AC252-A711-89DD-1DB0-1C39EB612C16}"
 EndProject
-Project("{930C7802-8A8C-48F9-8165-68863BCCD9DD}") = "NKKScaleBedSetupWix", "NKKScaleBedSetupWix\NKKScaleBedSetupWix.wixproj", "{E4F5A6B7-C8D9-0123-ABCD-F45678901234}"
+Project("{B7DD6F7E-DEF8-4E67-B5B7-07EF123DB6F0}") = "NKKScaleBedSetupWix", "NKKScaleBedSetupWix\NKKScaleBedSetupWix.wixproj", "{E4F5A6B7-C8D9-0123-ABCD-F45678901234}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -89,11 +89,9 @@ Global
 		{966B65D7-3D59-4A7E-A51B-8A645070951B}.Release|x86.ActiveCfg = Release|x86
 		{966B65D7-3D59-4A7E-A51B-8A645070951B}.Release|x86.Build.0 = Release|x86
 		{473AC252-A711-89DD-1DB0-1C39EB612C16}.Debug|Any CPU.ActiveCfg = Debug
-		{473AC252-A711-89DD-1DB0-1C39EB612C16}.Debug|Any CPU.Build.0 = Debug
 		{473AC252-A711-89DD-1DB0-1C39EB612C16}.Debug|x86.ActiveCfg = Debug
 		{473AC252-A711-89DD-1DB0-1C39EB612C16}.Debug|x86.Build.0 = Debug
 		{473AC252-A711-89DD-1DB0-1C39EB612C16}.Release|Any CPU.ActiveCfg = Release
-		{473AC252-A711-89DD-1DB0-1C39EB612C16}.Release|Any CPU.Build.0 = Release
 		{473AC252-A711-89DD-1DB0-1C39EB612C16}.Release|x86.ActiveCfg = Release
 		{473AC252-A711-89DD-1DB0-1C39EB612C16}.Release|x86.Build.0 = Release
 		{E4F5A6B7-C8D9-0123-ABCD-F45678901234}.Debug|Any CPU.ActiveCfg = Debug|x86

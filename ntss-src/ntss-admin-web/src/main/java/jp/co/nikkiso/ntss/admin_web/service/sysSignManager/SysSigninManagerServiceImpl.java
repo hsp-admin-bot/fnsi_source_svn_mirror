@@ -35,6 +35,7 @@ import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.session.SessionInformation;
 import org.springframework.security.core.session.SessionRegistry;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -66,6 +67,10 @@ public class SysSigninManagerServiceImpl implements SysSigninManagerService {
 
   private static final String FORCE_SIGN_OUT_LOG_MESSAGE = "%sが%sにより強制サインアウトされました。";
   private static final String SIGN_OUT_FUNCTION_NAME = "サインアウト";
+  // #12849 複数端末同時サインイン無効の乗っ取りサインインが動かない add 20260619 yangxuewang start
+  // logoutConnectionTimeout/MS
+  private static final int SIGN_OUT_CONNECT_TIMEOUT_MS = 500;
+  // #12849 複数端末同時サインイン無効の乗っ取りサインインが動かない add 20260619 yangxuewang end
 
   // add #9386 施設設定マスタNo64で有効として権限を編集しても対象のアカウントが強制サインアウトされない dou start
   @Value("${server.port:#{8080}}")
@@ -395,7 +400,9 @@ public class SysSigninManagerServiceImpl implements SysSigninManagerService {
         .append(apiUri);
       try {
         uri = new URI(commApiUri.toString());
-        RestTemplate rt = new RestTemplate();
+        // #12849 複数端末同時サインイン無効の乗っ取りサインインが動かない mod 20260619 yangxuewang start
+        RestTemplate rt = createRestTemplateWithTimeout();
+        // #12849 複数端末同時サインイン無効の乗っ取りサインインが動かない mod 20260619 yangxuewang end
         RequestEntity<Map<String, String>> request = RequestEntity
           .post(uri)
           .contentType(MediaType.APPLICATION_JSON)
@@ -426,14 +433,72 @@ public class SysSigninManagerServiceImpl implements SysSigninManagerService {
         logService.log(LogLevel.INFO, restTemplateEventLogMessage, null, LoggingConstant.SERVICE_NAME.FNSI, null);
 // #9698 アプリケーションログの内容修正 20260328 mod yangxuewang end
       } catch (Exception e) {
+        // #12849 複数端末同時サインイン無効の乗っ取りサインインが動かない add 20260619 yangxuewang start
+        if (isConnectTimeoutException(e)) {
+          deleteSigninManagerByUserIdAndServerIp(userId, serverIp,facilityCd);
+        }
+        // #12849 複数端末同時サインイン無効の乗っ取りサインインが動かない add 20260619 yangxuewang end
         EventLogMessage eventLogMessage = new EventLogMessage();
-        eventLogMessage.setLogMessage("signOutUserForMultiServerに失敗" + e);
+        eventLogMessage.setLogMessage("signOutAnotherForMultiServerに失敗" + e);
         logService.log(LogLevel.ERROR, eventLogMessage, null, LoggingConstant.SERVICE_NAME.FNSI,
           null);
       }
     }
   }
   // add #10160 複数端末同時サインイン無効時の強制サインアウトが動作しない。 dou end
+
+  // #12849 複数端末同時サインイン無効の乗っ取りサインインが動かない add 20260619 yangxuewang start
+  private RestTemplate createRestTemplateWithTimeout() {
+    SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+    requestFactory.setConnectTimeout(SIGN_OUT_CONNECT_TIMEOUT_MS);
+    return new RestTemplate(requestFactory);
+  }
+
+  private boolean isConnectTimeoutException(Throwable e) {
+    for (Throwable cause = e; cause != null; cause = cause.getCause()) {
+      if (cause instanceof java.net.SocketTimeoutException) {
+        String message = cause.getMessage();
+        if (message != null && message.toLowerCase().contains("connect timed out")) {
+          return true;
+        }
+        continue;
+      }
+      if (cause instanceof java.net.ConnectException) {
+        String message = cause.getMessage();
+        if (message != null) {
+          String lowerMessage = message.toLowerCase();
+          if (lowerMessage.contains("connection timed out") || lowerMessage.contains("connect timed out")) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  private void deleteSigninManagerByUserIdAndServerIp(String userId, String serverIp ,String facilityCd) {
+    if (StringUtils.isEmpty(userId)) {
+      return;
+    }
+    try {
+      if (StringUtils.isEmpty(serverIp)) {
+        return;
+      }
+      int deletedCount = sysSigninManagerDao.deleteByUserIdAndServerIp(Long.parseLong(userId), serverIp,facilityCd);
+      EventLogMessage eventLogMessage = new EventLogMessage();
+      eventLogMessage.setLogMessage(
+        "signOut connect timeout: deleted sys_signin_manager by userId=" + userId
+          + ", serverIp=" + serverIp + ", count=" + deletedCount
+      );
+      logService.log(LogLevel.INFO, eventLogMessage, null, LoggingConstant.SERVICE_NAME.FNSI, null);
+    } catch (NumberFormatException e) {
+      EventLogMessage eventLogMessage = new EventLogMessage();
+      eventLogMessage.setLogMessage("signOut connect timeout: invalid userId=" + userId);
+      logService.log(LogLevel.ERROR, eventLogMessage, null, LoggingConstant.SERVICE_NAME.FNSI, null);
+    }
+  }
+  // #12849 複数端末同時サインイン無効の乗っ取りサインインが動かない add 20260619 yangxuewang end
+
 
   private void outputForceSignOutLog(NtssUser userDetails, String sessionId, ForceSignOutReason reason) {
     if (userDetails == null || reason == null) {

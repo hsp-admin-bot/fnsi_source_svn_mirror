@@ -313,7 +313,10 @@ export default {
     });
     //8204 zhou 【デグレ】治療条件モーダルにて、使用しない項目を設定できてしまう add start
     const selectedEditMst = this.popoverData.popoverContentDataset.find(item => {
-      return item.value == this.value; // mod #9973 value Number→文字列  shiyw
+      // mod #10937 20260428 Ji start
+      // return item.value == this.value; // mod #9973 value Number→文字列  shiyw
+      return item.value == (this.velue ?? this.value);
+      // mod #10937 20260428 Ji end
     });
     //8204 zhou 【デグレ】治療条件モーダルにて、使用しない項目を設定できてしまう add end
     //8204 zhou 【デグレ】治療条件モーダルにて、使用しない項目を設定できてしまう mod start

@@ -29,7 +29,7 @@
               <tr>
                 <th
                   :id="Keys.no"
-                  class="custom-no ntss-list-header-th-sticky text-left word-break-th manual-width"
+                  class="custom-no ntss-list-header-th-sticky text-left word-break-th manual-width-scoped"
                   draggable="true"
                   @dragstart="onDragStart(false)"
                   @drag="onDragOver($event, false)"
@@ -37,31 +37,58 @@
                 >No</th>
                 <th
                   :id="Keys.bedName"
-                  class="custom-bed ntss-list-header-th-sticky text-left word-break-th manual-width"
-                  :class="sortedClass(Keys.bedName)"
+                  class="custom-bed ntss-list-header-th-sticky text-left word-break-th manual-width-scoped"
                   draggable="true"
                   @dragstart="onDragStart(false)"
                   @drag="onDragOver($event, false)"
                   @dragend="onDragEnd(false)"
-                ><span @click="sortBy(Keys.bedName)">ベッド</span></th>
+                >
+                  <div
+                    class="resizable-head-container"
+                    @click="updateSort(Keys.bedName, sort)"
+                  >
+                    <span
+                      class="span-grow-area"
+                      :class="getSortedClass(Keys.bedName, sort)"
+                    >ベッド</span>
+                  </div>
+                </th>
                 <th
                   :id="Keys.machineName"
-                  class="custom-equip ntss-list-header-th-sticky text-left word-break-th manual-width"
-                  :class="sortedClass(Keys.machineName)"
+                  class="custom-equip ntss-list-header-th-sticky text-left word-break-th manual-width-scoped"
                   draggable="true"
                   @dragstart="onDragStart(false)"
                   @drag="onDragOver($event, false)"
                   @dragend="onDragEnd(false)"
-                ><span @click="sortBy(Keys.machineName)">装置名</span></th>
+                >
+                  <div
+                    class="resizable-head-container"
+                    @click="updateSort(Keys.machineName, sort)"
+                  >
+                    <span
+                      class="span-grow-area"
+                      :class="getSortedClass(Keys.machineName, sort)"
+                    >装置名</span>
+                  </div>
+                </th>
                 <th
                   :id="Keys.machineType"
-                  class="custom-model ntss-list-header-th-sticky text-left word-break-th manual-width"
-                  :class="sortedClass(Keys.machineType)"
+                  class="custom-model ntss-list-header-th-sticky text-left word-break-th manual-width-scoped"
                   draggable="true"
                   @dragstart="onDragStart(false)"
                   @drag="onDragOver($event, false)"
                   @dragend="onDragEnd(false)"
-                ><span @click="sortBy(Keys.machineType)">型式</span></th>
+                >
+                  <div
+                    class="resizable-head-container"
+                    @click="updateSort(Keys.machineType, sort)"
+                  >
+                    <span
+                      class="span-grow-area"
+                      :class="getSortedClass(Keys.machineType, sort)"
+                    >型式</span>
+                  </div>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -112,9 +139,8 @@
                   :key="layout.menteLayoutCd"
                   :id="`${layout.menteLayoutCd}`"
                   v-show="showLayoutFlg[index]"
-                  class="ntss-list-header-th-sticky text-left word-break-th manual-width layout-header-th"
+                  class="ntss-list-header-th-sticky text-left word-break-th manual-width-scoped layout-header-th"
                   style="max-width: 400px; min-width: 150px; width: 150px; --base-width: 150px;"
-                  draggable="true"
                   @mousedown="onGetID"
                   @dragstart="onDragStart(true)"
                   @drag="onDragOver($event, true)"
@@ -130,7 +156,7 @@
                     >{{ layout.layoutName }}</span>
                     <img
                       :src="imageSrcInfoIcon"
-                      alt=""
+                      alt="info"
                       class="img-info-icon"
                       @click.stop="showPopover($event, layout)"
                     />
@@ -349,7 +375,9 @@ export default {
     ]),
     ...mapGetters("mst-layout", [
       "getCategoryList",
-      "getListMachine",
+      // getMachineTypeList の値を設定する sendRequestGetMachineTypeList は
+      // ヘッダー部の created で呼ばれる
+      "getMachineTypeList",
     ]),
     ...mapGetters("pat-info", ["selectedPatId"]),
 
@@ -433,7 +461,13 @@ export default {
           mainteDetailCd: null,
           ...category,
         });
-        result.push(...details);
+        details.forEach(detail => {
+          result.push({
+            isHeader: false,
+            mainteCategoryCd,
+            ...detail,
+          });
+        });
       });
       return result;
     },
@@ -499,10 +533,7 @@ export default {
       "sendRequestGetLayoutDetail",
       "setMachine",
     ]),
-    ...mapActions("mst-layout", [
-      "sendRequestGetAllCategoryByFacilityCd",
-      "sendRequestGetAllMachineByFacilityCd",
-    ]),
+    ...mapActions("mst-layout", ["sendRequestGetAllCategoryByFacilityCd"]),
     ...mapActions("multi-modal", ["showDailyModal"]),
     ...mapActions("loading-screen", ["executeWithLoadingScreen"]),
     ...mapActions("mst-holiday", [
@@ -519,7 +550,7 @@ export default {
       const typeNames = [];
       if (typeCdList.length) {
         typeCdList.forEach(typeCd => {
-          const typeMst = this.getListMachine.find(
+          const typeMst = this.getMachineTypeList.find(
             type => type.machineTypeCd === typeCd
           );
           if (!typeMst) return;
@@ -527,7 +558,7 @@ export default {
         });
       } else {
         // 装置型式が未指定の場合は「すべて」扱いとする
-        typeCdList.push(...this.getListMachine.map(
+        typeCdList.push(...this.getMachineTypeList.map(
           type => type.machineTypeCd
         ));
         typeNames.push("すべて");
@@ -688,25 +719,6 @@ export default {
       this.setMachine(machine);
       this.showDailyModal();
     },
-    sortBy(key) {
-      //mod 横展開パンくずリスト対応 趙 start
-      // if (key === this.sort.key && !this.sort.isAsc {
-      if ((key === this.sort.key && !this.sort.isAsc) || key == "") {
-      //mod 横展開パンくずリスト対応 趙 end
-        // ソートをクリア
-        this.sort.key = "";
-        this.sort.isAsc = true;
-        return;
-      }
-      this.sort.isAsc = this.sort.key === key ? !this.sort.isAsc : true;
-      this.sort.key = key;
-    },
-    // 昇順/降順のclassを作成
-    sortedClass(key) {
-      return key === this.sort.key
-        ? `sorted-${this.sort.isAsc ? "desc" : "asc"}`
-        : "";
-    },
     // レイアウトマスタリストについて
     // 最新マスタには存在しない（削除済み）のレイアウトの部分を
     // コード降順にソートする
@@ -742,7 +754,6 @@ export default {
           sendRequestGetLayoutForDailyCheck(menteDate),
           sendRequestGetCheckResult(menteDate),
           this.sendRequestGetAllCategoryByFacilityCd(this.getFacilityCd),
-          this.sendRequestGetAllMachineByFacilityCd(this.getFacilityCd),
         ]).catch(error => {
           getErrorMessage("DailyInspectionListComponent.vue", "applyConditionList", error);
         });
@@ -801,7 +812,7 @@ export default {
                   if (!categoryMst) return false;
                   // グループマスタで点検項目が選択されていない場合はfalseを返す
                   if (!categoryMst.detailList.length) return false;
-                  // 装置型式がグループマスタ他の対象型式に含まれているかを返す
+                  // 装置型式がグループマスタの対象型式に含まれているかを返す
                   // 装置型式が未指定の場合は「すべて」扱いとするための対応は
                   // dailyCategoryList の生成時に入っている
                   return categoryMst.typeCdList.includes(machine.machineTypeCd);
@@ -920,7 +931,7 @@ export default {
     async refresh() {
       await this.executeWithLoadingScreen(async () => {
         await this.applyConditionList();
-        this.sortBy("");
+        updateSort(Keys.defaultSort, this.sort);
       });
     },
     // マウスダウンイベント
@@ -977,8 +988,6 @@ export default {
       this.syncTableHeight();
       // 表示エリアサイズの設定
       this.setDisplayAreaSize();
-      // 固定テーブル列最小幅の補正
-      this.resetFixedTableColumnMinWidth();
     },
     // ドラッグオーバーイベント
     onDragOver(event, isScrollTableHeader) {
@@ -995,8 +1004,6 @@ export default {
         this.syncTableHeight();
         // 表示エリアサイズの設定
         this.setDisplayAreaSize();
-        // 固定テーブル列最小幅の補正
-        this.resetFixedTableColumnMinWidth();
         // 再帰処理の停止
         if (!this.isClicked && !this.isOvered) {
           // インターバルの削除
@@ -1017,8 +1024,6 @@ export default {
       this.syncTableHeight();
       // 表示エリアサイズの設定
       this.setDisplayAreaSize();
-      // 固定テーブル列最小幅の補正
-      this.resetFixedTableColumnMinWidth();
       // インターバルの削除
       this.disposeInterval();
       // 対象IDの削除
@@ -1130,7 +1135,16 @@ export default {
       // 日付数の取得
       const cols = this.getScrollThCount();
       // バッファーの算出
-      this.buffer = cols * 30;
+      const borderWidthPx = 1;
+      const paddingWidthPx = 8 * 2;
+      this.buffer = (cols * (borderWidthPx + paddingWidthPx)) + borderWidthPx;
+      // #11086対応時のメモ：
+      // this.buffer はヘッダーセルのstyle.widthの値に含まれない
+      // borderとpaddingを含めたテーブル全体の幅を計算するための値と思われる。
+      // テーブルの幅を計算してテーブルのstyle.widthに設定している理由は不明だが
+      // そうする場合には this.buffer の値を正確に計算しておかないと
+      // ヘッダーセルの表示上の幅がstyle.widthの値と乖離してしまい
+      // 列幅変更処理で設定値と見た目の幅がずれるなどの問題が起きる。
     },
     // テーブル高の同期
     syncTableHeight() {
@@ -1535,69 +1549,18 @@ export default {
         this.getScopedElementById(Keys.fixedArea).scrollTop = scrollTop;
       }
     },
-    // 固定テーブル列最小幅の補正
-    resetFixedTableColumnMinWidth() {
-      // 全体エリアスクロール状態の場合
-      if (this.scrollState) {
-        // -----NO-----
-        // 列幅の取得
-        const noWidth = this.getScopedElementById(Keys.no).style.width != "" ? Number(this.getScopedElementById(Keys.no).style.width.replace("px", "")) : this.noWidth;
-        // 現在列幅の評価
-        const currentNoWidth = this.evaluateCurrentWidth(noWidth, this.maxWidth, this.noWidth);
-        // 最小列幅の設定
-        this.getScopedElementById(Keys.no).style.minWidth = currentNoWidth + "px";
-        // -----ベッド-----
-        // 列幅の取得
-        const bedNameWidth = this.getScopedElementById(Keys.bedName).style.width != "" ? Number(this.getScopedElementById(Keys.bedName).style.width.replace("px", "")) : this.minWidth;
-        // 現在列幅の評価
-        const currentBedNameWidth = this.evaluateCurrentWidth(bedNameWidth, this.maxWidth, this.minWidth);
-        // 最小列幅の設定
-        this.getScopedElementById(Keys.bedName).style.minWidth = currentBedNameWidth + "px";
-        // -----装置名-----
-        // 列幅の取得
-        const machineNameWidth = this.getScopedElementById(Keys.machineName).style.width != "" ? Number(this.getScopedElementById(Keys.machineName).style.width.replace("px", "")) : this.minWidth;
-        // 現在列幅の評価
-        const currentMachineNameWidth = this.evaluateCurrentWidth(machineNameWidth, this.maxWidth, this.minWidth);
-        // 最小列幅の設定
-        this.getScopedElementById(Keys.machineName).style.minWidth = currentMachineNameWidth + "px";
-        // -----型式名-----
-        // 列幅の取得
-        const machineTypeWidth = this.getScopedElementById(Keys.machineType).style.width != "" ? Number(this.getScopedElementById(Keys.machineType).style.width.replace("px", "")) : this.minWidth;
-        // 現在列幅の評価
-        const currentMachineTypeWidth = this.evaluateCurrentWidth(machineTypeWidth, this.maxWidth, this.minWidth);
-        // 最小列幅の設定
-        this.getScopedElementById(Keys.machineType).style.minWidth = currentMachineTypeWidth + "px";
-      } else {
-        // -----NO-----
-        // 最小列幅の初期化
-        this.getScopedElementById(Keys.no).style.minWidth = "";
-        // -----ベッド-----
-        // 最小列幅の初期化
-        this.getScopedElementById(Keys.bedName).style.minWidth = "";
-        // -----装置名-----
-        // 最小列幅の初期化
-        this.getScopedElementById(Keys.machineName).style.minWidth = "";
-        // -----型式名-----
-        // 最小列幅の初期化
-        this.getScopedElementById(Keys.machineType).style.minWidth = "";
-      }
-    },
     // レイアウトの再調整
     modifyLayout() {
       // テーブル高の同期
       this.syncTableHeight();
       // 表示エリアサイズの設定
       this.setDisplayAreaSize();
-      // 固定テーブル列最小幅の補正
-      this.resetFixedTableColumnMinWidth();
       setTimeout(() => {
         // ここまでのレイアウト計算処理結果によって
         // スクロールバーの表示状態が変化してからレイアウトを再計算する
         // （nextTickではDOMのレンダリング結果の変化を待てないようなのでsetTimeoutを使用する）
         // 表示エリアサイズの設定
         this.setDisplayAreaSize();
-        // 固定テーブル列最小幅の補正
-        this.resetFixedTableColumnMinWidth();
       });
     },
     // タッチ開始位置を記録
@@ -1674,8 +1637,6 @@ export default {
           this.syncTableHeight();
           // 表示エリアサイズの設定
           this.setDisplayAreaSize();
-          // 固定テーブル列最小幅の補正
-          this.resetFixedTableColumnMinWidth();
           // 画面操作時のスクロール位置の設定
           const scrollArea = this.getScopedElementById(Keys.scrollArea);
           if (scrollArea) {
@@ -1690,8 +1651,6 @@ export default {
             // （nextTickではDOMのレンダリング結果の変化を待てないようなのでsetTimeoutを使用する）
             // 表示エリアサイズの設定
             this.setDisplayAreaSize();
-            // 固定テーブル列最小幅の補正
-            this.resetFixedTableColumnMinWidth();
           });
         });
       });
@@ -1856,8 +1815,7 @@ const compareLayoutAnswer = (itemA, itemB, isAsc, layoutCd) => {
   border: solid 1px #cccccc;
   color: var(--ntss-list-body-color);
 }
-.manual-width {
-  resize: horizontal;
+.manual-width-scoped {
   overflow-x: hidden;
 }
 .ntss-list {

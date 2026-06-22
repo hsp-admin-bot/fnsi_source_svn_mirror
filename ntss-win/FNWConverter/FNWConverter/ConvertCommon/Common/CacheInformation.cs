@@ -161,6 +161,18 @@ namespace ConvertCommon.Common
                 return (T)_cache[key];
             }
         }
-    
+        //add #11902 連携カテゴリキャッシュ start
+        public string CooperationType
+        {
+            get => GetOrAdd($"CooperationType_{CommonConfig.seriesCd}", () =>
+            {
+                string sqlSet = "select COOPSET from SYNC_FACILITY_CD where SERIES_CD=:SERIES_CD";
+                var param = db.GetIMakeSqlParameters();
+                param.AddParam(":SERIES_CD", CommonConfig.seriesCd);
+                DataTable dt = db.SelectTable(sqlSet, param.GetParam());
+                return dt.Rows.Count > 0 ? dt.Rows[0]["COOPSET"].ToString() : string.Empty;
+            });
+        }
+        //add #11902 連携カテゴリキャッシュ end
     }
 }

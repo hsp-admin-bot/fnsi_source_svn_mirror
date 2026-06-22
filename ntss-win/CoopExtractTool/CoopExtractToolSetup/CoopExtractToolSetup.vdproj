@@ -33,12 +33,6 @@
         }
         "Entry"
         {
-        "MsmKey" = "8:_501D1FFE8442C8DCFF2F7F1C0FE564DA"
-        "OwnerKey" = "8:_0ECDB7FD2FEF4EDF8273BC9015AEE2A1"
-        "MsmSig" = "8:_UNDEFINED"
-        }
-        "Entry"
-        {
         "MsmKey" = "8:_7E759E4C0D324551BFA8DB9BBE5D40FD"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
@@ -51,6 +45,12 @@
         }
         "Entry"
         {
+        "MsmKey" = "8:_B615914608A293713C422E7C7816CDC4"
+        "OwnerKey" = "8:_0ECDB7FD2FEF4EDF8273BC9015AEE2A1"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
         "MsmKey" = "8:_UNDEFINED"
         "OwnerKey" = "8:_0ECDB7FD2FEF4EDF8273BC9015AEE2A1"
         "MsmSig" = "8:_UNDEFINED"
@@ -58,13 +58,13 @@
         "Entry"
         {
         "MsmKey" = "8:_UNDEFINED"
-        "OwnerKey" = "8:_1B0ED057BC9B51125DDC94AAABBFEC89"
+        "OwnerKey" = "8:_B615914608A293713C422E7C7816CDC4"
         "MsmSig" = "8:_UNDEFINED"
         }
         "Entry"
         {
         "MsmKey" = "8:_UNDEFINED"
-        "OwnerKey" = "8:_501D1FFE8442C8DCFF2F7F1C0FE564DA"
+        "OwnerKey" = "8:_1B0ED057BC9B51125DDC94AAABBFEC89"
         "MsmSig" = "8:_UNDEFINED"
         }
     }
@@ -213,37 +213,6 @@
             "IsDependency" = "11:TRUE"
             "IsolateTo" = "8:"
             }
-            "{9F6F8455-1EF1-4B85-886A-4223BCC8E7F7}:_501D1FFE8442C8DCFF2F7F1C0FE564DA"
-            {
-            "AssemblyRegister" = "3:1"
-            "AssemblyIsInGAC" = "11:FALSE"
-            "AssemblyAsmDisplayName" = "8:Oracle.ManagedDataAccess, Version=4.122.18.3, Culture=neutral, PublicKeyToken=89b483f429c47342, processorArchitecture=MSIL"
-                "ScatterAssemblies"
-                {
-                    "_501D1FFE8442C8DCFF2F7F1C0FE564DA"
-                    {
-                    "Name" = "8:Oracle.ManagedDataAccess.dll"
-                    "Attributes" = "3:512"
-                    }
-                }
-            "SourcePath" = "8:Oracle.ManagedDataAccess.dll"
-            "TargetName" = "8:"
-            "Tag" = "8:"
-            "Folder" = "8:_4BF71FDF9D664BBD97A22724E0E06C6C"
-            "Condition" = "8:"
-            "Transitive" = "11:FALSE"
-            "Vital" = "11:TRUE"
-            "ReadOnly" = "11:FALSE"
-            "Hidden" = "11:FALSE"
-            "System" = "11:FALSE"
-            "Permanent" = "11:FALSE"
-            "SharedLegacy" = "11:FALSE"
-            "PackageAs" = "3:1"
-            "Register" = "3:1"
-            "Exclude" = "11:FALSE"
-            "IsDependency" = "11:TRUE"
-            "IsolateTo" = "8:"
-            }
             "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_7E759E4C0D324551BFA8DB9BBE5D40FD"
             {
             "SourcePath" = "8:..\\CoopExtractTool\\MappingXML\\CSI.xml"
@@ -282,6 +251,37 @@
             "Register" = "3:1"
             "Exclude" = "11:FALSE"
             "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
+            "{9F6F8455-1EF1-4B85-886A-4223BCC8E7F7}:_B615914608A293713C422E7C7816CDC4"
+            {
+            "AssemblyRegister" = "3:1"
+            "AssemblyIsInGAC" = "11:FALSE"
+            "AssemblyAsmDisplayName" = "8:Oracle.ManagedDataAccess, Version=4.122.18.3, Culture=neutral, PublicKeyToken=89b483f429c47342, processorArchitecture=MSIL"
+                "ScatterAssemblies"
+                {
+                    "_B615914608A293713C422E7C7816CDC4"
+                    {
+                    "Name" = "8:Oracle.ManagedDataAccess.dll"
+                    "Attributes" = "3:512"
+                    }
+                }
+            "SourcePath" = "8:Oracle.ManagedDataAccess.dll"
+            "TargetName" = "8:"
+            "Tag" = "8:"
+            "Folder" = "8:_4BF71FDF9D664BBD97A22724E0E06C6C"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:TRUE"
             "IsolateTo" = "8:"
             }
         }
@@ -351,8 +351,8 @@
         {
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:CoopExtractTool"
-        "ProductCode" = "8:{2AF92DCB-DB06-468F-9417-ACF7C6726F82}"
-        "PackageCode" = "8:{ED79DD6A-7F62-4BCD-9304-1BF9DB07ECC0}"
+        "ProductCode" = "8:{2DCA3E29-4685-4B43-B375-17596D1090DD}"
+        "PackageCode" = "8:{1FCCE3DC-FA64-4091-B63B-5740ECC9E649}"
         "UpgradeCode" = "8:{2BBD7E5E-4D8A-4C01-8B8B-11D976CAFA2B}"
         "AspNetVersion" = "8:4.0.30319.0"
         "RestartWWWService" = "11:FALSE"

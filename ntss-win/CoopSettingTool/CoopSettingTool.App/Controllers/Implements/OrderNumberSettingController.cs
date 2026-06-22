@@ -36,6 +36,9 @@ namespace CoopSettingTool.App.Controllers
     /// <seealso cref="CoopSettingTool.App.Controllers.IOrderNumberSettingController" />
     public class OrderNumberSettingController : BaseController<IOrderNumberSettingView, IOrderNumberSettingModel>, IOrderNumberSettingController
     {
+        private const int ImportOrderNumberColumnCount = 9;
+        private const int ImportColumnOffsetWithFacilityAndCoopVersion = 2;
+
         /// <summary>
         /// The system coop no service
         /// </summary>
@@ -149,10 +152,27 @@ namespace CoopSettingTool.App.Controllers
                             if(commonSetting != null && commonSetting.CoopOrdCds != null)
                             {
                                 OrdCd match = null;
+                                List<OrdCd> coopOrdCdCandidates = commonSetting.CoopOrdCds;
+                                List<OrdCd> coopVersionMatchedCandidates = new List<OrdCd>();
+                                if (!string.IsNullOrEmpty(sysCoopNo.CoopVersion))
+                                {
+                                    coopVersionMatchedCandidates = coopOrdCdCandidates
+                                        .Where(x => x.CoopVersion == sysCoopNo.CoopVersion)
+                                        .ToList();
+                                }
+
                                 // Try match by CoopCdIndex
                                 if (!string.IsNullOrEmpty(sysCoopNo.CoopCdIndex))
                                 {
-                                    match = commonSetting.CoopOrdCds.FirstOrDefault(x => x.CoopCdIndex == sysCoopNo.CoopCdIndex);
+                                    if (coopVersionMatchedCandidates.Count > 0)
+                                    {
+                                        match = coopVersionMatchedCandidates.FirstOrDefault(x => x.CoopCdIndex == sysCoopNo.CoopCdIndex);
+                                    }
+
+                                    if (match == null)
+                                    {
+                                        match = coopOrdCdCandidates.FirstOrDefault(x => x.CoopCdIndex == sysCoopNo.CoopCdIndex);
+                                    }
                                 }
                                 
                                 // Fallback: Try match by CoopCd from OrdCds
@@ -164,7 +184,15 @@ namespace CoopSettingTool.App.Controllers
                                         if (sysOrdCds != null && sysOrdCds.Count > 0)
                                         {
                                             var targetCd = sysOrdCds[0].CoopCd;
-                                            match = commonSetting.CoopOrdCds.FirstOrDefault(x => x.CoopCd == targetCd);
+                                            if (coopVersionMatchedCandidates.Count > 0)
+                                            {
+                                                match = coopVersionMatchedCandidates.FirstOrDefault(x => x.CoopCd == targetCd);
+                                            }
+
+                                            if (match == null)
+                                            {
+                                                match = coopOrdCdCandidates.FirstOrDefault(x => x.CoopCd == targetCd);
+                                            }
                                         }
                                     }
                                     catch { }
@@ -224,33 +252,49 @@ namespace CoopSettingTool.App.Controllers
             await Task.Run(() =>
             {
                 // ファイルのすべての行を取り込む
-                List<string[]> lines = File.ReadAllLines(filePath).Skip(1).Select(v => v.Split(','))
-                                            .ToList();
+                string[] allLines = File.ReadAllLines(filePath);
+                int importColumnOffset = HasFacilityAndCoopVersionColumns(allLines.FirstOrDefault()?.Split(','))
+                    ? ImportColumnOffsetWithFacilityAndCoopVersion
+                    : 0;
+                List<string[]> lines = allLines.Skip(1).Select(v => v.Split(',')).ToList();
                 foreach (string[] line in lines)
                 {
-                    // 行のアイテムが6以上時に取り込む
-                    // *OrdCds, CurCoopOrdNo, NoOfDigit, PaddingChar, PaddingPos, RangeMax, RangeMin, PrefixChar, SuffixChar
-                    if (line.Length >= 6)
+                    // *[FacilityCd, CoopVersion,] OrdCds, CurCoopOrdNo, NoOfDigit, PaddingChar, PaddingPos, RangeMax, RangeMin, PrefixChar, SuffixChar
+                    if (line.Length >= importColumnOffset + ImportOrderNumberColumnCount)
                     {
+                        string importCoopVersion = importColumnOffset == ImportColumnOffsetWithFacilityAndCoopVersion ? line[1] : string.Empty;
+                        string importOrdCds = line[importColumnOffset];
+
                         // 合ってる連携配信設定を探す
-                        SysCoopNoEntity sysCoopNoEntity = this.Model.SysCoopNoList.FirstOrDefault(x => CheckCoopOrdCd(x.OrdCds, line[0])
+                        SysCoopNoEntity sysCoopNoEntity = this.Model.SysCoopNoList.FirstOrDefault(x => CheckCoopOrdCd(x.OrdCds, importOrdCds)
+                                                                                                    && IsCoopVersionMatched(x.CoopVersion, importCoopVersion)
                                                                                                     && x.IsDel == "0");
                         if(sysCoopNoEntity != null)
                         {
-                            sysCoopNoEntity.CurCoopOrdNo = line[1];
-                            sysCoopNoEntity.NoOfDigit = line[2];
-                            sysCoopNoEntity.PaddingChar = string.IsNullOrEmpty(line[3]) ? '0' : line[3][0];
-                            sysCoopNoEntity.PaddingPos = line[4];
-                            sysCoopNoEntity.RangeMax = line[5];
-                            sysCoopNoEntity.RangeMin = line[6];
-                            sysCoopNoEntity.PrefixChar = line[7];
-                            sysCoopNoEntity.SuffixChar = line[8];
+                            if (!string.IsNullOrEmpty(importCoopVersion))
+                            {
+                                sysCoopNoEntity.CoopVersion = importCoopVersion;
+                            }
+
+                            sysCoopNoEntity.CurCoopOrdNo = line[importColumnOffset + 1];
+                            sysCoopNoEntity.NoOfDigit = line[importColumnOffset + 2];
+                            sysCoopNoEntity.PaddingChar = string.IsNullOrEmpty(line[importColumnOffset + 3]) ? '0' : line[importColumnOffset + 3][0];
+                            sysCoopNoEntity.PaddingPos = line[importColumnOffset + 4];
+                            sysCoopNoEntity.RangeMax = line[importColumnOffset + 5];
+                            sysCoopNoEntity.RangeMin = line[importColumnOffset + 6];
+                            sysCoopNoEntity.PrefixChar = line[importColumnOffset + 7];
+                            sysCoopNoEntity.SuffixChar = line[importColumnOffset + 8];
                         }
                         else
                         {
                             sysCoopNoEntity = new SysCoopNoEntity(this.Model.Facility.FacilityCd);
 
-                            string[] importCoopOrdCds = line[0].Split(';');
+                            if (!string.IsNullOrEmpty(importCoopVersion))
+                            {
+                                sysCoopNoEntity.CoopVersion = importCoopVersion;
+                            }
+
+                            string[] importCoopOrdCds = importOrdCds.Split(';');
                             List<CoopCdItem> coopCdItems = new List<CoopCdItem>();
                             foreach (string importCoopOrdCd in importCoopOrdCds)
                             {
@@ -263,14 +307,14 @@ namespace CoopSettingTool.App.Controllers
                             };
 
                             sysCoopNoEntity.OrdCds = JsonConvert.SerializeObject(coopCdItems, settings);
-                            sysCoopNoEntity.CurCoopOrdNo = line[1];
-                            sysCoopNoEntity.NoOfDigit = line[2];
-                            sysCoopNoEntity.PaddingChar = string.IsNullOrEmpty(line[3])?'0':line[3][0];
-                            sysCoopNoEntity.PaddingPos = line[4];
-                            sysCoopNoEntity.RangeMax = line[5];
-                            sysCoopNoEntity.RangeMin = line[6];
-                            sysCoopNoEntity.PrefixChar = line[7];
-                            sysCoopNoEntity.SuffixChar = line[8];
+                            sysCoopNoEntity.CurCoopOrdNo = line[importColumnOffset + 1];
+                            sysCoopNoEntity.NoOfDigit = line[importColumnOffset + 2];
+                            sysCoopNoEntity.PaddingChar = string.IsNullOrEmpty(line[importColumnOffset + 3])?'0':line[importColumnOffset + 3][0];
+                            sysCoopNoEntity.PaddingPos = line[importColumnOffset + 4];
+                            sysCoopNoEntity.RangeMax = line[importColumnOffset + 5];
+                            sysCoopNoEntity.RangeMin = line[importColumnOffset + 6];
+                            sysCoopNoEntity.PrefixChar = line[importColumnOffset + 7];
+                            sysCoopNoEntity.SuffixChar = line[importColumnOffset + 8];
 
                             this.Model.SysCoopNoList.Add(sysCoopNoEntity);
                         }
@@ -292,47 +336,46 @@ namespace CoopSettingTool.App.Controllers
         /// <returns></returns>
         private static bool CheckCoopOrdCd(string coopOrdCdsJson, string coopOrdCdsFromCsv)
         {
-            bool result = false;
             List<CoopCdItem> coopCdItems = new List<CoopCdItem>();
             try
             {
-                do
+                var settings = new JsonSerializerSettings
                 {
-                    var settings = new JsonSerializerSettings
-                    {
-                        NullValueHandling = NullValueHandling.Ignore,
-                        MissingMemberHandling = MissingMemberHandling.Ignore,
-                        TypeNameHandling = TypeNameHandling.Auto
-                    };
-                    coopCdItems = JsonConvert.DeserializeObject<List<CoopCdItem>>(coopOrdCdsJson, settings);
+                    NullValueHandling = NullValueHandling.Ignore,
+                    MissingMemberHandling = MissingMemberHandling.Ignore,
+                    TypeNameHandling = TypeNameHandling.Auto
+                };
+                coopCdItems = JsonConvert.DeserializeObject<List<CoopCdItem>>(coopOrdCdsJson, settings);
+                string[] importCoopOrdCds = coopOrdCdsFromCsv.Split(';');
 
-                    string[] importCoopOrdCds = coopOrdCdsFromCsv.Split(';');
-
-                    if(coopCdItems.Count != importCoopOrdCds.Length)
-                    {
-                        break;
-                    }
-
-                    foreach (string importCoopOrdCd in importCoopOrdCds)
-                    {
-                        if (!coopCdItems.Exists(x => x.CoopCd == importCoopOrdCd))
-                        {
-                            break;
-                        }
-
-                    }
-
-                    result = true;
-                }
-                while (false);
-
-
+                return coopCdItems != null
+                    && coopCdItems.Count == importCoopOrdCds.Length
+                    && importCoopOrdCds.All(importCoopOrdCd => coopCdItems.Exists(x => x.CoopCd == importCoopOrdCd));
             }
             catch
             {
             }
 
-            return result;
+            return false;
+        }
+
+        private static bool IsCoopVersionMatched(string coopVersion, string coopVersionFromCsv)
+        {
+            return string.IsNullOrEmpty(coopVersionFromCsv) || coopVersion == coopVersionFromCsv;
+        }
+
+        private static bool HasFacilityAndCoopVersionColumns(string[] header)
+        {
+            return header != null
+                && header.Length >= 3
+                && IsHeaderMatched(header[0], "施設コード", "facilityCd", "FacilityCd")
+                && IsHeaderMatched(header[1], "連携名", "連携版番号", "coopVersion", "CoopVersion", "coop_version");
+        }
+
+        private static bool IsHeaderMatched(string header, params string[] candidates)
+        {
+            string normalizedHeader = (header ?? string.Empty).Trim().Trim('"');
+            return candidates.Any(candidate => normalizedHeader.Equals(candidate, StringComparison.OrdinalIgnoreCase));
         }
 
         /// <summary>

@@ -2925,8 +2925,39 @@ import { getScopedElementById, getScopedElementsByClassName, queryScopedSelector
           this.mstPersonalUser,
           "userId",
           "userName");*/
+        const [jobResp, responsePersonalUser] = await Promise.all([
+          // r134600: 認可制御対応後の最終API形式を維持する
+          ApiHelper.get(uriJobName),
+          ApiHelper.get(uriPersonalUser, {
+            facility_cd: this.facilityCd
+          })
+        ]).catch(() => {
+          getErrorMessage("BbsDetailInfoContent.vue", "createStaffSelectorData", "DB取得失敗");
+          return [{ data: [] }, { data: [] }];
+        });
+
+        const jobList = Array.isArray(jobResp?.data)
+          ? jobResp.data.map(item => ({ ...item }))
+          : [];
+        const mstPersonalUser = Array.isArray(responsePersonalUser?.data)
+          ? responsePersonalUser.data
+              .filter(mst => mst.userId !== this.userId)
+              .map(item => ({ ...item }))
+          : [];
+
+        mstPersonalUser.forEach(item => {
+          const job = jobList.find(name => Number(item.jobCd) === name.jobCd);
+          if (job) {
+            item.jobName = job.jobName;
+          }
+        });
+        jobList.unshift({
+          jobCd: null,
+          jobName: ""
+        });
+
         const itemList = createItemListDataBbs(
-          this.mstPersonalUser,
+          mstPersonalUser,
           "userId",
           "",
           "userName",
@@ -2942,9 +2973,6 @@ import { getScopedElementById, getScopedElementsByClassName, queryScopedSelector
           "jobCd"
         );
         /*mod FNSI-改修内容掲示板外结No.10 任 end*/
-
-        // const jobList = this.jobList;
-        const jobList = this.jobList;
 
         return { title, itemList, class1, class2, defaultSelection, jobList };
       },

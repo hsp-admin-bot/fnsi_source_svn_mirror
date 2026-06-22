@@ -26,6 +26,7 @@ namespace FNSICloudConvertClient.Logic
     ///   POST /api/v1/jobs                 — 移行 JOB の起動
     ///   GET  /api/v1/jobs/{jobId}         — JOB 状態ポーリング
     ///   GET  /api/v1/jobs/{jobId}/logs    — 実行ログ取得（オフセットポーリング）
+    ///   DELETE /api/v1/jobs/{jobId}       — JOB 中断
     ///   POST /ntss-admin-web/api/log/uploader/{appName} — ログファイルアップロード
     /// </summary>
     //----------------------------------------------------------------------------------------------------
@@ -413,6 +414,34 @@ namespace FNSICloudConvertClient.Logic
                 string.Format("JOB 起動完了: JobId={0}", dto.JobId));
 
             return dto.JobId;
+        }
+
+        //----------------------------------------------------------------------------------------------------
+        /// <summary>
+        /// DELETE /api/v1/jobs/{jobId} — 実行中 JOB の中断をサーバーへ要求する
+        /// </summary>
+        //----------------------------------------------------------------------------------------------------
+        public async Task InterruptJobAsync(
+            long              jobId,
+            string            reason,
+            CancellationToken ct)
+        {
+            if (jobId <= 0)
+                throw new ArgumentException("jobId が不正です", "jobId");
+
+            string url = string.Format("{0}{1}/jobs/{2}", _baseUrl, API_BASE, jobId);
+            if (!string.IsNullOrWhiteSpace(reason))
+                url += "?reason=" + Uri.EscapeDataString(reason);
+
+            var resp = await SendAuthorizedAsync(() => CreateRequest(HttpMethod.Delete, url), ct);
+            string body = await resp.Content.ReadAsStringAsync();
+
+            if (!resp.IsSuccessStatusCode)
+                throw new InvalidOperationException(
+                    string.Format("JOB 中断失敗 [{0}]: {1}", (int)resp.StatusCode, body));
+
+            _log.AddLogInfo(DateTime.Now, "FNSICloudConvertClient", AppLogger.LOGGING_CLASS.INFO,
+                string.Format("JOB 中断要求送信完了: JobId={0}", jobId));
         }
 
         //----------------------------------------------------------------------------------------------------

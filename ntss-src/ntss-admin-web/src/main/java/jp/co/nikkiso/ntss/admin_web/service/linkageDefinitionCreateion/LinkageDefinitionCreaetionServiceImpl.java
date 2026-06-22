@@ -33,8 +33,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
 
 import jp.co.nikkiso.ntss.admin_web.service.SelectOptionsUtils;
 import jp.co.nikkiso.ntss.core.dao.MstCoopDistributeDao;
@@ -49,6 +49,7 @@ import jp.co.nikkiso.ntss.core.entity.xml.Item;
 import jp.co.nikkiso.ntss.core.entity.xml.Root;
 import jp.co.nikkiso.ntss.admin_web.constant.AdminWebConstant.FlagType;
 import org.springframework.util.StringUtils;
+import jp.co.nikkiso.ntss.core.config.DefaultDb;
 
 @Service
 public class LinkageDefinitionCreaetionServiceImpl implements LinkageDefinitionCreationService {
@@ -1036,22 +1037,6 @@ public class LinkageDefinitionCreaetionServiceImpl implements LinkageDefinitionC
     return   eventLogMessage;
   }
 
-  /**
-   * ログ出力共通クラス設定、取得
-   * @return logCommon ログ出力共通クラス
-   */
-  private DataUpdateLogCommonNew getLogCommon(Object dao, String tableName, StringBuffer whereStr, EventLogMessage eventLogMessage) {
-    DataUpdateLogCommonNew logCommon = new DataUpdateLogCommonNew();
-    logCommon.setEventLoggerFactory(eventLoggerFactory);
-    logCommon.setLogServiceCore(logServiceCore);
-    logCommon.setConfig(Config.get(dao));
-    logCommon.setTableName(tableName);
-    logCommon.setWhereStr(whereStr);
-    logCommon.setCommonEventLogMessage(eventLogMessage);
-    return logCommon;
-  }
-
-
   //FNSI-修正 ログ対応 wp add end
 
   /**
@@ -1114,6 +1099,16 @@ public class LinkageDefinitionCreaetionServiceImpl implements LinkageDefinitionC
   @Override
   public List<MstCoopIni> selectMstCoopIniByFacilityCd(String facilityCd){
     return mstCoopIniDao.selectByFacilityCd(facilityCd);
+  }
+
+  /**
+   * コピー元の連携設定マスタを取得.
+   * @param key0 ベンダーキー
+   * @return 連携エッジマスタ情報
+   */
+  @Override
+  public List<MstCoopIni> selectSourceMstCoopIniByKey0(String key0){
+    return mstCoopIniDao.selectSourceByKey0(key0);
   }
 
   /**

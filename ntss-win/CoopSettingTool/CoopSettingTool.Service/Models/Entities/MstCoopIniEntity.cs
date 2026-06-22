@@ -199,6 +199,13 @@ namespace CoopSettingTool.Service.Models
         private string CoopIniInfos { get; set; }
 
         /// <summary>
+        /// Gets or sets the key mapping.
+        /// </summary>
+        /// <value>The key mapping.</value>
+        [JsonProperty("keyMapping")]
+        public string KeyMapping { get; set; }
+
+        /// <summary>
         /// Gets or sets the is disp.
         /// </summary>
         /// <value>The is disp.</value>

@@ -178,6 +178,7 @@ export default {
 
       // 並び順管理マスタ
       mstSelector: [],
+      shrFacilityList: [],
 
       isDialogVisible: false,
       stringParams: null,
@@ -384,6 +385,7 @@ export default {
         this.findDirectGridRowsForRecord(ev.model, ev.model?.uid).forEach((row) => {
           this.markFacilitySettingValueCellsEdited(row, ev.model);
         });
+        this.syncFacilitySettingDispValueCellDisplay(ev.model, ev.model?.uid);
       };
       this.scheduleDirectGridRowVisualState(ev.model, ev.model?.uid);
       this.$nextTick(() => {
@@ -397,6 +399,7 @@ export default {
       this.invalidateDirectGridColumnFieldCache();
       this.applyDirectGridLegacyStyleContract();
       this.refreshDirectGridVisualState();
+      this.syncAllFacilitySettingDispValueCellDisplays();
       if (this.scrollTop > 0 || this.scrollLeft > 0) {
         this.$nextTick(() => {
           this.setGridScrollPosition({ top: this.scrollTop, left: this.scrollLeft });
@@ -543,6 +546,7 @@ export default {
         this.scheduleDirectGridRowVisualState(ev.model, ev.model?.uid);
         this.$nextTick(() => {
           this.applyDirectGridRowVisualState(ev.model, ev.model?.uid);
+          this.syncFacilitySettingDispValueCellDisplay(ev.model, ev.model?.uid);
         });
         this.scheduleDirectGridLayoutContract();
       }
@@ -963,7 +967,7 @@ export default {
       await this.setkendoGridDropList();
 
       // apiをコールして施設設定マスタの値を取得
-      this.getFacilitySettingDataList(this.facilitylistValue)
+      return this.getFacilitySettingDataList(this.facilitylistValue)
         .then(async response => {
           // editableをKendoUI用にfunctionオブジェクトに変換
           const toFunction = response.data.columns;
@@ -1084,19 +1088,15 @@ export default {
               });
 
             }else if(columnData.inputType === 4){
-              let jsonData = this.parseJsonValue(columnData.optionValue);
-
-              let matchData = jsonData.filter(function(item){
-                if(item.id == columnData.value) return true;
-              });
-              columnData.dispValue = matchData[0].name;
+              const jsonData = this.parseJsonValue(columnData.optionValue, []);
+              const matchData = this.findOptionValueById(jsonData, columnData.value);
+              columnData.dispValue = matchData?.name ?? "";
 
             }else if (columnData.inputType === 3){
-              let jsonData = [{"id":"0", "name":"OFF"},{"id":"1", "name":"ON"}];
-              let matchData = jsonData.filter(function(item){
-                if(item.id == columnData.value) return true;
-              });
-              columnData.dispValue = matchData[0].name;
+              const matchData = this.getFacilitySettingOnOffOptions().find(
+                (item) => String(item.id) === String(columnData.value)
+              );
+              columnData.dispValue = matchData?.name ?? "";
 
             } else if (columnData.inputType === 2) {
               // 入力分類(inputType)が2:数値型の場合、処理内で数値型だったり文字列だったり揺れがある。数値型だと不都合な処理がある為、文字列に統一
@@ -1159,7 +1159,8 @@ export default {
           let shrRes = await ApiHelper.get(
             `/shrPatInfo/facilityCdDown`
           )
-          const shrFacilityList = shrRes.data.filterFacility
+          const shrFacilityList = shrRes.data.filterFacility || [];
+          this.shrFacilityList = shrFacilityList;
           // 共有設定を持つ施設リスト取得 Add ligh end
 
           // mod #12462 患者情報共有 ligh end
@@ -1181,7 +1182,12 @@ export default {
               if (mstSelector[0]) {
                 for (let item of mstSelector[0].orderSettings.items) {
                   if (mstSelector[0].masterPhysicalName == 'mst_facility') {
-                    const matchedFacility = shrFacilityList.find(shrItem => shrItem.facilityCd === item.name);
+                    const facilityKey = String(item.code ?? item.name ?? "");
+                    const matchedFacility = shrFacilityList.find(
+                      (shrItem) =>
+                        String(shrItem.facilityCd) === facilityKey
+                        || String(shrItem.facilityName) === facilityKey
+                    );
                     if (matchedFacility) {
                       jsonData.push({
                         id: matchedFacility.facilityCd,
@@ -1195,6 +1201,18 @@ export default {
                     });
                   }
                 }
+              }
+              if (
+                String(columnData.facilitySettingNo) === SHR_PAT_INFO
+                && jsonData.length === 0
+                && Array.isArray(shrFacilityList)
+              ) {
+                shrFacilityList.forEach((shrItem) => {
+                  jsonData.push({
+                    id: shrItem.facilityCd,
+                    name: shrItem.facilityName
+                  });
+                });
               }
               columnData.optionValue = JSON.stringify(jsonData);
               const values = this.normalizeMultiSelectValues(columnData.value);
@@ -1240,6 +1258,7 @@ export default {
             this.initDirectGridIfReady();
             this.applyDirectGridDataSourceContract();
             this.scheduleDirectGridLayoutContract();
+            this.syncAllFacilitySettingDispValueCellDisplays();
             this.setGridScrollPosition({ top: scrollTop, left: scrollLeft });
           });
 
@@ -1642,7 +1661,8 @@ export default {
       if (!model || Number(model.inputType) !== 7) {
         return;
       }
-      const optionValue = this.parseJsonValue(model.optionValue, []);
+      this.syncFacilitySettingMultiSelectModelFromStore(model);
+      const optionValue = this.resolveFacilitySettingEditorOptionList(model);
       const values = this.normalizeMultiSelectValues(model.val ?? model.value);
       model.val = JSON.stringify(values);
       model.value = JSON.stringify(values);
@@ -1696,8 +1716,11 @@ export default {
         if (column.field === "dispOrder") {
           directColumn.width = "4em";
           directColumn.editor = this.editorInput;
-        } else if (column.title === "設定値") {
+        } else if (column.title === "設定値" || column.field === "dispValue") {
           directColumn.editor = this.editorInput;
+          // direct jq 移行後は dispValue の DOM 反映が save / cellClose まで遅れる行があるため、
+          // 設定値列は model から表示文言を毎回解決する。
+          directColumn.template = (dataItem) => this.resolveFacilitySettingDisplayText(dataItem);
         }
         return directColumn;
       });
@@ -1812,6 +1835,12 @@ export default {
         this.$nextTick(() => {
           this.applyDirectGridLegacyStyleContract();
           this.refreshDirectGridVisualState();
+          try {
+            grid.refresh?.();
+          } catch (_error) {
+            // noop
+          }
+          this.syncAllFacilitySettingDispValueCellDisplays();
           this.setGridScrollPosition(position);
         });
       });
@@ -2029,116 +2058,123 @@ export default {
       Array.from(data || []).forEach((record) => this.applyDirectGridRowVisualState(record, record.uid));
     },
 
+    syncFacilitySettingPersistValues(columnData) {
+      const inputType = Number(columnData?.inputType);
+      if (inputType === 4 || inputType === 5 || inputType === 8 || inputType === 9) {
+        const jsonData = this.resolveFacilitySettingEditorOptionList(columnData);
+        const strictMatch = jsonData.find(
+          (item) =>
+            String(item.name) === String(columnData.dispValue)
+            && String(item.id) === String(columnData.val ?? columnData.value)
+        );
+        const byVal = this.findOptionValueById(jsonData, columnData.val ?? columnData.value);
+        const byDisp = this.findOptionValueByName(jsonData, columnData.dispValue);
+        const match = strictMatch || byVal || byDisp;
+        if (match) {
+          columnData.value = String(match.id);
+          columnData.val = String(match.id);
+          columnData.dispValue = match.name;
+        }
+        return;
+      }
+      if (inputType === 7) {
+        const jsonData = this.resolveFacilitySettingEditorOptionList(columnData);
+        const valueData = this.normalizeMultiSelectValues(columnData.val || columnData.value);
+        const normalizedValues = valueData.filter((value) => this.findOptionValueById(jsonData, value));
+        columnData.val = JSON.stringify(normalizedValues);
+        columnData.value = JSON.stringify(normalizedValues);
+        columnData.dispValue = this.buildMultiSelectDisplayValue(jsonData, normalizedValues, columnData);
+        return;
+      }
+      if (inputType === 3) {
+        const match = this.getFacilitySettingOnOffOptions().find(
+          (item) => String(item.name) === String(columnData.dispValue)
+        ) || this.getFacilitySettingOnOffOptions().find(
+          (item) => String(item.id) === String(columnData.value ?? columnData.val)
+        );
+        if (match) {
+          columnData.value = match.id;
+          columnData.val = match.id;
+          columnData.dispValue = match.name;
+        }
+        return;
+      }
+      columnData.value = columnData.dispValue;
+    },
     async saveRecord() {
       // 共通ローダー:表示開始
       this.setLoadingScreenVisible(true);
-      //イベント発生前のスクロールバーの位置を保持
-      const { top: scrollTop, left: scrollLeft } = this.getGridScrollPosition();
-      this.scrollTop = scrollTop;
-      this.scrollLeft = scrollLeft;
-      // masterListの表示値から登録値を再設定(ドロップダウンリストの表示と値を再設定)
-      //画面表示項目と値格納項目の再分離
-      this.getMasterRecordList.data.forEach(columnData=> {
-        // mod 施設設定マスタ 帳票未指定時のデフォルト帳票を指定可能 孔s start
-        // if(columnData.inputType === 4 || columnData.inputType === 5 || columnData.inputType === 9){
-        if(columnData.inputType === 4 || columnData.inputType === 5 || columnData.inputType === 9 || columnData.inputType === 8){
-        // mod 施設設定マスタ 帳票未指定時のデフォルト帳票を指定可能 孔s end
-          //4:ドロップダウンリスト時
-          let jsonData = this.parseJsonValue(columnData.optionValue);
+      try {
+        //イベント発生前のスクロールバーの位置を保持
+        const { top: scrollTop, left: scrollLeft } = this.getGridScrollPosition();
+        this.scrollTop = scrollTop;
+        this.scrollLeft = scrollLeft;
+        // masterListの表示値から登録値を再設定(ドロップダウンリストの表示と値を再設定)
+        //画面表示項目と値格納項目の再分離
+        this.getMasterRecordList.data.forEach((columnData) => {
+          this.syncFacilitySettingPersistValues(columnData);
+        });
+        this.setMasterRecordList(this.getMasterRecordList);
 
-          let matchData = jsonData.filter(function(item){
-            if(item.name == columnData.dispValue && columnData.val == item.id) return true;
-          });
-          if(matchData.length > 0){
-            columnData.value = matchData[0].id;
-          }
+        // 登録用項目一覧
+        const keys = [
+          "facilitySettingNo",
+          "value"
+        ];
 
-        // add redmine 4675 医療材料表示順、投与薬剤表示順の不正 孔 start
-        }else if(columnData.inputType === 7){
-          const jsonData = this.parseJsonValue(columnData.optionValue, []);
-          const valueData = this.normalizeMultiSelectValues(columnData.val || columnData.value);
-          const normalizedValues = valueData.filter((value) => this.findOptionValueById(jsonData, value));
-          columnData.val = JSON.stringify(normalizedValues);
-          columnData.value = JSON.stringify(normalizedValues);
-        // add redmine 4675 医療材料表示順、投与薬剤表示順の不正 孔 end
-        }else if (columnData.inputType === 3){
-          //3:ON/OFF設定時(トグル不可のためドロップダウンリストで代替)
-          let jsonData = [{"id":"0", "name":"OFF"},{"id":"1", "name":"ON"}];
-          let matchData = jsonData.filter(function(item){
-            if(item.name == columnData.dispValue) return true;
-          });
-          columnData.value = matchData[0].id;
-
-        }else{
-          //2:数値入力 1:テキスト入力時
-          columnData.value = columnData.dispValue;
+        // 必須入力チェック
+        if (!this.isFilledRequired()) {
+          return;
         }
-      });
-      this.setMasterRecordList(this.getMasterRecordList);
 
-      // 登録用項目一覧
-      const keys = [
-        "facilitySettingNo",
-        "value"
-      ];
-
-      // 必須入力チェック
-      if (!this.isFilledRequired()) {
-        //共通ローダー：表示終了
-        this.setLoadingScreenVisible(false);
-        return;
-      }
-
-      // 編集中のレコードを取得
-      const insertRecords = [];
-      for (const record of this.getUpdateRecordList) {
-         if (record.operation === 2) {
-           //更新対象データ
+        // 編集中のレコードを取得
+        const insertRecords = [];
+        for (const record of this.getUpdateRecordList) {
+          if (record.operation === 2) {
+            //更新対象データ
             insertRecords.push(record);
+          }
         }
+
+        // 登録日時・更新日時用の現在日時
+        const now = dayjs().format("YYYY-MM-DDTHH:mm:ss.SSSZ");
+
+        const serializedInsertRecords = insertRecords.map(record =>
+          JSON.stringify({
+            ..._.pick(record, keys),
+            facilityCd: this.facilitylistValue,
+            regDate: now,
+            upDate: now
+          })
+        );
+
+        //登録更新用レコードの作成
+        const editRecord = {
+          insertRecord: serializedInsertRecords
+        };
+
+        // apiをコールして値を保存
+        await ApiHelper.put("/master_maintenance/saveMstFacilitySetting", editRecord);
+
+        // サインイン失敗時の設定
+        await this.setSignInFailSetting(this.facilitylistValue);
+
+        this.$ons.notification.alert({
+          // mod #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
+          // title: "更新完了",
+          // message: "マスタ更新が完了しました。"
+          title: DIALOG_MESSAGES[12000004].title,
+          message: messageFormat(DIALOG_MESSAGES[12000004].message),
+          // mod #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
+        });
+
+        await this.findList();
+      } catch (error) {
+        console.error("[mst-facility-setting] saveRecord failed", error);
+      } finally {
+        // 共通ローダー:表示終了（例外時も必ず閉じる）
+        this.setLoadingScreenVisible(false);
       }
-
-      // 登録日時・更新日時用の現在日時
-      const now = dayjs().format("YYYY-MM-DDTHH:mm:ss.SSSZ");
-
-      const serializedInsertRecords = insertRecords.map(record =>
-        JSON.stringify({
-          ..._.pick(record, keys),
-          facilityCd: this.facilitylistValue,
-          regDate: now,
-          upDate: now
-        })
-      );
-
-      //登録更新用レコードの作成
-      const editRecord = {
-        insertRecord: serializedInsertRecords
-      };
-
-      // apiをコールして値を保存
-      await ApiHelper.put("/master_maintenance/saveMstFacilitySetting", editRecord).catch(
-        error => {
-          //共通ローダー：表示終了
-          this.setLoadingScreenVisible(false);
-          throw new Error(error);
-        }
-      );
-
-      // サインイン失敗時の設定
-      await this.setSignInFailSetting(this.facilitylistValue);
-
-      this.$ons.notification.alert({
-        // mod #6107 2023/03/09 メッセージボックス全調整 林峻峰 start
-        // title: "更新完了",
-        // message: "マスタ更新が完了しました。"
-        title: DIALOG_MESSAGES[12000004].title,
-        message: messageFormat(DIALOG_MESSAGES[12000004].message),
-        // mod #6107 2023/03/09 メッセージボックス全調整 林峻峰 end
-      });
-
-      await this.findList();
-      // 共通ローダー:表示終了
-      this.setLoadingScreenVisible(false);
     },
     /**
      * @description 必須項目チェック
@@ -2218,6 +2254,22 @@ export default {
       this.scrollTop = 0;
       this.scrollLeft = 0;
     },
+    parseLegacyFacilitySettingOptionList(value) {
+      if (typeof value !== "string" || !/^\s*\[\s*\{/.test(value) || !/\bid\s*:/.test(value)) {
+        return null;
+      }
+      const items = [];
+      const pattern = /\{id\s*:\s*([^,}]+)\s*,\s*name\s*:\s*(.+?)\s*\}/g;
+      let match = pattern.exec(value);
+      while (match) {
+        items.push({
+          id: String(match[1]).trim(),
+          name: String(match[2]).trim(),
+        });
+        match = pattern.exec(value);
+      }
+      return items.length > 0 ? items : null;
+    },
     parseJsonValue(value, fallback = null) {
       if (value == null || value === "") {
         return fallback;
@@ -2228,6 +2280,10 @@ export default {
       try {
         return JSON.parse(value);
       } catch (_error) {
+        const legacyList = this.parseLegacyFacilitySettingOptionList(value);
+        if (legacyList != null) {
+          return legacyList;
+        }
         return fallback;
       }
     },
@@ -2237,6 +2293,120 @@ export default {
         && list[0]?.master_physical_name
         && list[0]?.id == null
         && list[0]?.name == null;
+    },
+    syncFacilitySettingMultiSelectModelFromStore(model) {
+      if (!model || Number(model.inputType) !== 7) {
+        return;
+      }
+      const storeRow = (this.getMasterRecordList?.data || []).find((row) => {
+        if (model.facilitySettingNo != null && row?.facilitySettingNo != null) {
+          return String(row.facilitySettingNo) === String(model.facilitySettingNo);
+        }
+        return model.dispOrder != null && String(row.dispOrder) === String(model.dispOrder);
+      });
+      if (!storeRow) {
+        return;
+      }
+      const storeList = this.parseJsonValue(storeRow.optionValue, []);
+      if (Array.isArray(storeList) && !this.isFacilitySettingSelectorPlaceholder(storeList) && storeList.length > 0) {
+        model.optionValue = storeRow.optionValue;
+      }
+      if ((model.dispValue == null || String(model.dispValue).trim() === "") && storeRow.dispValue != null) {
+        model.dispValue = storeRow.dispValue;
+      }
+    },
+    getFacilitySettingModelField(model, field) {
+      if (!model) {
+        return undefined;
+      }
+      if (typeof model.get === "function") {
+        const value = model.get(field);
+        return value !== undefined ? value : model[field];
+      }
+      return model[field];
+    },
+    setFacilitySettingModelField(model, field, value) {
+      if (!model) {
+        return;
+      }
+      if (typeof model.set === "function") {
+        model.set(field, value);
+        return;
+      }
+      model[field] = value;
+    },
+    ensureFacilitySettingModelDispValue(model) {
+      if (!model) {
+        return;
+      }
+      const currentDispValue = this.getFacilitySettingModelField(model, "dispValue");
+      if (currentDispValue != null && String(currentDispValue).trim() !== "") {
+        return;
+      }
+      this.syncFacilitySettingSelectorModelFromStore(model);
+      const syncedDispValue = this.getFacilitySettingModelField(model, "dispValue");
+      if (syncedDispValue != null && String(syncedDispValue).trim() !== "") {
+        return;
+      }
+      const inputType = Number(this.getFacilitySettingModelField(model, "inputType"));
+      if (inputType === 3) {
+        this.syncFacilitySettingOnOffModel(model);
+        return;
+      }
+      if (inputType === 7) {
+        this.syncFacilitySettingMultiSelectDisplayModel(model);
+        return;
+      }
+      if ([4, 5, 8, 9].includes(inputType)) {
+        const optionList = this.resolveFacilitySettingEditorOptionList(model);
+        const value = this.getFacilitySettingModelField(model, "value")
+          ?? this.getFacilitySettingModelField(model, "val");
+        const match = this.findOptionValueById(optionList, value);
+        if (match?.name != null) {
+          this.setFacilitySettingModelField(model, "dispValue", match.name);
+        }
+        return;
+      }
+      const rawValue = this.getFacilitySettingModelField(model, "value");
+      if (rawValue != null && rawValue !== "") {
+        this.setFacilitySettingModelField(model, "dispValue", String(rawValue));
+      }
+    },
+    resolveFacilitySettingDisplayText(model) {
+      if (!model) {
+        return "";
+      }
+      this.ensureFacilitySettingModelDispValue(model);
+      const dispValue = this.getFacilitySettingModelField(model, "dispValue");
+      return dispValue == null ? "" : String(dispValue);
+    },
+    syncFacilitySettingDispValueCellDisplay(record, preferredUid = null) {
+      if (!record) {
+        return;
+      }
+      const displayText = this.resolveFacilitySettingDisplayText(record);
+      const rows = this.findDirectGridRowsForRecord(record, preferredUid);
+      rows.forEach((row) => {
+        if (this.isDirectGridLockedRow(row)) {
+          return;
+        }
+        const cell = this.findFacilitySettingDispValueCell(row, record);
+        if (!cell || cell.classList.contains("k-edit-cell")) {
+          return;
+        }
+        if ((cell.textContent ?? "") !== displayText) {
+          cell.textContent = displayText;
+        }
+      });
+    },
+    syncAllFacilitySettingDispValueCellDisplays() {
+      const grid = this.getDirectGridWidget();
+      if (!grid?.dataSource) {
+        return;
+      }
+      Array.from(grid.dataSource.data() || []).forEach((record) => {
+        this.syncFacilitySettingDispValueCellDisplay(record, record?.uid);
+      });
     },
     syncFacilitySettingSelectorModelFromStore(model) {
       if (!model || ![4, 5, 8, 9].includes(Number(model.inputType))) {
@@ -2296,6 +2466,16 @@ export default {
         if (!Array.isArray(list)) {
           list = [];
         }
+      }
+      if (
+        list.length === 0
+        && String(model.facilitySettingNo) === SHR_PAT_INFO
+        && Array.isArray(this.shrFacilityList)
+      ) {
+        list = this.shrFacilityList.map((shrItem) => ({
+          id: shrItem.facilityCd,
+          name: shrItem.facilityName
+        }));
       }
       return list;
     },

@@ -278,7 +278,7 @@
                   :disabled="settingData.startDateEdit || !getItemAuthorized()"
                   :disable-dates-after="disableDatesAfter"
                   :to-month="toMonth"
-                  @input="onCalendarIndStartDateInput"
+                  @input="date => { onCalendarIndStartDateInput(date); resetComponentData(); }"
                 />
                 <!-- add 9664補液及び透析液仕様修正します yangqingzhe end -->
                 <!-- mod #10359 編集権限の動作不正 dengshen end -->
@@ -481,7 +481,7 @@
                   :disable-dates-before="disableDatesBefore"
                   :disable-dates-after="disableDatesAfter"
                   :to-month="toMonth"
-                  @input="onCalendarIndEndDateInput"
+                  @input="date => { onCalendarIndEndDateInput(date); resetComponentData(); }"
                 />
                 <!-- mod #10359 編集権限の動作不正 dengshen end -->
                 <!-- mod 9267 9296 患者経過総合ビューアにて投与薬剤の投与間隔を変更すると新規で作成される。治療予定作成時の開始日が空欄 zy end -->
@@ -842,7 +842,7 @@
                 v-if="componentId === 'ind-sch-edit'"
                 class="btn1-execute width-padding"
                 style="margin-left: 1.5em;"
-                :disabled="updateDisable || (structData.editOnly && !editFlg) || !getItemAuthorized()"
+                :disabled="updateDisable || !getItemAuthorized()"
                 @click="updateIndInfo(1, '', { useOrdMoveCheckApi: true })"
               >
                 保存
@@ -863,7 +863,7 @@
                 class="btn1-execute width-padding"
                 style="margin-left: 1.5em;"
                 v-if="'予定作成' != settingData.headerTitle && '医療材料編集' != settingData.headerTitle && componentId !== 'ind-sch-edit'"
-                :disabled="updateDisable || !editFlg || !getItemAuthorized()"
+                :disabled="updateDisable || !getItemAuthorized()"
                 @click="updateIndInfo(1)"
               >
                 保存
@@ -914,7 +914,7 @@
                   class="btn1-execute width-padding"
                   style="margin-left: 1.5em;"
                   v-if="'医療材料編集' != settingData.headerTitle"
-                  :disabled="updateDisable || !editFlg || !getItemAuthorized()"
+                  :disabled="updateDisable || !getItemAuthorized()"
                   @click="updateIndInfo(2)"
                 >
                 <!-- mod #10359 編集権限の動作不正 dengshen end -->
@@ -1522,7 +1522,7 @@ export default {
         "Na注入プログラム",
         "透析液濃度プログラム",
         "血流量・透析液流量プログラム",
-        "Ｉ‐ＨＤＦプログラム",
+        "I-HDF設定",
         "BV‐UFC",
         "透析量プログラム"
       ];
@@ -1588,7 +1588,7 @@ export default {
         // "医療材料編集", "除水プログラム", "Na注入プログラム", "透析液濃度プログラム",
         "除水プログラム", "Na注入プログラム", "透析液濃度プログラム",
         // mod #11311 編集箇所のみ保存の再精査 zkm end
-        "血流量・透析液流量プログラム", "Ｉ‐ＨＤＦプログラム",
+        "血流量・透析液流量プログラム", "I-HDF設定",
         // add #11120 I-HDF設定内の破棄確認メッセージ不正 張玲 start 
         "透析量プログラム"
         // add #11120 I-HDF設定内の破棄確認メッセージ不正 張玲 end 
@@ -2933,23 +2933,43 @@ export default {
     //add FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.94(外結)対応 韓 start
     async resetComponentData() {
       const slotComponent = await this.getDefaultSlotComponentAfterRender();
-      if (typeof slotComponent?.resetComponentIndData === "function") {
-        await this.executeWithLoadingScreen(
-          () => slotComponent.resetComponentIndData(this.structData)
-        );
-      }
+      const runReset = async (component) => {
+        if (typeof component?.resetComponentIndData !== "function") {
+          return;
+        }
+        const originalIsEdit = component.isEdit;
+        if (typeof originalIsEdit === "function") {
+          component.isEdit = () => {
+            if (component.$refs?.equipEdit?.checkEdit?.()) return true;
+            if (typeof component.checkEdit === "function" && component.checkEdit()) return true;
+            if (component.commentContent?.initValue !== component.commentContent?.editValue) return true;
+            if (typeof component.getIsEdit === "function") {
+              if (component.getIsEdit("selectedKur") || component.getIsEdit("indTreatStartTime") || component.getIsEdit("selectedBed")) return true;
+            }
+            for (const key of Object.keys(component.$refs || {})) {
+              if (component.$refs[key]?.[0]?.checkEditCount?.()) return true;
+            }
+            return originalIsEdit.call(component);
+          };
+        }
+        try {
+          await this.executeWithLoadingScreen(
+            () => component.resetComponentIndData(this.structData)
+          );
+        } finally {
+          if (typeof originalIsEdit === "function") {
+            component.isEdit = originalIsEdit;
+          }
+        }
+      };
 
+      await runReset(slotComponent);
       if (this.isDialogType9_offWater) {
-        await this.executeWithLoadingScreen(
-          () => this.getRenderedChild(slotComponent, [0])?.resetComponentIndData?.(this.structData)
-        );
+        await runReset(this.getRenderedChild(slotComponent, [0]));
       }
       if (this.isDialogType9_ihdf) {
-        await this.executeWithLoadingScreen(
-          () => this.getRenderedChild(slotComponent, [2])?.resetComponentIndData?.(this.structData)
-        );
+        await runReset(this.getRenderedChild(slotComponent, [2]));
       }
-
     },
     //add FNSI-【1006】障害票一覧_患者経過総合ビューア.xlsxのNo.94(外結)対応 韓 end
 
@@ -3629,7 +3649,11 @@ export default {
           this.$emit("hide-modal");
           break;
         // add FNSI-濃度プログラムチェックの追加 楊 end
-
+        case 13000169:
+          if ("OK" === answer) {
+            this.getDefaultSlotComponent().getComponentData(this.structData, 2);
+          }
+          break;
         // add FNSI-【1006】最新の改修対象一覧の679対応 韓 start
         case 70000028:
           // 反映処理を行う
@@ -3986,6 +4010,8 @@ export default {
         this.AdjustTreatStartDate(date, false);
         this.calendarIndEndDate = date;
       }
+
+      this.resetComponentData();
     },
 
     /**

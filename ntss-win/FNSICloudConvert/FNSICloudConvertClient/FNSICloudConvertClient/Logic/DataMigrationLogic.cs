@@ -17,7 +17,9 @@ namespace FNSICloudConvertClient.Logic
     public class DataMigrationLogic
     {
         private readonly AppLogger _log;
+        private readonly object _jobStateLock = new object();
         private CancellationTokenSource _cts;
+        private long _currentJobId;
 
         public DataMigrationLogic()
         {
@@ -200,6 +202,7 @@ namespace FNSICloudConvertClient.Logic
                 { "files",     filesUploadId },
             };
             long jobId = await apiClient.StartJobAsync("off2on", facilityCds, uploadIds, ct);
+            SetCurrentJobId(jobId);
 
             // JOB 起動成功 → オンプレ側は完了（100%）
             pgProgress.Report(new ProgressInfo
@@ -211,7 +214,14 @@ namespace FNSICloudConvertClient.Logic
             // ----------------------------------------------------------------
             // Step 6: JOB ポーリング（mongoProgress 0-100%）
             // ----------------------------------------------------------------
-            await apiClient.PollUntilDoneAsync(jobId, pgProgress, mongoProgress, ct);
+            try
+            {
+                await apiClient.PollUntilDoneAsync(jobId, pgProgress, mongoProgress, ct);
+            }
+            finally
+            {
+                ClearCurrentJobId(jobId);
+            }
         }
 
         //----------------------------------------------------------------------------------------------------
@@ -272,6 +282,7 @@ namespace FNSICloudConvertClient.Logic
             });
 
             long jobId = await apiClient.StartJobOnToOffAsync(facilityCds, seqStartMap, ct);
+            SetCurrentJobId(jobId);
 
             pgProgress.Report(new ProgressInfo
             {
@@ -283,7 +294,14 @@ namespace FNSICloudConvertClient.Logic
             // ----------------------------------------------------------------
             // Step 3: JOB ポーリング（mongoProgress 0-100%、pgProgress は 25% 固定）
             // ----------------------------------------------------------------
-            await apiClient.PollUntilDoneAsync(jobId, pgProgress, mongoProgress, ct);
+            try
+            {
+                await apiClient.PollUntilDoneAsync(jobId, pgProgress, mongoProgress, ct);
+            }
+            finally
+            {
+                ClearCurrentJobId(jobId);
+            }
 
             // ----------------------------------------------------------------
             // Step 4: ダウンロード × 3 (pgProgress 25-55%)
@@ -501,12 +519,20 @@ namespace FNSICloudConvertClient.Logic
                 { "files",     filesUploadId },
             };
             long jobId = await apiClient.StartJobAsync("off2on", facilityCds, uploadIds, ct);
+            SetCurrentJobId(jobId);
 
             // JOB 起動成功 → クライアント側処理完了（100%）
             pgProgress.Report(new ProgressInfo { DbKind = DbKind.PostgreSql, Percentage = 100, Message = string.Format("[JOB] 起動完了: JobId={0}　サーバー処理を待機中...", jobId) });
 
             // Step 6: JOB ポーリング（pgProgress は 100% 維持のままログ追記）
-            await apiClient.PollUntilDoneAsync(jobId, pgProgress, mongoProgress, ct);
+            try
+            {
+                await apiClient.PollUntilDoneAsync(jobId, pgProgress, mongoProgress, ct);
+            }
+            finally
+            {
+                ClearCurrentJobId(jobId);
+            }
 
             pgProgress.Report(new ProgressInfo { DbKind = DbKind.PostgreSql, Percentage = 100, Message = "[クラウド Import] 完了" });
         }
@@ -542,10 +568,18 @@ namespace FNSICloudConvertClient.Logic
             ct.ThrowIfCancellationRequested();
             pgProgress.Report(new ProgressInfo { DbKind = DbKind.PostgreSql, Percentage = 21, Message = "[Import] 移行 JOB を起動中..." });
             long jobId = await apiClient.StartJobOnToOffAsync(facilityCds, seqStartMap, ct);
+            SetCurrentJobId(jobId);
             pgProgress.Report(new ProgressInfo { DbKind = DbKind.PostgreSql, Percentage = 30, Message = string.Format("[Import] JOB 起動完了: JobId={0}　サーバー処理を待機中...", jobId) });
 
             // Step 3: JOB ポーリング (mongoProgress 0-100%)
-            await apiClient.PollUntilDoneAsync(jobId, pgProgress, mongoProgress, ct);
+            try
+            {
+                await apiClient.PollUntilDoneAsync(jobId, pgProgress, mongoProgress, ct);
+            }
+            finally
+            {
+                ClearCurrentJobId(jobId);
+            }
 
             // Step 4: ダウンロード × 3 (30-100%)
             string downloadDir  = Path.Combine(settings.OnpreTempFolder, "downloads");
@@ -626,6 +660,56 @@ namespace FNSICloudConvertClient.Logic
         {
             if (_cts != null)
                 _cts.Cancel();
+
+            long jobId = CurrentJobId();
+            if (jobId > 0)
+                RequestServerInterrupt(jobId);
+        }
+
+        private void SetCurrentJobId(long jobId)
+        {
+            lock (_jobStateLock)
+            {
+                _currentJobId = jobId;
+            }
+        }
+
+        private void ClearCurrentJobId(long jobId)
+        {
+            lock (_jobStateLock)
+            {
+                if (_currentJobId == jobId)
+                    _currentJobId = 0;
+            }
+        }
+
+        private long CurrentJobId()
+        {
+            lock (_jobStateLock)
+            {
+                return _currentJobId;
+            }
+        }
+
+        private void RequestServerInterrupt(long jobId)
+        {
+            _log.AddLogInfo(DateTime.Now, "FNSICloudConvertClient", AppLogger.LOGGING_CLASS.INFO,
+                string.Format("[Cancel] サーバー JOB 中断要求を送信します: JobId={0}", jobId));
+
+            Task.Run(async () =>
+            {
+                try
+                {
+                    var apiClient = new ConverterApiClient(AppConfigLoader.ConverterBaseUri);
+                    await apiClient.InterruptJobAsync(jobId, "client cancel", CancellationToken.None);
+                }
+                catch (Exception ex)
+                {
+                    _log.AddLogInfo(DateTime.Now, "FNSICloudConvertClient",
+                        AppLogger.LOGGING_CLASS.WARNING,
+                        string.Format("[Cancel] サーバー JOB 中断要求に失敗: JobId={0}, error={1}", jobId, ex.Message));
+                }
+            });
         }
 
         //----------------------------------------------------------------------------------------------------

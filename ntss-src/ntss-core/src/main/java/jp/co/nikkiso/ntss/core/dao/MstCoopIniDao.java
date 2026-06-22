@@ -25,6 +25,14 @@ public interface MstCoopIniDao {
   List<MstCoopIni> selectByFacilityCd(String facilityCd);
 
   /**
+   * コピー元の連携設定マスタを取得する
+   * @param key0 ベンダーキー
+   * @return 連携設定マスタEntity
+   */
+  @Select
+  List<MstCoopIni> selectSourceByKey0(String key0);
+
+  /**
   * 連携設定マスタを取得する
   * @param coopIniCd 連携設定番号
   * @return 連携設定マスタEntity

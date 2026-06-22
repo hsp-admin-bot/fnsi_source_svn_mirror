@@ -51,8 +51,8 @@ namespace FNSICloudConvertClient.Logic
         {
             var (sqlHost, sqlPort) = AppSettings.ParseHostPort(settings.OnpreRdbIpAddress, 5432);
             _connectionString = string.Format(
-                "Host={0};Port={1};Database=ntss_db5;Username=nkk5;Password=nkk5;",
-                sqlHost, sqlPort);
+                "Host={0};Port={1};Database={2};Username={3};Password={4};",
+                sqlHost, sqlPort, AppConfigLoader.PgDb5Name, AppConfigLoader.PgDb5User, AppConfigLoader.PgDb5Password);
             _log = AppLogger.GetInstance();
         }
 

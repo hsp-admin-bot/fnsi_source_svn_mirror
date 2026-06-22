@@ -14,6 +14,7 @@
 using CoopSettingTool.Service.Configuration;
 using CoopSettingTool.Service.Extendsions;
 using CoopSettingTool.Service.Models;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -36,6 +37,17 @@ namespace CoopSettingTool.Service
         public async Task<GetMstCoopIniResponse> GetMstCoopIni(string facilityCd)
         {
             GetMstCoopIniResponse res = (await ServerAccess.GetInstance().GetAsync<List<MstCoopIniEntity>>(Constant.GET_MST_COOP_INI + "/" + facilityCd, null)).ToClass<List<MstCoopIniEntity>, GetMstCoopIniResponse>();
+            return res;
+        }
+
+        /// <summary>
+        /// Gets the source MST coop ini.
+        /// </summary>
+        /// <param name="key0">The vendor key.</param>
+        /// <returns>GetMstCoopIniResponse.</returns>
+        public async Task<GetMstCoopIniResponse> GetSourceMstCoopIni(string key0)
+        {
+            GetMstCoopIniResponse res = (await ServerAccess.GetInstance().GetAsync<List<MstCoopIniEntity>>(Constant.GET_SOURCE_MST_COOP_INI + "/" + Uri.EscapeDataString(key0 ?? string.Empty), null)).ToClass<List<MstCoopIniEntity>, GetMstCoopIniResponse>();
             return res;
         }
 

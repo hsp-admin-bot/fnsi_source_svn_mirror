@@ -112,12 +112,14 @@ public class ComboResource {
       // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
   ) {
     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie start
-    try{
-      if (facilityCd != null && !facilityCd.isEmpty() &&
-        !facilityCd.equals(ntssUser.getFacilityCd())) {
-        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    if (!ntssUser.isNkkAdminUser()) {
+      try {
+        if (facilityCd != null && !facilityCd.isEmpty() &&
+          !facilityCd.equals(ntssUser.getFacilityCd())) {
+          return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+        }
+      } catch (Exception ignored) {
       }
-    }catch (Exception ignored) {
     }
     // #11205 -ペンテスト2－4認可制御の不備  add 20260317 zhangYingJie end
 

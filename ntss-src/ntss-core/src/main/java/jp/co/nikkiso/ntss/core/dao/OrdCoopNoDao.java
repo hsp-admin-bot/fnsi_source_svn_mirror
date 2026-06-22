@@ -2,7 +2,6 @@ package jp.co.nikkiso.ntss.core.dao;
 
 import java.sql.Timestamp;
 import java.util.List;
-import java.util.Set;
 
 
 import org.seasar.doma.Dao;

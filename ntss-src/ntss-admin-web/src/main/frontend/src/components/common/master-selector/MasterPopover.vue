@@ -327,7 +327,7 @@ export default {
     },
 
     popoverOkDisabled() {
-      return !this.isPopoverListRowSelected || this.isChanged;
+      return !this.isPopoverListRowSelected && this.isSelectionRequired;
     },
   },
 

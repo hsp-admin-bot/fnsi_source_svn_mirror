@@ -157,7 +157,7 @@ export default {
       // ベースに渡す雛形情報(IndEditBase)
       const settingData = this.getDefaultSettingIndData;
       // モーダルのヘッダータイトル
-      settingData.headerTitle = MODAL_TITLE["Ｉ‐ＨＤＦプログラム"];
+      settingData.headerTitle = MODAL_TITLE["I-HDF設定"];
       // 【通常】【隔日】切替ボタン-非表示
       settingData.showSegment = false;
       // 中止ボタン-非表示
@@ -258,7 +258,7 @@ export default {
       // オーダー番号
       settingData.ordNo = cellInfo.ordNo;
       // モーダルのヘッダータイトル
-      settingData.headerTitle = MODAL_TITLE["Ｉ‐ＨＤＦプログラム"];
+      settingData.headerTitle = MODAL_TITLE["I-HDF設定"];
       // 【通常】【隔日】切替ボタン-非表示
       settingData.showSegment = false;
       // 中止ボタン-非表示

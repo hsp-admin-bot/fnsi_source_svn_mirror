@@ -118,6 +118,7 @@
         <custom-input-number-pro
           ref="amount"
           :required="true"
+          :initVal="amountInputValue.initValue"
           :value="amountInputValue.editValue"
           :invalidArray="['0']"
           :min="0"

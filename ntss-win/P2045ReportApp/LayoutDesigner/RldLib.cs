@@ -2456,7 +2456,12 @@ namespace LayoutDesigner
 
             using (var wXlRange = new ExcelRangeEx(XlHelper.XlSheetLayout, wAddress))
             {
-                wValue = Convert.ToString(wXlRange.GetValue2());
+                // mod #10446 テンプレート繰返しでの計算式繰返しの制限事項対応②（「=」で始まる計算式） 高 start
+                if (wXlRange.HasFormula())
+                    wValue = wXlRange.GetFormula();
+                else
+                    wValue = Convert.ToString(wXlRange.GetValue2());
+                // mod #10446 テンプレート繰返しでの計算式繰返しの制限事項対応②（「=」で始まる計算式） 高 end
             }
 
             return wValue;

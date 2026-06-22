@@ -3158,12 +3158,21 @@ public class WeightResource {
   }
   // add #9616 帳票印刷失敗通知がされない 高 2024/01/25　end
   private boolean hasFacilityAccess(NtssUser ntssUser, String facilityCd) {
-    return ntssUser != null && ntssUser.getFacilityCd() != null && ntssUser.getFacilityCd().equals(facilityCd);
+    if (ntssUser == null) {
+      return false;
+    }
+    if (ntssUser.isNkkAdminUser()) {
+      return true;
+    }
+    return facilityCd != null && ntssUser.getFacilityCd() != null && ntssUser.getFacilityCd().equals(facilityCd);
   }
 
   private boolean hasPatAccess(NtssUser ntssUser, Long patId) {
     if (ntssUser == null || patId == null) {
       return false;
+    }
+    if (ntssUser.isNkkAdminUser()) {
+      return true;
     }
     PatPersonalMain patPersonalMain = patPersonalMainDao.selectById(patId);
     return patPersonalMain == null || patPersonalMain.getFacility_cd() == null
@@ -3174,6 +3183,9 @@ public class WeightResource {
     if (ntssUser == null || weightScaleNo == null) {
       return false;
     }
+    if (ntssUser.isNkkAdminUser()) {
+      return true;
+    }
     OrdWeightScale ordWeightScale = ordWeightScaleDao.selectByCd(weightScaleNo);
     return ordWeightScale == null || ordWeightScale.getFacilityCd() == null
       || ordWeightScale.getFacilityCd().equals(ntssUser.getFacilityCd());
@@ -3182,6 +3194,9 @@ public class WeightResource {
   private boolean hasOrdAccess(NtssUser ntssUser, Long ordNo) {
     if (ntssUser == null) {
       return false;
+    }
+    if (ntssUser.isNkkAdminUser()) {
+      return true;
     }
     OrdMain ordMain = ordMainDao.selectByOrdNo(ordNo);
     return ordMain == null || ordMain.getFacilityCd() == null || ordMain.getFacilityCd().equals(ntssUser.getFacilityCd());

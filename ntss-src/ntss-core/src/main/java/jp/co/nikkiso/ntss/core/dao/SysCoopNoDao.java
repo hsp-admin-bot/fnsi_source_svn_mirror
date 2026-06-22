@@ -28,6 +28,14 @@ public interface SysCoopNoDao {
   List<SysCoopNo> selectByFacilityCd(String facilityCd);
 
   /**
+   * コピー元の連携オーダ採番情報を取得する
+   * @param coopVersion 連携版番号
+   * @return
+   */
+  @Select
+  List<SysCoopNo> selectSourceByCoopVersion(String coopVersion);
+
+  /**
    * 連携オーダ採番情報を取得する
    * @param ctlNo 管理番号
    * @return

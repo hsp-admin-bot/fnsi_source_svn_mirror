@@ -1,8 +1,7 @@
 /** * 連携稼働ビューア コマンド実行 */
 <template>
   <v-ons-popover
-    v-if="popoverVisible"
-    :target="targetPositionElement"
+    :target="resolvedTargetPositionElement"
     :visible="popoverVisible"
     :direction="popoverDisplayDirection"
     :class="[fontSizeSet, 'popover-style']"
@@ -23,8 +22,9 @@
         <v-ons-col width="25%" vertical-align="center" class="pop-title">
           <label style="white-space: nowrap">施設選択</label>
         </v-ons-col>
-        <v-ons-col vertical-align="center">
+        <v-ons-col vertical-align="center" class="external-selector-facility-ms">
           <kendo-multiselect
+            class="external-selector-facility-multiselect"
             style="min-width: 17em"
             v-model="searchCondition.facilityCd"
             :data-source="facilityInfo"
@@ -93,17 +93,17 @@
 <script>
 import PopoverMixin from "@/components/PopoverMixin";
 import { ApiHelper } from "@/apis/AxiosHelper.js";
-import { mapGetters, mapActions } from "vuex"; // add 鞠 マスタを取得するために
-import {
-  popoverPreShow,
-  popoverPostShow,
-  popoverPosthide,
-} from "@/functions/common/CommonPopoverFunctions";
+import { mapGetters, mapActions } from "@/compat/vue/vuex";
+import { popoverPreShow, popoverPostShow, popoverPosthide } from "@/functions/common/CommonPopoverFunctions";
+
 // add #6107 2023/03/08 メッセージボックス全調整 林峻峰 start
-import { messageFormat } from '@/functions/common/MessageFormat'
-import DIALOG_MESSAGES from '@/components/common/message-dialog/DialogMessages'
+import { getViewportHeight, getViewportWidth } from "@/functions/common/LayoutMeasureHelper";
+import { resolveOnsPopoverTargetElement } from "@/functions/common/OnsenFunctions";
+import { messageFormat } from "@/functions/common/MessageFormat";
+import DIALOG_MESSAGES from "@/components/common/message-dialog/DialogMessages";
+
 // add #6107 2023/03/08 メッセージボックス全調整 林峻峰 end
-const uriFunctionFacility = "/mstInfo/mstFacility/";
+const uriFunctionFacility = "/mstInfo/mstFacility";
 
 export default {
   mixins: [PopoverMixin],
@@ -205,9 +205,7 @@ export default {
      */
     targetPositionElement: {
       type: [Object, HTMLElement],
-      default() {
-        return this.$parent;
-      },
+      default: null,
     },
 
     /**
@@ -292,12 +290,12 @@ export default {
       /**
        * @description 画面の高さ(レスポンシブ対応)
        */
-      windowHeight: window.innerHeight,
+      windowHeight: getViewportHeight(),
 
       /**
        * @description 画面の幅(レスポンシブ対応)
        */
-      windowWidth: window.innerWidth,
+      windowWidth: getViewportWidth(),
 
       isChanged: false, // add #6512 患者情報画面の分の修正 劉
       // 施設
@@ -312,6 +310,12 @@ export default {
   },
 
   computed: {
+    resolvedTargetPositionElement() {
+      return resolveOnsPopoverTargetElement(this.targetPositionElement, this);
+    },
+    resolvedTargetRectElement() {
+      return this.resolvedTargetPositionElement;
+    },
     /**
      * add 鞠 マスタを取得するために
      */
@@ -325,9 +329,9 @@ export default {
     popoverDisplayDirection() {
       if (!this.popoverVisible) return null;
 
-      const elemPosition = this.targetPositionElement.$el
-        ? this.targetPositionElement.$el.getBoundingClientRect()
-        : this.targetPositionElement.getBoundingClientRect();
+      const targetElement = this.resolvedTargetRectElement;
+      if (!targetElement?.getBoundingClientRect) return null;
+      const elemPosition = targetElement.getBoundingClientRect();
       let direction = "right";
       let defaultHeight = 420;
       if (this.masterPhysicalName == "mst_treatment_set") {
@@ -438,8 +442,7 @@ export default {
         this.popoverTitleHeader === "担当医" ||
         this.popoverTitleHeader === "診断医" ||
         this.popoverTitleHeader === "病名" ||
-        this.popoverTitleHeader === "スタッフ"
-      ) {
+        this.popoverTitleHeader === "スタッフ") {
         return true;
       } else {
         return false;
@@ -481,7 +484,7 @@ export default {
     /** 連携稼働ビューアのヘッダで選択中の施設CDを監視 */
     getToFacilityCd: {
       handler(value) {
-        this.searchCondition.facilityCd = value;
+        this.searchCondition.facilityCd = Array.isArray(value) ? value : (value ? [value] : []);
       },
       immediate: true,
     },
@@ -489,7 +492,7 @@ export default {
 
   mounted() {
     // modify by 史 for 6119 ブラウザがOut of Memoryのエラーが発生する
-    window.addEventListener("resize",this.resizeEventListener);
+    (this.$el?.ownerDocument?.defaultView || window).addEventListener("resize",this.resizeEventListener);
   },
   async created() {
     await this.getSearchData();
@@ -497,8 +500,8 @@ export default {
   methods: {
     // modify by 史 for 6119 ブラウザがOut of Memoryのエラーが発生する
     resizeEventListener(){
-      this.windowHeight = window.innerHeight;
-      this.windowWidth = window.innerWidth;
+      this.windowHeight = getViewportHeight();
+      this.windowWidth = getViewportWidth();
     },
     popoverPreShow,
     popoverPostShow,
@@ -531,8 +534,7 @@ export default {
       if (
         this.mstMachineSupportFlg &&
         filter === "薬剤分類" &&
-        this.popoverFilterSelectedItem["薬剤区分"] === 3
-      ) {
+        this.popoverFilterSelectedItem["薬剤区分"] === 3) {
         this.popoverFilterSelectedItem["薬剤分類"] = 0;
         return true;
       } else {
@@ -545,7 +547,8 @@ export default {
      * @description ポップオーバー非表示
      */
     closePopover() {
-      this.searchCondition.facilityCd = this.getToFacilityCd; // NOTE: 閉じるときに選択中の施設を再設定
+      const value = this.getToFacilityCd;
+      this.searchCondition.facilityCd = Array.isArray(value) ? value : (value ? [value] : []);
       this.$emit("popover-close", false);
       this.popoverDirection = "";
     },
@@ -577,8 +580,7 @@ export default {
             message: messageFormat(DIALOG_MESSAGES['00200001'].message)
             // mod #6107 2023/03/08 メッセージボックス全調整 林峻峰 end
           });
-        }
-      );
+        });
 
       if (200 === response.status) {
         this.$ons.notification.alert({
@@ -609,19 +611,15 @@ export default {
       // 投薬支援マスタ 薬剤分類と薬剤名の連動 add start 鞠
       if (
         "mst_medicine_support" === this.masterPhysicalName &&
-        this.popoverFilter.length != 0
-      ) {
+        this.popoverFilter.length != 0) {
         let classCd = 0;
         const selectedItem = this.popoverContentDataset.find(
-          (item) => item.value === this.popoverContentSelectedItem
-        );
+          (item) => item.value === this.popoverContentSelectedItem);
         if (
           !(
             selectedItem === undefined ||
             selectedItem.fnValue.薬剤分類 === -1 ||
-            selectedItem.fnValue.薬剤分類 === undefined
-          )
-        ) {
+            selectedItem.fnValue.薬剤分類 === undefined)) {
           classCd = selectedItem.fnValue.薬剤分類;
         }
 
@@ -766,7 +764,7 @@ export default {
               type: "command",
               command: commandKey,
               dir_path: "",
-              facility_cd: [this.searchCondition.facilityCd],
+              facility_cd: this.searchCondition.facilityCd,
               serial_no: "",
             };
             const response = await this.sendRequestCommandKeyCoop(param).catch(
@@ -780,8 +778,7 @@ export default {
                     message: messageFormat(DIALOG_MESSAGES['00200004'].message),
                   });
                 }
-              }
-            );
+              });
             // add 7348 IFエッジ→AWSへの死活監視電文が送信されなくなった 吉 start
             if("restart" != commandKey){
               this.$emit('refresh-change',true);
@@ -867,21 +864,21 @@ export default {
       });
     },
   },
-  beforeDestroy() {
-    window.removeEventListener("resize",this.resizeEventListener);
+  beforeUnmount() {
+    (this.$el?.ownerDocument?.defaultView || window).removeEventListener("resize",this.resizeEventListener);
   }
 };
 </script>
 
 <style scoped>
-.popover-style >>> .popover--top,
-.popover-style >>> .popover--right,
-.popover-style >>> .popover--left,
-.popover-style >>> .popover--bottom {
+.popover-style :deep(.popover--top),
+.popover-style :deep(.popover--right),
+.popover-style :deep(.popover--left),
+.popover-style :deep(.popover--bottom) {
   width: initial;
 }
 
-.popover-style >>> .popover__content {
+.popover-style :deep(.popover__content) {
   width: 600px;
   height: 510px;
   max-height: none !important; /* NOTE: windowSizeを変更すると[Onsen UI]の制御が走り、縮むため[Onsen UI]の制御を無効化 */
@@ -944,14 +941,14 @@ export default {
 }
 /* スマホ対応 */
 @media screen and (max-width: 420px) {
-  .popover-style >>> .popover__content {
+  .popover-style :deep(.popover__content) {
     width: auto;
     padding: 10px;
   }
 }
 
 @media screen and (max-height: 420px) {
-  .popover-style >>> .popover__content {
+  .popover-style :deep(.popover__content) {
     width: 350px;
     padding: 5px;
   }
@@ -983,10 +980,10 @@ export default {
 .exam-e {
   align-content: flex-end;
 }
-.popover-style >>> .popover-mask {
+.popover-style :deep(.popover-mask) {
   z-index: 1999 !important;
 }
-.popover-style >>> .popover {
+.popover-style :deep(.popover) {
   z-index: 10001 !important;
 }
 /* add 8482 リモートコマンド実行後のローダーを表示 ljx start*/
@@ -1031,5 +1028,92 @@ export default {
   padding: 6px 8px;
   text-align: center;
   border: solid 1px var(--ntss-list-border-color);
+}
+
+/* 施設 MultiSelect: 入力枠は白 */
+.popover-style .external-selector-facility-ms :deep(.k-legacy-multiselect.k-multiselect),
+.popover-style .external-selector-facility-ms :deep(.k-widget.k-multiselect.k-legacy-multiselect) {
+  background-color: #fff !important;
+  min-height: 0 !important;
+}
+
+/* 施設 MultiSelect: theme.css の :before 空行占位を抑え、chip/input を同一 flex 流で折り返す */
+.popover-style .external-selector-facility-ms :deep(.k-legacy-multiselect > .k-input-values.k-multiselect-wrap::before) {
+  content: none !important;
+  display: none !important;
+  height: 0 !important;
+  float: none !important;
+}
+
+.popover-style .external-selector-facility-ms :deep(.k-input-values.k-multiselect-wrap) {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  align-content: flex-start !important;
+  gap: 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+}
+
+.popover-style .external-selector-facility-ms :deep(.k-chip-list.k-reset),
+.popover-style .external-selector-facility-ms :deep(.k-selection-multiple.k-reset),
+.popover-style .external-selector-facility-ms :deep(.k-multiselect-wrap > ul.k-reset) {
+  display: contents !important;
+}
+
+.popover-style .external-selector-facility-ms :deep(.k-chip.k-button),
+.popover-style .external-selector-facility-ms :deep(.k-multiselect-wrap > ul.k-reset > li.k-button) {
+  flex: 0 0 auto !important;
+}
+
+.popover-style .external-selector-facility-ms :deep(.k-input-inner.k-input),
+.popover-style .external-selector-facility-ms :deep(input.k-input) {
+  flex: 0 1 20px !important;
+  width: auto !important;
+  min-width: 20px !important;
+  max-width: 100% !important;
+}
+
+/* 施設選択：各タグ上の×は常時表示 */
+.popover-style .external-selector-facility-ms :deep(.k-chip-remove-action.k-select),
+.popover-style .external-selector-facility-ms :deep(.k-multiselect-wrap > ul.k-reset > li.k-button > .k-select) {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: translateY(4px);
+}
+
+/* preshow 中（.popover が visibility:hidden）× だけ先に見えるのを防ぐ */
+.popover-style :deep(.popover[style*="visibility: hidden"] .external-selector-facility-ms .k-clear-value),
+.popover-style :deep(.popover[style*="visibility: hidden"] .external-selector-facility-ms .k-chip-remove-action) {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.popover-style .external-selector-facility-ms :deep(.k-chip-remove-action .k-icon::before),
+.popover-style .external-selector-facility-ms :deep(.k-chip-remove-action .k-svg-icon::before) {
+  font-size: 22px !important;
+  font-weight: normal !important;
+  line-height: 1 !important;
+}
+
+/* 右端一括クリア：ホバー/フォーカス時のみ表示 */
+.popover-style .external-selector-facility-ms :deep(.k-legacy-multiselect .k-clear-value),
+.popover-style .external-selector-facility-ms :deep(.k-widget.k-multiselect .k-clear-value) {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 0.12s ease;
+}
+
+.popover-style .external-selector-facility-ms:hover :deep(.k-legacy-multiselect .k-clear-value),
+.popover-style .external-selector-facility-ms:focus-within :deep(.k-legacy-multiselect .k-clear-value),
+.popover-style .external-selector-facility-ms :deep(.k-legacy-multiselect.k-multiselect:hover .k-clear-value),
+.popover-style .external-selector-facility-ms :deep(.k-legacy-multiselect.k-multiselect:focus-within .k-clear-value),
+.popover-style .external-selector-facility-ms:hover :deep(.k-widget.k-multiselect .k-clear-value),
+.popover-style .external-selector-facility-ms:focus-within :deep(.k-widget.k-multiselect .k-clear-value),
+.popover-style .external-selector-facility-ms :deep(.k-widget.k-multiselect.k-legacy-multiselect:hover .k-clear-value),
+.popover-style .external-selector-facility-ms :deep(.k-widget.k-multiselect.k-legacy-multiselect:focus-within .k-clear-value) {
+  opacity: 1 !important;
+  pointer-events: auto !important;
 }
 </style>
