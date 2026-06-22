@@ -1,0 +1,26 @@
+--CREATE TABLE ntss.table_flag_config (
+--    tbl_name VARCHAR(50),
+--		tbl_comment VARCHAR(50),
+--		col_name VARCHAR(50) NOT NULL,
+--		col_comment VARCHAR(50) NOT NULL,
+--		json_flg VARCHAR(1) NOT NULL,
+--		flag_value VARCHAR(2) NOT NULL,
+--		flag_comment VARCHAR(50) NOT NULL,
+--		is_output VARCHAR(2) NOT NULL,
+--    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP -- TIMESTAMPタイプ、デフォルト値を現在のタイムスタンプに設定
+--);
+---- 列注釈の追加
+--COMMENT ON COLUMN table_flag_config.tbl_name IS 'テーブル物理名';
+--COMMENT ON COLUMN table_flag_config.tbl_comment IS 'テーブル論理名';
+--COMMENT ON COLUMN table_flag_config.col_name IS 'コラム物理名';
+--COMMENT ON COLUMN table_flag_config.col_comment IS 'コラム論理名';
+--COMMENT ON COLUMN table_flag_config.json_flg IS 'JSONフラグ';
+--COMMENT ON COLUMN table_flag_config.flag_value IS 'フラグ値';
+--COMMENT ON COLUMN table_flag_config.flag_comment IS 'フラグ値翻訳';
+--COMMENT ON COLUMN table_flag_config.is_output IS '出力するかどうか';
+--COMMENT ON COLUMN table_flag_config.created_at IS '作成時間';
+---- ユニークキー制約
+--ALTER TABLE ntss.table_flag_config
+--ADD CONSTRAINT unique_key_01 UNIQUE (tbl_name, col_name, flag_value);
+----テーブルの所有者の指定
+--ALTER TABLE ntss.table_flag_config OWNER TO nkk5;

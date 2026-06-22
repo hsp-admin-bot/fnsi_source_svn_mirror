@@ -1,0 +1,3 @@
+--ALTER TABLE "ntss"."ord_material_save"
+--  ADD COLUMN "receipt_conversion" jsonb;
+--COMMENT ON COLUMN "ntss"."ord_material_save"."receipt_conversion" IS '単位換算情报';

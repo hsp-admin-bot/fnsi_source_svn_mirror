@@ -1,0 +1,4 @@
+--CREATE INDEX "idx_ord_weight_scale_02" ON "ntss"."ord_weight_scale" USING btree (
+--  "pat_id" "pg_catalog"."int8_ops" ASC NULLS LAST,
+--  "measure_date" "pg_catalog"."timestamp_ops" ASC NULLS LAST
+--);

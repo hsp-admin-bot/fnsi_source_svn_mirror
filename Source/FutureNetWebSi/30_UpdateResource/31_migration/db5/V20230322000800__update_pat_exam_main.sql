@@ -1,0 +1,4 @@
+--ALTER table pat_exam_main add phy_ord_class VARCHAR(16);
+--comment on column pat_exam_main.phy_ord_class is '血液検査/心電図';
+--ALTER table pat_exam_main_hst add phy_ord_class VARCHAR(16);
+--comment on column pat_exam_main_hst.phy_ord_class is '血液検査/心電図';
