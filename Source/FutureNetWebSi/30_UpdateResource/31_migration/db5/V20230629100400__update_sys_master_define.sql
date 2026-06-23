@@ -1,0 +1,1 @@
+update sys_master_define set column_info = '{"fields":[{"type":"number","alias":"code","title":"チェックリストコード","physical_name":"checklist_cd","validation":{"max":null,"min":null,"required":true,"maxlength":"50"}},{"type":"del","title":"削除","physical_name":"is_del"}]}'  where master_physical_name = 'mst_checklist';

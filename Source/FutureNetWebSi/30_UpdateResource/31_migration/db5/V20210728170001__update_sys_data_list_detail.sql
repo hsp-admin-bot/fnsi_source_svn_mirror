@@ -1,0 +1,359 @@
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='ＴＭＰゼロ補正時間上限HD+補液',master_display_name='ＴＭＰゼロ補正時間上限HD+補液'
+	WHERE data_list_detail_cd=1430;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='ＴＭＰゼロ補正時間下限HD+補液',master_display_name='ＴＭＰゼロ補正時間下限HD+補液'
+	WHERE data_list_detail_cd=1431;
+
+DELETE FROM ntss.sys_data_list_detail
+	WHERE data_list_detail_cd=1140;
+DELETE FROM ntss.sys_data_list_detail
+	WHERE data_list_detail_cd=1141;
+INSERT INTO ntss.sys_data_list_detail (data_list_detail_cd,disp_order,category_cd,master_display_name,master_display_type,function_display_name,function_display_type)
+	VALUES (1434,11,91,'Ht（結果値）','2','Ht（結果値）','2');
+INSERT INTO ntss.sys_data_list_detail (data_list_detail_cd,disp_order,category_cd,master_display_name,master_display_type,function_display_name,function_display_type)
+	VALUES (1435,12,91,'Ht（検査日時）','2','Ht（検査日時）','2');
+INSERT INTO ntss.sys_data_list_detail (data_list_detail_cd,disp_order,category_cd,master_display_name,master_display_type,function_display_name,function_display_type)
+	VALUES (1436,13,91,'TP（結果値）','2','TP（結果値）','2');
+INSERT INTO ntss.sys_data_list_detail (data_list_detail_cd,disp_order,category_cd,master_display_name,master_display_type,function_display_name,function_display_type)
+	VALUES (1437,14,91,'TP（検査日時）','2','TP（検査日時）','2');
+
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='治療開始予定時刻',master_display_name='治療開始予定時刻'
+	WHERE data_list_detail_cd=275;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='除水量制限（L）',master_display_name='除水量制限（L）'
+	WHERE data_list_detail_cd=281;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目1名称（g・kg）',master_display_name='項目1名称（g・kg）'
+	WHERE data_list_detail_cd=516;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目1重さ（g・kg）',master_display_name='項目1重さ（g・kg）'
+	WHERE data_list_detail_cd=517;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目2名称（g・kg）',master_display_name='項目2名称（g・kg）'
+	WHERE data_list_detail_cd=518;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目2重さ（g・kg）',master_display_name='項目2重さ（g・kg）'
+	WHERE data_list_detail_cd=519;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目3名称（g・kg）',master_display_name='項目3名称（g・kg）'
+	WHERE data_list_detail_cd=520;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目3重さ（g・kg）',master_display_name='項目3重さ（g・kg）'
+	WHERE data_list_detail_cd=521;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目4名称（g・kg）',master_display_name='項目4名称（g・kg）'
+	WHERE data_list_detail_cd=522;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目4重さ（g・kg）',master_display_name='項目4重さ（g・kg）'
+	WHERE data_list_detail_cd=523;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目5名称（g・kg）',master_display_name='項目5名称（g・kg）'
+	WHERE data_list_detail_cd=524;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目5重さ（g・kg）',master_display_name='項目5重さ（g・kg）'
+	WHERE data_list_detail_cd=525;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目1名称（g・kg）',master_display_name='項目1名称（g・kg）'
+	WHERE data_list_detail_cd=527;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目1重さ（g・kg）',master_display_name='項目1重さ（g・kg）'
+	WHERE data_list_detail_cd=528;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目2名称（g・kg）',master_display_name='項目2名称（g・kg）'
+	WHERE data_list_detail_cd=529;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目2重さ（g・kg）',master_display_name='項目2重さ（g・kg）'
+	WHERE data_list_detail_cd=530;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目3名称（g・kg）',master_display_name='項目3名称（g・kg）'
+	WHERE data_list_detail_cd=531;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目3重さ（g・kg）',master_display_name='項目3重さ（g・kg）'
+	WHERE data_list_detail_cd=532;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目4名称（g・kg）',master_display_name='項目4名称（g・kg）'
+	WHERE data_list_detail_cd=533;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目4重さ（g・kg）',master_display_name='項目4重さ（g・kg）'
+	WHERE data_list_detail_cd=534;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目5名称（g・kg）',master_display_name='項目5名称（g・kg）'
+	WHERE data_list_detail_cd=535;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目5重さ（g・kg）',master_display_name='項目5重さ（g・kg）'
+	WHERE data_list_detail_cd=536;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='最終工程',master_display_name='最終工程'
+	WHERE data_list_detail_cd=569;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='工程切替時間（min）',master_display_name='工程切替時間（min）'
+	WHERE data_list_detail_cd=584;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='ＵＦＲプロ連動',master_display_name='ＵＦＲプロ連動'
+	WHERE data_list_detail_cd=585;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='電源SW',master_display_name='電源SW'
+	WHERE data_list_detail_cd=590;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='ＵＦＲプロ連動',master_display_name='ＵＦＲプロ連動'
+	WHERE data_list_detail_cd=591;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='工程切替時間',master_display_name='工程切替時間'
+	WHERE data_list_detail_cd=592;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='最大ステップ数',master_display_name='最大ステップ数'
+	WHERE data_list_detail_cd=619;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='QBプログラム',master_display_name='QBプログラム'
+	WHERE data_list_detail_cd=620;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='血流量1（mL/min）',master_display_name='血流量1（mL/min）'
+	WHERE data_list_detail_cd=621;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='血流量2（mL/min）',master_display_name='血流量2（mL/min）'
+	WHERE data_list_detail_cd=622;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='血流量3（mL/min）',master_display_name='血流量3（mL/min）'
+	WHERE data_list_detail_cd=623;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='血流量4（mL/min）',master_display_name='血流量4（mL/min）'
+	WHERE data_list_detail_cd=624;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='血流量5（mL/min）',master_display_name='血流量5（mL/min）'
+	WHERE data_list_detail_cd=625;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='血流量6（mL/min）',master_display_name='血流量6（mL/min）'
+	WHERE data_list_detail_cd=626;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='血流量7（mL/min）',master_display_name='血流量7（mL/min）'
+	WHERE data_list_detail_cd=627;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='血流量8（mL/min）',master_display_name='血流量8（mL/min）'
+	WHERE data_list_detail_cd=628;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='血流量9（mL/min）',master_display_name='血流量9（mL/min）'
+	WHERE data_list_detail_cd=629;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='血流量10（mL/min）',master_display_name='血流量10（mL/min）'
+	WHERE data_list_detail_cd=630;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='QDプログラム',master_display_name='QDプログラム'
+	WHERE data_list_detail_cd=631;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='透析液流量1（mL/min）',master_display_name='透析液流量1（mL/min）'
+	WHERE data_list_detail_cd=632;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='透析液流量2（mL/min）',master_display_name='透析液流量2（mL/min）'
+	WHERE data_list_detail_cd=633;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='透析液流量3（mL/min）',master_display_name='透析液流量3（mL/min）'
+	WHERE data_list_detail_cd=634;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='透析液流量4（mL/min）',master_display_name='透析液流量4（mL/min）'
+	WHERE data_list_detail_cd=635;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='透析液流量5（mL/min）',master_display_name='透析液流量5（mL/min）'
+	WHERE data_list_detail_cd=636;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='透析液流量6（mL/min）',master_display_name='透析液流量6（mL/min）'
+	WHERE data_list_detail_cd=637;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='透析液流量7（mL/min）',master_display_name='透析液流量7（mL/min）'
+	WHERE data_list_detail_cd=638;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='透析液流量8（mL/min）',master_display_name='透析液流量8（mL/min）'
+	WHERE data_list_detail_cd=639;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='透析液流量9（mL/min）',master_display_name='透析液流量9（mL/min）'
+	WHERE data_list_detail_cd=640;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='透析液流量10（mL/min）',master_display_name='透析液流量10（mL/min）'
+	WHERE data_list_detail_cd=641;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='切り替え時間1（min）',master_display_name='切り替え時間1（min）'
+	WHERE data_list_detail_cd=642;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='切り替え時間2（min）',master_display_name='切り替え時間2（min）'
+	WHERE data_list_detail_cd=643;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='切り替え時間3（min）',master_display_name='切り替え時間3（min）'
+	WHERE data_list_detail_cd=644;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='切り替え時間4（min）',master_display_name='切り替え時間4（min）'
+	WHERE data_list_detail_cd=645;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='切り替え時間5（min）',master_display_name='切り替え時間5（min）'
+	WHERE data_list_detail_cd=646;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='切り替え時間6（min）',master_display_name='切り替え時間6（min）'
+	WHERE data_list_detail_cd=647;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='切り替え時間7（min）',master_display_name='切り替え時間7（min）'
+	WHERE data_list_detail_cd=648;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='切り替え時間8（min）',master_display_name='切り替え時間8（min）'
+	WHERE data_list_detail_cd=649;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='切り替え時間9（min）',master_display_name='切り替え時間9（min）'
+	WHERE data_list_detail_cd=650;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='開始　時間（min）',master_display_name='開始　時間（min）'
+	WHERE data_list_detail_cd=699;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='除水速度倍率　開始',master_display_name='除水速度倍率　開始'
+	WHERE data_list_detail_cd=700;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='時間　定倍除水期間（min）',master_display_name='時間　定倍除水期間（min）'
+	WHERE data_list_detail_cd=701;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='最高血圧　定倍除水終了条件（mmHg）',master_display_name='最高血圧　定倍除水終了条件（mmHg）'
+	WHERE data_list_detail_cd=703;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='脈拍　定倍除水終了条件（bpm）',master_display_name='脈拍　定倍除水終了条件（bpm）'
+	WHERE data_list_detail_cd=704;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='⊿BV　定倍除水終了条件（%）',master_display_name='⊿BV　定倍除水終了条件（%）'
+	WHERE data_list_detail_cd=705;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='終了前　時間（min）',master_display_name='終了前　時間（min）'
+	WHERE data_list_detail_cd=706;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='開始時⊿BV（%）',master_display_name='開始時⊿BV（%）'
+	WHERE data_list_detail_cd=707;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='指数1',master_display_name='指数1'
+	WHERE data_list_detail_cd=708;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='指数2',master_display_name='指数2'
+	WHERE data_list_detail_cd=709;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='指数3',master_display_name='指数3'
+	WHERE data_list_detail_cd=710;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='終了時⊿BV（%）',master_display_name='終了時⊿BV（%）'
+	WHERE data_list_detail_cd=711;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='除水量制限（L）',master_display_name='除水量制限（L）'
+	WHERE data_list_detail_cd=797;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目1名称（g・kg）',master_display_name='項目1名称（g・kg）'
+	WHERE data_list_detail_cd=1032;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目1重さ（g・kg）',master_display_name='項目1重さ（g・kg）'
+	WHERE data_list_detail_cd=1033;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目2名称（g・kg）',master_display_name='項目2名称（g・kg）'
+	WHERE data_list_detail_cd=1034;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目2重さ（g・kg）',master_display_name='項目2重さ（g・kg）'
+	WHERE data_list_detail_cd=1035;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目3名称（g・kg）',master_display_name='項目3名称（g・kg）'
+	WHERE data_list_detail_cd=1036;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目3重さ（g・kg）',master_display_name='項目3重さ（g・kg）'
+	WHERE data_list_detail_cd=1037;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目4名称（g・kg）',master_display_name='項目4名称（g・kg）'
+	WHERE data_list_detail_cd=1038;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目4重さ（g・kg）',master_display_name='項目4重さ（g・kg）'
+	WHERE data_list_detail_cd=1039;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目5名称（g・kg）',master_display_name='項目5名称（g・kg）'
+	WHERE data_list_detail_cd=1040;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目5重さ（g・kg）',master_display_name='項目5重さ（g・kg）'
+	WHERE data_list_detail_cd=1041;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目1名称（g・kg）',master_display_name='項目1名称（g・kg）'
+	WHERE data_list_detail_cd=1043;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目1重さ（g・kg）',master_display_name='項目1重さ（g・kg）'
+	WHERE data_list_detail_cd=1044;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目2名称（g・kg）',master_display_name='項目2名称（g・kg）'
+	WHERE data_list_detail_cd=1045;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目2重さ（g・kg）',master_display_name='項目2重さ（g・kg）'
+	WHERE data_list_detail_cd=1046;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目3名称（g・kg）',master_display_name='項目3名称（g・kg）'
+	WHERE data_list_detail_cd=1047;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目3重さ（g・kg）',master_display_name='項目3重さ（g・kg）'
+	WHERE data_list_detail_cd=1048;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目4名称（g・kg）',master_display_name='項目4名称（g・kg）'
+	WHERE data_list_detail_cd=1049;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目4重さ（g・kg）',master_display_name='項目4重さ（g・kg）'
+	WHERE data_list_detail_cd=1050;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目5名称（g・kg）',master_display_name='項目5名称（g・kg）'
+	WHERE data_list_detail_cd=1051;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目5重さ（g・kg）',master_display_name='項目5重さ（g・kg）'
+	WHERE data_list_detail_cd=1052;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目1名称（g・kg）',master_display_name='項目1名称（g・kg）'
+	WHERE data_list_detail_cd=1054;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目1重さ（g・kg）',master_display_name='項目1重さ（g・kg）'
+	WHERE data_list_detail_cd=1055;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目2名称（g・kg）',master_display_name='項目2名称（g・kg）'
+	WHERE data_list_detail_cd=1056;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目2重さ（g・kg）',master_display_name='項目2重さ（g・kg）'
+	WHERE data_list_detail_cd=1057;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目3名称（g・kg）',master_display_name='項目3名称（g・kg）'
+	WHERE data_list_detail_cd=1058;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目3重さ（g・kg）',master_display_name='項目3重さ（g・kg）'
+	WHERE data_list_detail_cd=1059;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目4名称（g・kg）',master_display_name='項目4名称（g・kg）'
+	WHERE data_list_detail_cd=1060;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目4重さ（g・kg）',master_display_name='項目4重さ（g・kg）'
+	WHERE data_list_detail_cd=1061;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目5名称（g・kg）',master_display_name='項目5名称（g・kg）'
+	WHERE data_list_detail_cd=1062;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目5重さ（g・kg）',master_display_name='項目5重さ（g・kg）'
+	WHERE data_list_detail_cd=1063;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目1名称（g・kg）',master_display_name='項目1名称（g・kg）'
+	WHERE data_list_detail_cd=1065;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目1重さ（g・kg）',master_display_name='項目1重さ（g・kg）'
+	WHERE data_list_detail_cd=1066;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目2名称（g・kg）',master_display_name='項目2名称（g・kg）'
+	WHERE data_list_detail_cd=1067;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目2重さ（g・kg）',master_display_name='項目2重さ（g・kg）'
+	WHERE data_list_detail_cd=1068;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目3名称（g・kg）',master_display_name='項目3名称（g・kg）'
+	WHERE data_list_detail_cd=1069;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目3重さ（g・kg）',master_display_name='項目3重さ（g・kg）'
+	WHERE data_list_detail_cd=1070;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目4名称（g・kg）',master_display_name='項目4名称（g・kg）'
+	WHERE data_list_detail_cd=1071;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目4重さ（g・kg）',master_display_name='項目4重さ（g・kg）'
+	WHERE data_list_detail_cd=1072;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目5名称（g・kg）',master_display_name='項目5名称（g・kg）'
+	WHERE data_list_detail_cd=1073;
+UPDATE ntss.sys_data_list_detail
+	SET function_display_name='項目5重さ（g・kg）',master_display_name='項目5重さ（g・kg）'
+	WHERE data_list_detail_cd=1074;

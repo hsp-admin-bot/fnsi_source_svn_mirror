@@ -1,0 +1,6 @@
+DELETE FROM "ntss"."sys_system_define" WHERE ctl_no = 7;
+INSERT INTO "ntss"."sys_system_define" ("ctl_no", "service_cd", "name", "value", "description", "is_enable", "up_date") VALUES ('7', '003', '帳票レイアウトデザイナーアプリケーション最新バージョン', '[{"version": "2.0.0.43", "self_update_path": "application/self_update", "self_update_filename": "FNWSiLayoutDesignerSetup.zip"}]', '対象アプリケーションの最新版バージョンを設定することでアプリケーションのアップデートを実施する', '1', CURRENT_TIMESTAMP);
+DELETE FROM "ntss"."sys_system_define" WHERE ctl_no = 8;
+INSERT INTO "ntss"."sys_system_define" ("ctl_no", "service_cd", "name", "value", "description", "is_enable", "up_date") VALUES ('8', '003', '体重計アプリケーション最新バージョン', '[{"version": "2.0.0.9", "self_update_path": "application/self_update", "self_update_filename": "FNWSiScaleSetup.zip"}]', '対象アプリケーションの最新版バージョンを設定することでアプリケーションのアップデートを実施する', '1', CURRENT_TIMESTAMP);
+DELETE FROM "ntss"."sys_system_define" WHERE ctl_no = 40;
+INSERT INTO "ntss"."sys_system_define" ("ctl_no", "service_cd", "name", "value", "description", "is_enable", "up_date") VALUES ('40', '003', 'スケールベッドアプリケーション最新バージョン', '[{"version": "2.0.0.3", "self_update_path": "application/self_update", "self_update_filename": "NKKScaleBedSetup.zip"}]', '対象アプリケーションの最新版バージョンを設定することでアプリケーションのアップデートを実施する', '1', CURRENT_TIMESTAMP);

@@ -1,0 +1,2 @@
+DELETE from mst_coop_layout_detail where ctl_no= -103000014;
+INSERT INTO "ntss"."mst_coop_layout_detail"("ctl_no", "facility_cd", "coop_cd", "direction", "coop_cd_detail", "coop_cd_detail_sub", "coop_name", "description", "is_editable", "coop_setting", "coop_ext_setting", "is_disp", "is_del", "user_id", "reg_date", "up_date") VALUES (-103000014, 'nkknkk', 'profile', 'R', '詳細項目', 'all', '日機装標準', '患者情報（XML)', '1', '<DetailInfo></DetailInfo>', '{}', '1', '0', 4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);

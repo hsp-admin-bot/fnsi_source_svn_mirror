@@ -1,0 +1,29 @@
+--項目追加：指示変更
+INSERT INTO mst_treatment_status_disp_item (
+	item_cd,
+	data_class,
+	machine_class,
+	item_name,
+	table_name,
+	field_name,
+	json_key_name,
+	disp_order,
+	is_disp,
+	is_del,
+	reg_date,
+	up_date
+)
+VALUES (
+	109,
+	'0',
+	'0',
+	'指示変更',
+	null,
+	null,
+	null,
+	-3,
+	'1',
+	'0',
+	now(),
+	now()
+);

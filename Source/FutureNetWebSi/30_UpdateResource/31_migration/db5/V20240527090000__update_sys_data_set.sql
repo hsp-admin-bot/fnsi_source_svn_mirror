@@ -1,0 +1,243 @@
+DELETE FROM ntss.sys_data_set WHERE sql_cd in (1802,9627);
+
+INSERT INTO ntss.sys_data_set
+(sql_cd, "sql", db_class, detail, can_repeat, use_application, report_class, memo, reg_date, up_date, pre_sql_info)
+VALUES(1802, 'WITH 
+	coop_ini_data AS (
+	  SELECT
+	    COALESCE(NULLIF(ini_info ->> ''value'', ''''), ini_info ->> ''default_v'') AS value,
+	    ini_info ->> ''key2'' as key2
+	  FROM
+	    mst_coop_ini AS ini 
+	    CROSS JOIN LATERAL json_array_elements(ini.coop_ini_info ::json) AS ini_info 
+	  WHERE
+	    ini.is_del = ''0''
+	    AND ini.is_disp = ''1''
+	    AND ini.facility_cd = ''@facilityCd''
+	    AND COALESCE(ini_info->>''key0'','''') = ''@key0''
+	    AND TRIM(ini_info ->> ''key1'') = ''TABOO_CD'' 
+	)
+	,taboo_allergy_medicine AS (
+	  SELECT
+	     medicine_cd AS cd
+	  FROM
+	     mst_medicine
+	  WHERE
+	    facility_cd = ''@facilityCd''
+	    AND is_del = ''0'' 
+	    AND is_disp = ''1''
+	    AND CASE (SELECT value FROM coop_ini_data WHERE key2 = ''MEDICINE'')
+			WHEN ''1'' THEN in_hospital_cd_1
+			WHEN ''2'' THEN in_hospital_cd_2
+			WHEN ''3'' THEN in_hospital_cd_3
+			WHEN ''4'' THEN in_hospital_cd_4
+			ELSE null
+			END = ''@tabooAllergyInfo.tabooAllergyCd''
+	    limit 1
+	)
+	,taboo_allergy_equipment AS (
+	  SELECT
+	     equipment_cd AS cd
+	  FROM
+	     mst_equipment
+	  WHERE
+	    facility_cd = ''@facilityCd''
+	    AND is_del = ''0'' 
+	    AND is_disp = ''1''
+	    AND CASE (SELECT value FROM coop_ini_data WHERE key2 = ''EQUIPMENT'')
+			WHEN ''1'' THEN in_hospital_cd_1
+			WHEN ''2'' THEN in_hospital_cd_2
+			WHEN ''3'' THEN in_hospital_cd_3
+			WHEN ''4'' THEN in_hospital_cd_4
+			ELSE null
+			END = ''@tabooAllergyInfo.tabooAllergyCd''
+	    limit 1
+	)
+	,taboo_allergy_dialyzer AS (
+	  SELECT
+	     dialyzer_cd AS cd
+	  FROM
+	     mst_dialyzer
+	  WHERE
+	    facility_cd = ''@facilityCd''
+	    AND is_del = ''0'' 
+	    AND is_disp = ''1''
+	    AND CASE (SELECT value FROM coop_ini_data WHERE key2 = ''DIALYZER'')
+			WHEN ''1'' THEN in_hospital_cd_1
+			WHEN ''2'' THEN in_hospital_cd_2
+			WHEN ''3'' THEN in_hospital_cd_3
+			WHEN ''4'' THEN in_hospital_cd_4
+			ELSE null
+			END = ''@tabooAllergyInfo.tabooAllergyCd''
+	    limit 1
+	)
+	,tabooAllergyCdInfo as (
+	select
+		(case
+			when (select nullif(cd, null) from taboo_allergy_medicine) is NOT NULL then (select nullif(cd, null) from taboo_allergy_medicine)
+			when (select nullif(cd, null) from taboo_allergy_equipment) is NOT NULL then (select nullif(cd, null) from taboo_allergy_equipment)
+			when (select nullif(cd, null) from taboo_allergy_dialyzer) is NOT NULL then (select nullif(cd, null) from taboo_allergy_dialyzer)
+			else null
+		end) as cd
+		,
+		(case
+			when (select nullif(cd, null) from taboo_allergy_medicine) is NOT NULL then ''1''
+			when (select nullif(cd, null) from taboo_allergy_equipment) is NOT NULL then ''3''
+			when (select nullif(cd, null) from taboo_allergy_dialyzer) is NOT NULL then ''4''
+			else ''5''
+		end) as type)
+   , newTabooAllergyInfo AS (SELECT ''【分類】'' || (CASE type
+                                                     WHEN ''1'' THEN ''薬剤''
+                                                     WHEN ''2'' THEN ''調製薬剤''
+                                                     WHEN ''3'' THEN ''医療材料''
+                                                     WHEN ''4'' THEN ''ダイアライザ''
+                                                     WHEN ''5'' THEN ''フリーワード''
+                                                     WHEN ''6'' THEN ''一般名処方''
+                                                     ELSE ''不明'' END) || E''\n''
+                                        ''【開始日】'' || ''@tabooAllergyInfo.startDate'' || E''\n''
+                                        ''【症状】'' || ''@tabooAllergyInfo.symptom'' || E''\n''
+                                         || (CASE type
+                                                     WHEN ''5'' THEN ''【マスタ一致】該当なし（''
+                                                     ELSE ''【マスタ一致】連携コード（'' END) || ''@tabooAllergyInfo.tabooAllergyCd'' || ''）''::TEXT AS memo
+                                  , COALESCE(NULLIF(''@nextCtlNo3'', ''''), ''1'')            AS ctl_no
+                                  , ''@tabooAllergyInfo.content''::TEXT                   AS content
+                                  , COALESCE(NULLIF(''@nextCtlNo3'', ''''), ''0'')            AS disp_order
+                                  , type::TEXT             AS category_class
+                                  , cd::TEXT                                            AS taboo_allergy_cd
+                                  , ''@tabooAllergyInfo.tabooAllergyClass''::TEXT         AS taboo_allergy_class
+                             FROM tabooAllergyCdInfo)
+   , tabooAllergyInfo AS (SELECT 0                                                                        AS order_no
+                               , (idx - 1)                                                                AS idx
+                               , REPLACE(REPLACE(ms ->> ''memo'', CHR(10), ''\n''), ''\n'', E''\n'')        AS memo
+                               , ms ->> ''ctl_no''                                                          AS ctl_no
+                               , ms ->> ''content''                                                         AS content
+                               , ms ->> ''disp_order''                                                      AS disp_order
+                               , ms ->> ''category_class''                                                  AS category_class
+                               , ms ->> ''taboo_allergy_cd''                                                AS taboo_allergy_cd
+                               , ms ->> ''taboo_allergy_class''                                             AS taboo_allergy_class
+                          FROM pat_main AS A
+                                   CROSS JOIN LATERAL jsonb_array_elements(A.taboo_allergy_info ::jsonb) WITH ORDINALITY AS info(ms, idx)
+                                   INNER JOIN newTabooAllergyInfo AS new
+                                              ON (ms ->> ''taboo_allergy_cd'' <> '''' and new.taboo_allergy_cd = ms ->> ''taboo_allergy_cd'' and new.category_class = ms ->> ''category_class'') or
+                                                 (ms ->> ''taboo_allergy_cd'' = '''' and new.content = ms ->> ''content'')
+                          WHERE A.is_del = ''0''
+                            AND A.facility_cd = ''@facilityCd''
+                            AND A.pat_id = @patId
+                          UNION
+                          SELECT 1    AS order_no
+                               , NULL AS idx
+                               , memo
+                               , ctl_no
+                               , content
+                               , disp_order
+                               , category_class
+                               , taboo_allergy_cd
+                               , taboo_allergy_class
+                          FROM newTabooAllergyInfo
+                          ORDER BY order_no ASC, idx ASC
+                          LIMIT 1)
+UPDATE pat_main
+SET 
+	up_date = CURRENT_TIMESTAMP,
+taboo_allergy_info = jsonb_set(COALESCE(taboo_allergy_info, ''[]'') ::JSONB
+    , CAST((SELECT ''{'' || COALESCE(idx, 999) || ''}'' FROM tabooAllergyInfo) AS TEXT[])
+    , jsonb_build_object(''memo'', memo,
+                      ''ctl_no'', ctl_no::integer,
+                      ''content'', content,
+                      ''disp_order'', disp_order::integer,
+                      ''category_class'', category_class,
+                      ''taboo_allergy_cd'', nullif(taboo_allergy_cd, ''''),
+                      ''taboo_allergy_class'', taboo_allergy_class))
+from tabooAllergyInfo
+WHERE is_del = ''0''
+  AND pat_id = @patId
+  AND facility_cd = ''@facilityCd''', 2, '[{}]'::jsonb, '0', '{"applications": [4]}'::jsonb, NULL, '(受信用)富士通__禁忌・アレルギー情報_更新', '2020-05-25 18:21:40.841', CURRENT_TIMESTAMP, NULL);
+  
+
+
+INSERT INTO ntss.sys_data_set
+(sql_cd, "sql", db_class, detail, can_repeat, use_application, report_class, memo, reg_date, up_date, pre_sql_info)
+VALUES(9627, 'WITH 
+coop_ini_data AS (
+  SELECT
+    COALESCE(NULLIF(ini_info ->> ''value'', ''''), ini_info ->> ''default_v'') AS value,
+    ini_info ->> ''key2'' as key2
+  FROM
+    mst_coop_ini AS ini 
+    CROSS JOIN LATERAL json_array_elements(ini.coop_ini_info ::json) AS ini_info 
+  WHERE
+    ini.is_del = ''0''
+    AND ini.is_disp = ''1''
+    AND ini.facility_cd = ''@facilityCd''
+    AND COALESCE(ini_info->>''key0'','''') = ''@key0''
+    AND TRIM(ini_info ->> ''key1'') = ''TABOO_CD'' 
+),
+taboo_allergy_medicine AS (
+  SELECT
+     medicine_cd AS cd
+  FROM
+     mst_medicine
+  WHERE
+    facility_cd = ''@facilityCd''
+    AND is_del = ''0'' 
+    AND is_disp = ''1''
+    AND CASE (SELECT value FROM coop_ini_data WHERE key2 = ''MEDICINE'')
+		WHEN ''1'' THEN in_hospital_cd_1
+		WHEN ''2'' THEN in_hospital_cd_2
+		WHEN ''3'' THEN in_hospital_cd_3
+		WHEN ''4'' THEN in_hospital_cd_4
+		ELSE null
+		END = ''@tabooAllergyInfo.tabooAllergyCd''
+    limit 1
+),
+tabooAllergyCdInfo as (
+select
+	(case
+		when (select nullif(cd, null) from taboo_allergy_medicine) is NOT NULL then (select nullif(cd, null) from taboo_allergy_medicine)
+		else null
+	end) as cd
+                                 ,
+	(case
+		when (select nullif(cd, null) from taboo_allergy_medicine) is NOT NULL then ''1''
+		else ''5''
+	end) as type)
+   ,
+newTabooAllergyInfo as (
+select
+	''【分類】薬剤アレルギー'' || E''\n'' || (case
+		when ''@tabooAllergyInfo.memo'' != ''''
+                                                     then ''【内容】'' || ''@tabooAllergyInfo.memo''
+		else ''''
+	end) ::text as memo
+                                  ,
+	coalesce(nullif(''@nextCtlNo3'', ''''), ''1'') as ctl_no
+                                  ,
+	''@tabooAllergyInfo.content''::text as content
+                                  ,
+	coalesce(nullif(''@nextCtlNo3'', ''''), ''0'') as disp_order
+                                  ,
+	type ::text as category_class
+                                  ,
+	cd as taboo_allergy_cd
+                                  ,
+	''@tabooAllergyInfo.tabooAllergyClass''::text as taboo_allergy_class
+from
+	tabooAllergyCdInfo)
+update
+	pat_main
+set 
+	up_date = CURRENT_TIMESTAMP,
+	taboo_allergy_info = taboo_allergy_info || jsonb_build_object(''memo'', memo,
+                      ''ctl_no'', ctl_no::integer,
+                      ''content'', content,
+                      ''disp_order'', disp_order::integer,
+                      ''category_class'', category_class,
+                      ''taboo_allergy_cd'', taboo_allergy_cd,
+                      ''taboo_allergy_class'', taboo_allergy_class,
+											''new_flag'', 1)
+from
+	newTabooAllergyInfo
+where
+	is_del = ''0''
+	and pat_id = @patId
+	and facility_cd = ''@facilityCd''', 2, '[{}]'::jsonb, '0', '{"applications": [4]}'::jsonb, NULL, '(受信用)日機装の患者プロファイル(薬剤アレルギー情報)', '2022-06-09 12:45:07.732', CURRENT_TIMESTAMP, NULL);

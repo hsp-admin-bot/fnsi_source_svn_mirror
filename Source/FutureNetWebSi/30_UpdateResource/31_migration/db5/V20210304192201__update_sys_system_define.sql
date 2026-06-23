@@ -1,0 +1,2 @@
+-- アプリケーションログ、max_file_sizeを追加
+update sys_system_define set value='{"path_output": "/efs/{0}/サーバー/{0}.log", "file_pattern": "/efs/{0}/サーバー/%d''{''yyyyMMdd''}''/{0}_%d''{''yyyyMMdd''}_%i''.log", "max_file_size": "100"}' where ctl_no = 27

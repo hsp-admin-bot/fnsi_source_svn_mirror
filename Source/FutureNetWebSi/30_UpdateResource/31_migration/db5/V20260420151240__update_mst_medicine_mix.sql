@@ -1,0 +1,2 @@
+UPDATE mst_medicine_mix SET amount_unit = ROUND(amount_unit, 8) WHERE amount_unit IS NOT NULL AND (amount_unit::text LIKE '%.%') AND (LENGTH(SPLIT_PART(amount_unit::text, '.', 2)) > 8);
+UPDATE mst_medicine_mix SET unit_decimal_point = 8 WHERE unit_decimal_point IS NOT NULL AND unit_decimal_point > 8;

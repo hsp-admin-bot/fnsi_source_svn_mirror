@@ -1,0 +1,435 @@
+delete from "sys_data_set" where "sql_cd" in (-212,-213);
+INSERT INTO "sys_data_set"("sql_cd", "sql", "db_class", "detail", "can_repeat", "use_application", "report_class", "memo", "reg_date", "up_date", "pre_sql_info") VALUES (-213, ' SELECT
+  dial_diff_com_info ::TEXT as dial_diff_com_info
+ FROM
+   pat_personal_main
+ WHERE
+   is_del = ''0'' 
+   AND pat_id = @patId', 3, '[]', '0', '{"applications": [4]}', '{"classes": []}', 'NECiS)透析実績の透析困難コメント_事前取得', '2020-07-31 18:29:49', '2020-07-31 18:29:49', NULL);
+INSERT INTO "sys_data_set"("sql_cd", "sql", "db_class", "detail", "can_repeat", "use_application", "report_class", "memo", "reg_date", "up_date", "pre_sql_info") VALUES (-212, 'WITH ini_data AS ( 
+  SELECT
+    TRIM(ini_info ->> ''key2'') ::TEXT AS key2
+    , ( 
+      CASE TRIM(ini_info ->> ''value'') 
+        WHEN '''' THEN TRIM(ini_info ->> ''default_v'') 
+        WHEN ''NULL'' THEN TRIM(ini_info ->> ''default_v'') 
+        ELSE TRIM(ini_info ->> ''value'') 
+        END
+    ) ::TEXT AS ini_value 
+  FROM
+    mst_coop_ini AS ini 
+    CROSS JOIN LATERAL json_array_elements(ini.coop_ini_info ::json) AS ini_info 
+  WHERE
+    ini.is_del = ''0'' 
+    AND ini.facility_cd = @facilityCd 
+    AND TRIM(ini_info ->> ''key1'') = ''NECIS_SCHE_DIAL''
+) 
+, ini_unit AS ( 
+  SELECT
+    TRIM(ini_info ->> ''key2'') ::TEXT AS key2
+    , ( 
+      CASE TRIM(ini_info ->> ''value'') 
+        WHEN '''' THEN TRIM(ini_info ->> ''default_v'') 
+        WHEN ''NULL'' THEN TRIM(ini_info ->> ''default_v'') 
+        ELSE TRIM(ini_info ->> ''value'') 
+        END
+    ) ::TEXT AS ini_value 
+  FROM
+    mst_coop_ini AS ini 
+    CROSS JOIN LATERAL json_array_elements(ini.coop_ini_info ::json) AS ini_info 
+  WHERE
+    ini.is_del = ''0'' 
+    AND ini.facility_cd = @facilityCd 
+    AND TRIM(ini_info ->> ''key1'') = ''NECIS_CONV_UNIT''
+) 
+, dialysis_detail AS ( 
+  -- (1) DW
+  SELECT
+    (SELECT ini_value FROM ini_data WHERE key2 = ''DW_FUNCTION_ID'') AS function_id
+    , (SELECT ini_value FROM ini_data WHERE key2 = ''DW_ITEM_CODE'') AS item_code
+    , (physical ->> ''dw'') ::TEXT AS quantity
+    , (SELECT ini_value FROM ini_data WHERE key2 = ''WEIGHT_UNIT'') AS unit_code 
+  FROM
+    ord_main AS ord 
+    LEFT OUTER JOIN pat_unique AS puq ON puq.pat_id = ord.pat_id AND puq.is_del = ''0''
+    CROSS JOIN LATERAL json_array_elements(puq.physical_info ::json) physical 
+  WHERE
+    ord.ord_no = @ordNo 
+    AND physical ->> ''exam_date'' = ( 
+      SELECT
+        MAX(physical2 ->> ''exam_date'') 
+      FROM
+        ord_main ord2
+        , pat_unique puq2 
+        CROSS JOIN LATERAL json_array_elements(puq2.physical_info ::json) physical2 
+      WHERE
+        ord2.ord_no = @ordNo 
+        AND puq2.pat_id = @patId 
+        AND TO_CHAR(CAST(physical2 ->> ''exam_date'' AS TIMESTAMP), ''YYYYMMDD'') <= ord.treat_date 
+        AND COALESCE(physical2 ->> ''dw'', ''ZERO'') <> ''ZERO'' 
+        AND ord.pat_id = puq2.pat_id
+        AND puq2.is_del = ''0''
+    ) 
+  -- (2) 前体重
+  UNION 
+  SELECT
+    (SELECT ini_value FROM ini_data WHERE key2 = ''BEFORE_WEIGHT_FUNCTION_ID'') AS function_id
+    , (SELECT ini_value FROM ini_data WHERE key2 = ''BEFORE_WEIGHT_ITEM_CODE'') AS item_code
+    , CASE WHEN NULLIF((ord.rst_weight_info ->> ''weight_before''), '''') IS NULL THEN '''' ELSE TO_CHAR(TO_NUMBER((ord.rst_weight_info ->> ''weight_before'') , ''FM999.00''), ''FM999.00'') END AS quantity
+    , (SELECT ini_value FROM ini_data WHERE key2 = ''WEIGHT_UNIT'') AS unit_code 
+  FROM
+    ord_main AS ord 
+  WHERE
+    ord.ord_no = @ordNo
+  -- (3) 後体重
+  UNION 
+  SELECT
+    (SELECT ini_value FROM ini_data WHERE key2 = ''AFTER_WEIGHT_FUNCTION_ID'') AS function_id
+    , (SELECT ini_value FROM ini_data WHERE key2 = ''AFTER_WEIGHT_ITEM_CODE'') AS item_code
+    , CASE WHEN NULLIF((ord.rst_weight_info ->> ''weight_after''), '''') IS NULL THEN '''' ELSE TO_CHAR(TO_NUMBER((ord.rst_weight_info ->> ''weight_after''), ''FM999.00''), ''FM999.00'') END AS quantity
+    , (SELECT ini_value FROM ini_data WHERE key2 = ''WEIGHT_UNIT'') AS unit_code 
+  FROM
+    ord_main AS ord 
+  WHERE
+    ord.ord_no = @ordNo
+  -- (4) VA
+  UNION 
+  SELECT
+    COALESCE(NULLIF(TRIM(mva.in_hospital_cd_2), ''''), ((SELECT ini_value FROM ini_data WHERE key2 = ''VA_FUNCTION_ID''))) AS function_id
+    , TRIM(mva.in_hospital_cd_1) AS item_code
+    , '''' AS quantity
+    , '''' AS unit_code 
+  FROM
+    ord_main AS ord 
+    LEFT OUTER JOIN mst_va AS mva ON mva.va_cd = TO_NUMBER(NULLIF(ord.rst_cond_info -> ''2'' ->> ''value'', ''0''), ''FM999999999999'')
+  WHERE
+    ord.ord_no = @ordNo
+    AND ord.rst_cond_info -> ''2'' ->> ''value'' IS NOT NULL 
+  -- (5) ダイアライザ
+  UNION 
+  SELECT
+    COALESCE(NULLIF(TRIM(mdr.in_hospital_cd_2), ''''), ((SELECT ini_value FROM ini_data WHERE key2 = ''DIALYZER_FUNCTION_ID''))) AS function_id
+    , TRIM(mdr.in_hospital_cd_1) AS item_code
+    , ''1'' AS quantity
+    , (SELECT ini_value FROM ini_data WHERE key2 = ''DIALYZER_UNIT'') AS unit_code 
+  FROM
+    ord_main AS ord 
+    LEFT OUTER JOIN mst_dialyzer AS mdr ON mdr.dialyzer_cd = TO_NUMBER(ord.rst_cond_info -> ''5'' ->> ''value'', ''FM999999999999'')  
+  WHERE
+    ord.ord_no = @ordNo 
+    AND ord.rst_cond_info -> ''5'' ->> ''value'' IS NOT NULL 
+  -- (6) 抗凝固剤(単体薬剤時)
+  UNION 
+  SELECT
+    COALESCE(NULLIF(TRIM(med25.in_hospital_cd_2), ''''), (( SELECT ini_value FROM ini_data WHERE key2 = ''ANTICOAGULANT_FUNCTION_ID''))) AS function_id
+    , TRIM(med25.in_hospital_cd_1) AS item_code
+    , TO_CHAR(TO_NUMBER( NULLIF(ord.rst_cond_info -> ''26'' ->> ''value'', ''0''), ''FM999999999999'') + TO_NUMBER(NULLIF(ord.rst_cond_info -> ''28'' ->> ''value'', ''0''), ''FM999999999999'') , ''FM999999999999.00'') AS quantity
+    , (SELECT ini_value FROM ini_unit WHERE key2 = med25.unit) AS unit_code 
+  FROM
+    ord_main AS ord 
+    LEFT OUTER JOIN mst_medicine AS med25 ON med25.medicine_cd = TO_NUMBER(ord.rst_cond_info -> ''25'' ->> ''value'', ''FM999999999999'') 
+  WHERE
+    ord.ord_no = @ordNo 
+    AND ord.rst_cond_info -> ''25'' ->> ''medicine_type'' ::TEXT = ''1'' 
+    AND ord.rst_cond_info -> ''15'' ->> ''value'' IS NOT NULL 
+  -- (7) 抗凝固剤(セット薬剤時)
+  UNION 
+  SELECT
+    COALESCE(NULLIF(TRIM(mmx.in_hospital_cd_2), ''''), ((SELECT ini_value FROM ini_data WHERE key2 = ''ANTICOAGULANT_FUNCTION_ID''))) AS function_id
+    , TRIM(mmx.in_hospital_cd_1) AS item_code
+    , NULLIF(jsonb_array_length(mmx.mix_info), 0) ::TEXT AS quantity
+    , (SELECT ini_value FROM ini_unit WHERE key2 = mmx.unit) AS unit_code 
+  FROM
+    ord_main AS ord 
+    LEFT OUTER JOIN mst_medicine_mix AS mmx ON mmx.medicine_mix_cd = TO_NUMBER(ord.rst_cond_info -> ''25'' ->> ''value'', ''FM999999999999'') 
+  WHERE
+    ord.ord_no = @ordNo 
+    AND ord.rst_cond_info -> ''25'' ->> ''medicine_type'' ::TEXT = ''2'' 
+    AND ord.rst_cond_info -> ''15'' ->> ''value'' IS NOT NULL 		
+  -- (8) 薬剤(単体薬剤時) ：愁訴処置の酸素吸入
+  UNION 
+  SELECT
+    (SELECT ini_value FROM ini_data WHERE key2 = ''OXYGEN_FUNCTION_ID'') AS function_id
+    , (SELECT ini_value FROM ini_data WHERE key2 = ''OXYGEN_ITEM_CODE'') AS item_code
+    , TO_CHAR(TO_NUMBER(trea ->> ''oxygen_amount'', ''FM999999999999.99''), ''FM999999999999.00'') AS quantity
+    , (SELECT ini_value FROM ini_unit WHERE  key2 = ''L'') AS unit_code 
+  FROM
+    ord_main AS ord 
+    CROSS JOIN LATERAL json_array_elements(ord.rst_treatment_info ::json) trea
+  WHERE
+    ord.ord_no = @ordNo 
+    AND trea ->> ''treat_class'' = ''3'' -- 酸素吸入
+    AND trea ->> ''oxygen_amount'' IS NOT NULL
+  -- (8) 薬剤(単体薬剤時) ：愁訴処置の酸素吸入以外
+  UNION 
+  SELECT
+    COALESCE(NULLIF(TRIM(mmd.in_hospital_cd_2), ''''), ((SELECT ini_value FROM ini_data WHERE key2 = ''MEDICINE_FUNCTION_ID''))) AS function_id
+    , TRIM(mmd.in_hospital_cd_1) AS item_code
+    , TO_CHAR(TO_NUMBER(trea ->> ''amount'', ''FM999999999999.99''), ''FM999999999999.00'') AS quantity
+     , (SELECT ini_value FROM ini_unit WHERE  key2 = mmd.unit) AS unit_code 
+  FROM
+    ord_main AS ord 
+    CROSS JOIN LATERAL json_array_elements(ord.rst_treatment_info ::json) trea
+    LEFT OUTER JOIN mst_medicine AS mmd ON mmd.medicine_cd = TO_NUMBER(COALESCE(NULLIF(trea ->> ''treat_medicine_cd'', ''''), trea ->> ''medicine_cd''), ''FM999999999999'') 
+  WHERE
+    ord.ord_no = @ordNo 
+    AND (trea ->> ''treat_class'' IS NULL OR trea ->> ''treat_class'' != ''3'')--酸素吸入以外
+    AND trea->>''medicine_type'' = ''1'' -- 単体薬剤
+  -- (8) 薬剤(単体薬剤時) ：投与薬剤
+  UNION 
+  SELECT
+    COALESCE(NULLIF(TRIM(mmd.in_hospital_cd_2), ''''), ((SELECT ini_value FROM ini_data WHERE key2 = ''MEDICINE_FUNCTION_ID''))) AS function_id
+    , TRIM(mmd.in_hospital_cd_1) AS item_code
+    , TO_CHAR(TO_NUMBER(medi ->> ''amount'', ''FM999999999999.99''), ''FM999999999999.00'') AS quantity
+    , (SELECT ini_value FROM ini_unit WHERE  key2 = mmd.unit) AS unit_code 
+  FROM
+    ord_main AS ord 
+    CROSS JOIN LATERAL json_array_elements(ord.rst_medi_info ::json) medi 
+    LEFT OUTER JOIN mst_medicine AS mmd ON mmd.medicine_cd = TO_NUMBER(medi ->> ''cd'', ''FM999999999999'') 
+  WHERE
+    ord.ord_no = @ordNo 
+    AND medi ->> ''medicine_type'' = ''1'' 
+  --AND COALESCE(mmd.in_hospital_cd_1, ''ZERO'') <> ''ZERO''
+  -- (8) 薬剤(単体薬剤時) ：透析条件の透析液
+  UNION 
+  SELECT
+    COALESCE(NULLIF(TRIM(med15.in_hospital_cd_2), ''''), ((SELECT ini_value FROM ini_data WHERE key2 = ''MEDICINE_FUNCTION_ID''))) AS function_id
+    , TRIM(med15.in_hospital_cd_1) AS item_code
+    , TO_CHAR(TO_NUMBER(NULLIF(ord.rst_cond_info -> ''17'' ->> ''value'', ''0''), ''FM999999999999'') , ''FM999999999999.00'') AS quantity
+    , ( SELECT ini_value FROM ini_unit WHERE key2 = med15.unit) AS unit_code 
+  FROM
+    ord_main AS ord 
+    LEFT OUTER JOIN mst_medicine AS med15 ON med15.medicine_cd = TO_NUMBER(ord.rst_cond_info -> ''15'' ->> ''value'', ''FM999999999999'') 
+  WHERE
+    ord.ord_no = @ordNo 
+    AND ord.rst_cond_info -> ''15'' ->> ''medicine_type'' ::TEXT = ''1'' 
+    AND ord.rst_cond_info -> ''15'' ->> ''value'' IS NOT NULL 
+  -- (8) 薬剤(単体薬剤時) ：透析条件の補液
+  UNION 
+  SELECT
+    COALESCE(NULLIF(TRIM(med19.in_hospital_cd_2), ''''), ((SELECT ini_value FROM ini_data WHERE key2 = ''MEDICINE_FUNCTION_ID''))) AS function_id
+    , TRIM(med19.in_hospital_cd_1) AS item_code
+    , TO_CHAR(TO_NUMBER(NULLIF(ord.rst_cond_info -> ''22'' ->> ''value'', ''0''), ''FM999999999999'') , ''FM999999999999.00'') AS quantity
+    , (SELECT ini_value FROM ini_unit WHERE key2 = med19.unit) AS unit_code 
+  FROM
+    ord_main AS ord 
+    LEFT OUTER JOIN mst_medicine AS med19 ON med19.medicine_cd = TO_NUMBER( ord.rst_cond_info -> ''19'' ->> ''value'', ''FM999999999999'') 
+  WHERE
+    ord.ord_no = @ordNo 
+    AND ord.rst_cond_info -> ''19'' ->> ''medicine_type'' ::TEXT = ''1'' 
+    AND ord.rst_cond_info -> ''19'' ->> ''value'' IS NOT NULL 
+  -- (9) 薬剤(セット薬剤時) ：愁訴処置(セット薬剤時、酸素吸入無し)
+  UNION 
+  SELECT
+    COALESCE(NULLIF(TRIM(mmx.in_hospital_cd_2), ''''), ((SELECT ini_value FROM ini_data WHERE key2 = ''MEDICINE_FUNCTION_ID''))) AS function_id
+    , TRIM(mmx.in_hospital_cd_1) AS item_code
+    , NULLIF(jsonb_array_length(mmx.mix_info), 0) ::TEXT AS quantity
+     , (SELECT ini_value FROM ini_unit WHERE  key2 = mmx.unit) AS unit_code 
+  FROM
+    ord_main AS ord 
+    CROSS JOIN LATERAL json_array_elements(ord.rst_treatment_info ::json) trea
+    LEFT OUTER JOIN mst_medicine_mix AS mmx ON mmx.medicine_mix_cd = TO_NUMBER(COALESCE(NULLIF(trea ->> ''treat_medicine_cd'', ''''), trea ->> ''medicine_cd''), ''FM999999999999'') 
+  WHERE
+    ord.ord_no = @ordNo 
+    AND (trea ->> ''treat_class'' IS NULL OR trea ->> ''treat_class'' != ''3'')--酸素吸入以外
+    AND trea->>''medicine_type'' = ''2'' -- セット薬剤
+
+  -- (9) 薬剤(セット薬剤時)  ：投与薬剤
+  UNION
+  SELECT
+    COALESCE(NULLIF(TRIM(mmx.in_hospital_cd_2), ''''), ((SELECT ini_value FROM ini_data WHERE key2 = ''MEDICINE_FUNCTION_ID''))) AS function_id
+    , TRIM(mmx.in_hospital_cd_1) AS item_code
+    , NULLIF(jsonb_array_length(mmx.mix_info), 0) ::TEXT AS quantity
+    , (SELECT ini_value FROM ini_unit WHERE key2 = mmx.unit) AS unit_code 
+  FROM
+    ord_main AS ord 
+    CROSS JOIN LATERAL json_array_elements(ord.rst_medi_info ::json) medi 
+    LEFT OUTER JOIN mst_medicine_mix AS mmx ON mmx.medicine_mix_cd = TO_NUMBER(medi ->> ''cd'', ''FM999999999999'')
+  WHERE
+    ord.ord_no = @ordNo 
+    AND medi ->> ''medicine_type'' = ''2'' 
+  --AND COALESCE(mmd.in_hospital_cd_1, ''ZERO'') <> ''ZERO''
+  -- (9) 薬剤(セット薬剤時)  ：透析条件の透析液
+  UNION 
+  SELECT
+    COALESCE(NULLIF(TRIM(mmmx.in_hospital_cd_2), ''''), ((SELECT ini_value FROM ini_data WHERE key2 = ''MEDICINE_FUNCTION_ID''))) AS function_id
+    , TRIM(mmmx.in_hospital_cd_1) AS item_code
+    , TO_CHAR(TO_NUMBER(NULLIF(ord.rst_cond_info -> ''17'' ->> ''value'', ''0''), ''FM999999999999'') , ''FM999999999999.00'') AS quantity
+    , (SELECT ini_value FROM ini_unit WHERE key2 = mmmx.unit) AS unit_code 
+  FROM
+    ord_main AS ord 
+    LEFT OUTER JOIN mst_medicine_mix AS mmmx ON mmmx.medicine_mix_cd = TO_NUMBER( ord.rst_cond_info -> ''15'' ->> ''value'', ''FM999999999999'')  
+  WHERE
+    ord.ord_no = @ordNo 
+    AND ord.rst_cond_info -> ''15'' ->> ''medicine_type'' ::TEXT = ''2'' 
+    AND ord.rst_cond_info -> ''15'' ->> ''value'' IS NOT NULL 
+  -- (9) 薬剤(セット薬剤時)  ：透析条件の補液
+  UNION 
+  SELECT
+    COALESCE(NULLIF(TRIM(mmmmx.in_hospital_cd_2), ''''), ((SELECT ini_value FROM ini_data WHERE key2 = ''MEDICINE_FUNCTION_ID''))) AS function_id
+    , TRIM(mmmmx.in_hospital_cd_1) AS item_code
+    , TO_CHAR(TO_NUMBER(NULLIF(ord.rst_cond_info -> ''22'' ->> ''value'', ''0''), ''FM999999999999'') , ''FM999999999999.00'') AS quantity
+    , (SELECT ini_value FROM ini_unit WHERE key2 = mmmmx.unit) AS unit_code 
+  FROM
+    ord_main AS ord 
+    LEFT OUTER JOIN mst_medicine_mix AS mmmmx ON mmmmx.medicine_mix_cd = TO_NUMBER( ord.rst_cond_info -> ''19'' ->> ''value'', ''FM999999999999'') 
+  WHERE
+    ord.ord_no = @ordNo 
+    AND ord.rst_cond_info -> ''19'' ->> ''medicine_type'' ::TEXT = ''2'' 
+    AND ord.rst_cond_info -> ''19'' ->> ''value'' IS NOT NULL 
+  -- (10) 穿刺針:透析条件のA針
+  UNION 
+  SELECT
+    COALESCE(NULLIF(TRIM(meq.in_hospital_cd_2), ''''), ((SELECT ini_value FROM ini_data WHERE key2 = ''NEEDLE_FUNCTION_ID''))) AS function_id
+    , TRIM(meq.in_hospital_cd_1) AS item_code
+    , ''1.00'' AS quantity
+    , (SELECT ini_value FROM ini_unit WHERE key2 = meq.unit) AS unit_code 
+  FROM
+    ord_main AS ord 
+    LEFT OUTER JOIN mst_equipment AS meq ON meq.equipment_cd = TO_NUMBER( ord.rst_cond_info -> ''9'' ->> ''value'', ''FM999999999999'')  
+  WHERE
+    ord.ord_no = @ordNo 
+    AND ord.rst_cond_info -> ''9'' ->> ''value'' IS NOT NULL 
+  -- (10) 穿刺針:透析条件のV針
+  UNION 
+  SELECT
+    COALESCE(NULLIF(TRIM(meq.in_hospital_cd_2), ''''), ((SELECT ini_value FROM ini_data WHERE key2 = ''NEEDLE_FUNCTION_ID''))) AS function_id
+    , TRIM(meq.in_hospital_cd_1) AS item_code
+    , ''1.00'' AS quantity
+    , (SELECT ini_value FROM ini_unit WHERE key2 = meq.unit) AS unit_code 
+  FROM
+    ord_main AS ord 
+    LEFT OUTER JOIN mst_equipment AS meq ON meq.equipment_cd = TO_NUMBER( ord.rst_cond_info -> ''10'' ->> ''value'', ''FM999999999999'') 
+  WHERE
+    ord.ord_no = @ordNo 
+    AND ord.rst_cond_info -> ''10'' ->> ''value'' IS NOT NULL 
+  -- (10) 穿刺針:透析条件のSN針
+  UNION 
+  SELECT
+    COALESCE( NULLIF(TRIM(meq.in_hospital_cd_2), ''''), ((SELECT ini_value FROM ini_data WHERE key2 = ''NEEDLE_FUNCTION_ID''))) AS function_id
+    , TRIM(meq.in_hospital_cd_1) AS item_code
+    , ''1.00'' AS quantity
+    , (SELECT ini_value FROM ini_unit WHERE key2 = meq.unit) AS unit_code 
+  FROM
+    ord_main AS ord 
+    LEFT OUTER JOIN mst_equipment AS meq ON meq.equipment_cd = TO_NUMBER( ord.rst_cond_info -> ''11'' ->> ''value'', ''FM999999999999'') 
+  WHERE
+    ord.ord_no = @ordNo 
+    AND ord.rst_cond_info -> ''11'' ->> ''value'' IS NOT NULL 
+  -- (10) 穿刺針:医材内の穿刺針
+  UNION 
+  SELECT
+    COALESCE(NULLIF(TRIM(meq.in_hospital_cd_2), ''''), ((SELECT ini_value FROM ini_data WHERE key2 = ''MEDICINE_FUNCTION_ID''))) AS function_id
+    , TRIM(meq.in_hospital_cd_1) AS item_code
+    , (equip ->> ''amount'') ::TEXT AS quantity
+    , (SELECT ini_value FROM ini_unit WHERE key2 = meq.unit) AS unit_code 
+  FROM
+    ord_main AS ord 
+    CROSS JOIN LATERAL json_array_elements(ord.rst_equip_info ::json) equip 
+    LEFT OUTER JOIN mst_equipment AS meq ON meq.equipment_cd = TO_NUMBER(equip ->> ''cd'', ''FM999999999999'') 
+  WHERE
+    ord.ord_no = @ordNo 
+    AND equip ->> ''class_type'' IN (''2'', ''3'') 
+  -- (11) 使用材料:医材内の穿刺針を除く
+  UNION 
+  SELECT
+    COALESCE( NULLIF(TRIM(meq.in_hospital_cd_2), ''''), ((SELECT ini_value FROM ini_data WHERE key2 = ''EQUIP_FUNCTION_ID''))) AS function_id
+    , TRIM(meq.in_hospital_cd_1) AS item_code
+    , (equip ->> ''amount'') ::TEXT AS quantity
+    , (SELECT ini_value FROM ini_unit WHERE key2 = meq.unit) AS unit_code 
+  FROM
+    ord_main AS ord 
+    CROSS JOIN LATERAL json_array_elements(ord.rst_equip_info ::json) equip 
+    LEFT OUTER JOIN mst_equipment AS meq ON meq.equipment_cd = TO_NUMBER(equip ->> ''cd'', ''FM999999999999'') 
+  WHERE
+    ord.ord_no = @ordNo 
+    AND equip ->> ''class_type'' NOT IN (''2'', ''3'') 
+  -- (12) 使用材料(透析条件の吸着カラム)
+  UNION 
+  SELECT
+    COALESCE(NULLIF(TRIM(meq.in_hospital_cd_2), ''''), ((SELECT ini_value FROM ini_data WHERE key2 = ''EQUIP_FUNCTION_ID''))) AS function_id
+    , TRIM(meq.in_hospital_cd_1) AS item_code
+    , ''1'' AS quantity
+    , (SELECT ini_value FROM ini_unit WHERE key2 = meq.unit) AS unit_code 
+  FROM
+    ord_main AS ord 
+    LEFT OUTER JOIN mst_equipment AS meq ON meq.equipment_cd = TO_NUMBER( ord.rst_cond_info -> ''6'' ->> ''value'', ''FM999999999999'')  
+  WHERE
+    ord.ord_no = @ordNo 
+    AND ord.rst_cond_info -> ''6'' ->> ''value'' IS NOT NULL 
+  -- (12) 使用材料(透析条件の1次膜)
+  UNION 
+  SELECT
+    COALESCE(NULLIF(TRIM(meq.in_hospital_cd_2), ''''), ((SELECT ini_value FROM ini_data WHERE key2 = ''EQUIP_FUNCTION_ID''))) AS function_id
+    , TRIM(meq.in_hospital_cd_1) AS item_code
+    , ''1'' AS quantity
+    , (SELECT ini_value FROM ini_unit WHERE key2 = meq.unit) AS unit_code 
+  FROM
+    ord_main AS ord 
+    LEFT OUTER JOIN mst_equipment AS meq ON meq.equipment_cd = TO_NUMBER( ord.rst_cond_info -> ''7'' ->> ''value'', ''FM999999999999'') 
+  WHERE
+    ord.ord_no = @ordNo 
+    AND ord.rst_cond_info -> ''7'' ->> ''value'' IS NOT NULL 
+  -- (12) 使用材料(透析条件の2次膜)
+  UNION 
+  SELECT
+    COALESCE(NULLIF(TRIM(meq.in_hospital_cd_2), ''''), ((SELECT ini_value FROM ini_data WHERE key2 = ''EQUIP_FUNCTION_ID''))) AS function_id
+    , TRIM(meq.in_hospital_cd_1) AS item_code
+    , ''1'' AS quantity
+    , (SELECT ini_value FROM ini_unit WHERE key2 = meq.unit) AS unit_code 
+  FROM
+    ord_main AS ord 
+    LEFT OUTER JOIN mst_equipment AS meq ON meq.equipment_cd = TO_NUMBER( ord.rst_cond_info -> ''8'' ->> ''value'', ''FM999999999999'') 
+  WHERE
+    ord.ord_no = @ordNo 
+    AND ord.rst_cond_info -> ''8'' ->> ''value'' IS NOT NULL 
+  -- (13) 加算(システム設定(ID=134：レセプトメモ表示切替)が存在しない、または「0：透析困難理由」の場合)
+  UNION
+  SELECT COALESCE
+    (NULLIF(TRIM (dialysis.in_hospital_cd_2), ''''), ((SELECT ini_value FROM ini_data WHERE key2 = ''OTHER_FUNCTION_ID''))) AS function_id
+    , TRIM (dialysis.in_hospital_cd_1) AS item_code
+    , '''' AS quantity
+    , '''' AS unit_code 
+  FROM
+   json_array_elements ( @dialDiffComInfo :: json ) info
+   LEFT JOIN mst_dialysis_difficulty AS dialysis ON dialysis.dialysis_difficulty_cd :: TEXT = info ->> ''dial_diff_cd''
+  WHERE
+    info ->> ''is_dial_diff'' = ''1''
+    AND ''1'' = COALESCE(NULLIF((SELECT ini_value FROM ini_data WHERE key2 = ''IS_ADD_FUNCTION''), ''''), ''1'')
+  -- (14) 加算(システム設定(ID=134：レセプトメモ表示切替)が「1：レセプトメモ」の場合)
+  UNION
+  SELECT COALESCE
+    (NULLIF(TRIM (msta.in_hospital_cd_2), ''''), ((SELECT ini_value FROM ini_data WHERE key2 = ''OTHER_FUNCTION_ID''))) AS function_id
+    , TRIM (msta.in_hospital_cd_1) AS item_code
+    , '''' AS quantity
+    , '''' AS unit_code 
+  FROM
+    ord_main AS ord
+    CROSS JOIN LATERAL json_array_elements ( ord.addition_info :: json ) addition
+    LEFT OUTER JOIN mst_addition AS msta ON msta.addition_cd :: TEXT = addition ->> ''cd'' 
+  WHERE
+    ord.ord_no = @ordNo 
+    AND addition ->> ''is_enable'' = ''1''
+    AND ''0'' = COALESCE(NULLIF((SELECT ini_value FROM ini_data WHERE key2 = ''IS_ADD_FUNCTION''), ''''), ''1'')
+  -- (15) その他項目(除水量)
+  UNION 
+  SELECT
+    (SELECT ini_value FROM ini_data WHERE key2 = ''OTHER_FUNCTION_ID'') AS function_id
+    , (SELECT ini_value FROM ini_data WHERE key2 = ''OTHER_ITEM_CODE'') AS item_code
+    , TO_CHAR(SUM(TO_NUMBER(ord.rst_weight_info ->> ''water_removal_rst'', ''FM999.99'')), ''FM99999.00'') AS quantity 
+    , (SELECT ini_value FROM ini_unit WHERE key2 = ''L'') AS unit_code 
+  FROM
+    ord_main AS ord 
+  WHERE
+    ord.pat_id = @patId
+    AND NULLIF(ord.rst_weight_info ->> ''water_removal_rst'', '''') IS NOT NULL
+  ORDER BY
+    function_id ASC, item_code ASC
+) 
+SELECT
+  ROW_NUMBER() OVER (ORDER BY function_id) AS seq_no
+  , dialysis_detail.* 
+FROM
+  dialysis_detail 
+ORDER BY
+  function_id ASC, item_code ASC', 2, '[{}]', '0', '{"applications": [4]}', NULL, 'NECiS)透析実績の透析指示明細を取得する', '2021-12-22 09:23:54.241', '2021-12-22 09:23:54.241', '[{"sql_cd": -213, "field_name": "dial_diff_com_info", "replace_var": "@dialDiffComInfo"}]');

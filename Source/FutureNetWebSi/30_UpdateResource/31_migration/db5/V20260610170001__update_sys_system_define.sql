@@ -1,0 +1,2 @@
+DELETE FROM "ntss"."sys_system_define" WHERE ctl_no = 40;
+INSERT INTO "ntss"."sys_system_define" ("ctl_no", "service_cd", "name", "value", "description", "is_enable", "up_date") VALUES ('40', '003', 'スケールベッドアプリケーション最新バージョン', '[{"version": "2.0.0.2"}]', '対象アプリケーションの最新版バージョンを設定することでアプリケーションのアップデートを実施する', '1', CURRENT_TIMESTAMP);

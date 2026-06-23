@@ -1,0 +1,2 @@
+DELETE FROM "ntss"."mst_coop_filename" where "ctl_no" IN (-201);
+INSERT INTO "ntss"."mst_coop_filename"("ctl_no", "facility_cd", "coop_cd", "coop_cd_index", "pdf_name", "dump_name", "compression_name", "is_disp", "is_del", "user_id", "reg_date", "up_date") VALUES (-201, 'F_hosp', 'rep_dial', 'pdf', '[{"name": {"ctlNo": 0, "ordNo": 0, "sqlCode": -62}, "report_cd": 676}]', '{}', '{}', '1', '0', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);

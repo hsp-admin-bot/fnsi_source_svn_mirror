@@ -1,0 +1,1 @@
+UPDATE mst_exam_set SET label_info = '[]' WHERE label_info != '[]' or label_info is null;

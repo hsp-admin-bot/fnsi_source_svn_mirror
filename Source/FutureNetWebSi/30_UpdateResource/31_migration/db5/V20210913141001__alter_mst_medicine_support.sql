@@ -1,0 +1,1 @@
+alter table ntss.mst_medicine_support alter column target_inspection type numeric(8,2) using target_inspection::numeric(8,2);

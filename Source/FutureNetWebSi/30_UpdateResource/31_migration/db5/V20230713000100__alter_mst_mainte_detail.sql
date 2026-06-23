@@ -1,0 +1,1 @@
+ALTER TABLE mst_mainte_detail  ALTER COLUMN fn_mainte_detail_cd TYPE varchar(20);

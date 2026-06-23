@@ -1,0 +1,1 @@
+INSERT INTO "ntss"."sys_system_define"("ctl_no", "service_cd", "name", "value", "description", "is_enable", "up_date") VALUES ('1010', '003', 'カード読み取りアプリケーションログ出力先', '{"path": "/efs/{0}/カード読み取りアプリ/"}', '対象アプリケーションのログファイル出力先を指定する。 ※{0}は施設コードに変換', '1', '2022-02-08 09:06:15');

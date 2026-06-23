@@ -1,0 +1,16 @@
+DELETE
+FROM
+	sys_data_set
+WHERE
+	sql_cd = -400002;
+INSERT INTO "ntss"."sys_data_set"("sql_cd", "sql", "db_class", "detail", "can_repeat", "use_application", "report_class", "memo", "reg_date", "up_date", "pre_sql_info") VALUES (-400002, 'SELECT
+CASE
+		@aligh
+		WHEN ''0'' THEN
+	substr(substr(to_char(10^@len, ''FM999999999''), 2)||hosp_pat_id,0,13) else substr(hosp_pat_id,0,13-@len) ||substr(to_char(10^@len, ''FM999999999''), 2)
+	END AS hosp_pat_id
+FROM
+	pat_personal_main
+WHERE
+	is_del = ''0''
+	AND pat_id = @patId', 3, '[]', '0', '{"applications": [4]}', '{"classes": []}', '日機装 透析レポート', '2022-05-17 08:54:31.638', CURRENT_TIMESTAMP, '[{"sql_cd": -400005, "field_name": "len", "replace_var": "@len"}, {"sql_cd": -400003, "field_name": "aligh", "replace_var": "@aligh"}]');

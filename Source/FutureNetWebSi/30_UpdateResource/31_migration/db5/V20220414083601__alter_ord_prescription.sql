@@ -1,0 +1,1 @@
+ALTER table ord_prescription ADD COLUMN  fn_ord_prescription_no varchar(50) DEFAULT null;

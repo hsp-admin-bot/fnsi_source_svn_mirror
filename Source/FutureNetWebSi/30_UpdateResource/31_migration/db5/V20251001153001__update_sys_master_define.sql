@@ -1,0 +1,1 @@
+UPDATE ntss.sys_master_define SET column_info = jsonb_set(jsonb_set(column_info, '{fields,12,title}', '"UFR警報点上限"'), '{fields,13,title}', '"UFR警報点下限"') ,up_date=CURRENT_TIMESTAMP WHERE master_physical_name='mst_dialyzer';

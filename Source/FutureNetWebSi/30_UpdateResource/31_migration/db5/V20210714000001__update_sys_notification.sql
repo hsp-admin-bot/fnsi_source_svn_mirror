@@ -1,0 +1,1 @@
+UPDATE sys_notification SET help= '患者の主治医、担当や穿刺が設定されると通知します' WHERE notification_no=16;

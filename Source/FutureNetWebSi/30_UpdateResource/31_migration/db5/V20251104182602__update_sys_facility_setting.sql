@@ -1,0 +1,1 @@
+DELETE FROM "ntss"."sys_facility_setting" where facility_setting_no in ('1041');

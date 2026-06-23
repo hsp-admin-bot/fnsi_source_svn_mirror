@@ -1,0 +1,1 @@
+ALTER table mst_take_medicine ADD COLUMN fn_take_medicine_cd varchar(3) DEFAULT null;

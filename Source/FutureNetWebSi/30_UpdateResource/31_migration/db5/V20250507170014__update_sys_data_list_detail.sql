@@ -1,0 +1,3 @@
+-- #11145 データリストの単位表示
+UPDATE "ntss"."sys_data_list_detail" SET "function_display_sql" = 'select moni_data_no as id, moni_data_name as name, unit as unit from sys_monitor_item where sys_monitor_item.moni_data_no in (@ids) and sys_monitor_item.vital_monitor_class = ''1'' and is_disp = ''1'' and moni_data_type is null' WHERE "disp_order" = 1 AND "category_cd" = 83;
+UPDATE "ntss"."sys_data_list_detail" SET "function_display_sql" = 'select moni_data_no as id, moni_data_name as name, unit as unit from sys_monitor_item where sys_monitor_item.moni_data_no in (@ids) and sys_monitor_item.vital_monitor_class = ''2'' and is_disp = ''1'' and moni_data_type is null' WHERE "disp_order" = 1 AND "category_cd" = 84;

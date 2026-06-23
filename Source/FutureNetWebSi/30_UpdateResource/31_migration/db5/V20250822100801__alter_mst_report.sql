@@ -1,0 +1,1 @@
+ALTER TABLE mst_report DROP COLUMN IF EXISTS multi_total_defaul;

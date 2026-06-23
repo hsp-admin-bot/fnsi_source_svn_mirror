@@ -1,0 +1,1 @@
+UPDATE ntss.sys_data_list_detail SET function_display_name = master_display_name, function_display_type = master_display_type, function_display_sql = master_display_sql WHERE data_list_detail_cd >= 74;

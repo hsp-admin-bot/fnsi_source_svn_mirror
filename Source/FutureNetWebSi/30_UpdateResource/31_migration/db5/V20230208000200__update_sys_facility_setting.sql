@@ -1,0 +1,1 @@
+UPDATE sys_facility_setting SET default_value = '2' WHERE facility_setting_no = '1030'

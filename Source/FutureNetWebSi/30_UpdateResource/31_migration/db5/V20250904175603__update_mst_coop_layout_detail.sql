@@ -1,0 +1,22 @@
+DELETE FROM mst_coop_layout_detail
+WHERE ctl_no IN (-407000035, -407000036, -407000040);
+
+INSERT INTO mst_coop_layout_detail
+(ctl_no, facility_cd, coop_cd, direction, coop_cd_detail, coop_cd_detail_sub, coop_name, description, is_editable, coop_setting, coop_ext_setting, is_disp, is_del, user_id, reg_date, up_date, coop_version)
+VALUES(-407000035, 'P_hosp', 'rst_dial', 'S', 'holiday_units', '01', '処置・人工腎臓以外(夜間・休日加算)情報(Order_Units)', '処置・人工腎臓以外(夜間・休日加算)情報のOrder_Unitsタグを出力します。', '1', '<root>
+  <Order_Units Order_UnitsID="dataset:-307086.order_units_id_rece_holi" Application="dataset:-307086.prescription_details_holiday" InputUserCode="dataset:-307099.staff_cd" InputUserName="dataset:-307099.staff_name" InputTime="dataset:-307093.rst_start_date" LastUpdateTime="dataset:-307093.up_date" _detail="treatment" _sqlCode="-307063" />
+</root>
+', '{"dataset": [{"key0": "-307134.key0", "ordNo": "-307134.ord_no", "sqlCode": -307063, "facilityCd": "-307134.facility_cd"}, {"ordNo": "-307134.ord_no", "sqlCode": -307093}, {"key0": "-307134.key0", "ordNo": "-307134.ord_no", "patId": "-307134.pat_id", "sqlCode": -307099, "facilityCd": "-307134.facility_cd"}, {"key0": "-307134.key0", "ctlNo": "-307134.ctl_no", "ordNo": "-307134.ord_no", "sqlCode": -307086, "facilityCd": "-307134.facility_cd"}]}'::jsonb, '1', '0', -1, '2025-06-19 10:54:40.876', CURRENT_TIMESTAMP, 'MED');
+INSERT INTO mst_coop_layout_detail
+(ctl_no, facility_cd, coop_cd, direction, coop_cd_detail, coop_cd_detail_sub, coop_name, description, is_editable, coop_setting, coop_ext_setting, is_disp, is_del, user_id, reg_date, up_date, coop_version)
+VALUES(-407000036, 'P_hosp', 'rst_dial', 'S', 'dialysis_units', '01', '処置・人工腎臓以外(導入期加算)情報(Order_Units)', '処置・人工腎臓以外(導入期加算)情報のOrder_Unitsタグを出力します。', '1', '<root>
+  <Order_Units Order_UnitsID="dataset:-307086.order_units_id_rece_dial" Application="dataset:-307086.prescription_details_dialysis" InputUserCode="dataset:-307101.staff_cd" InputUserName="dataset:-307101.staff_name" InputTime="dataset:-307093.rst_start_date" LastUpdateTime="dataset:-307093.up_date" _detail="treatment" _sqlCode="-307065" />
+</root>
+', '{"dataset": [{"key0": "-307135.key0", "ordNo": "-307135.ord_no", "sqlCode": -307065, "facilityCd": "-307135.facility_cd"}, {"ordNo": "-307135.ord_no", "sqlCode": -307093}, {"key0": "-307135.key0", "ctlNo": "-307135.ctl_no", "ordNo": "-307135.ord_no", "sqlCode": -307086, "facilityCd": "-307135.facility_cd"}, {"key0": "-307135.key0", "ordNo": "-307135.ord_no", "patId": "-307135.pat_id", "sqlCode": -307101, "facilityCd": "-307135.facility_cd"}]}'::jsonb, '1', '0', -1, '2025-06-19 10:54:40.876', CURRENT_TIMESTAMP, 'MED');
+INSERT INTO mst_coop_layout_detail
+(ctl_no, facility_cd, coop_cd, direction, coop_cd_detail, coop_cd_detail_sub, coop_name, description, is_editable, coop_setting, coop_ext_setting, is_disp, is_del, user_id, reg_date, up_date, coop_version)
+VALUES(-407000040, 'P_hosp', 'rst_dial', 'S', 'treatment_units', '01', '処置・治療項目情報(Order_Units)', '処置・治療項目情報のOrder_Unitsタグを出力します。', '1', '<root>
+  <Order_Units Order_UnitsID="dataset:-307086.order_units_id_treatment" Application="dataset:-307086.prescription_details_treatment" InputUserCode="dataset:-307098.staff_cd" InputUserName="dataset:-307098.staff_name" InputTime="dataset:-307093.rst_start_date" LastUpdateTime="dataset:-307093.up_date" _detail="treatment" _sqlCode="-307138" />
+            <Order_Units Order_UnitsID="dataset:-307086.order_units_id_oxygen" Application="dataset:-307086.prescription_details_oxygen" InputUserCode="dataset:-307097.staff_cd" InputUserName="dataset:-307097.staff_name" InputTime="dataset:-307093.rst_start_date" LastUpdateTime="dataset:-307093.up_date" _detail="treatment" _sqlCode="-307130" />
+</root>
+', '{"dataset": [{"key0": "-307133.key0", "ctlNo": "-307133.ctl_no", "ordNo": "-307133.ord_no", "sqlCode": -307086, "facilityCd": "-307133.facility_cd"}, {"ordNo": "-307133.ord_no", "sqlCode": -307093}, {"key0": "-307133.key0", "ordNo": "-307133.ord_no", "patId": "-307133.pat_id", "sqlCode": -307097, "facilityCd": "-307133.facility_cd"}, {"key0": "-307133.key0", "ordNo": "-307133.ord_no", "patId": "-307133.pat_id", "sqlCode": -307098, "facilityCd": "-307133.facility_cd"}, {"key0": "-307133.key0", "ordNo": "-307133.ord_no", "patId": "-307133.pat_id", "sqlCode": -307138, "facilityCd": "-307133.facility_cd"}, {"key0": "-307133.key0", "ordNo": "-307133.ord_no", "sqlCode": -307130, "facilityCd": "-307133.facility_cd"}]}'::jsonb, '1', '0', -1, '2025-06-19 10:54:40.876', CURRENT_TIMESTAMP, 'MED');

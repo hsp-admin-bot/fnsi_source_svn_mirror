@@ -1,0 +1,1 @@
+DELETE FROM "ntss"."mst_coop_facility" where ctl_no = -1001;

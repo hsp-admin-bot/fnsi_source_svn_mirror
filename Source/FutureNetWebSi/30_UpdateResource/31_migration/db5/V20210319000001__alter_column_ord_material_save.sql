@@ -1,0 +1,1 @@
+ALTER TABLE ord_material_save ALTER supplies_base_no DROP not null;

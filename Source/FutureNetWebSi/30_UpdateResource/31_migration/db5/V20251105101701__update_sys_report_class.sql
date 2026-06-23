@@ -1,0 +1,2 @@
+DELETE FROM "ntss"."sys_report_class" where report_class_cd in (11);
+INSERT INTO "ntss"."sys_report_class" ("report_class_cd", "report_class_name", "report_type", "is_disp", "is_del", "up_date", "reg_date") VALUES (11, '複数集計', '[{"cd": "1", "name": "スケジュール表"}, {"cd": "2", "name": "週間薬剤集計表"}, {"cd": "3", "name": "水質調査一覧"}, {"cd": "4", "name": "日常点検一覧"}, {"cd": "5", "name": "定期点検一覧"}]', '1', '0', CURRENT_TIMESTAMP, '2023-08-16 21:08:43.64');
